@@ -63,8 +63,9 @@ export default function ReportPage() {
   }
 
   // Cálculos Básicos pro Header do Relatório
-  const firstLog = logs[logs.length - 1];
-  const lastLog = logs[0];
+  const weightLogs = logs.filter(l => typeof l.weight === 'number');
+  const firstLog = weightLogs[weightLogs.length - 1];
+  const lastLog = weightLogs[0];
   const totalLost = firstLog && lastLog ? (firstLog.weight - lastLog.weight).toFixed(1) : 0;
   
   return (
@@ -141,7 +142,7 @@ export default function ReportPage() {
                        <span style={{ color: 'var(--text-muted)' }}>Acompanhamento</span>
                     )}
                   </td>
-                  <td style={{ padding: '1rem', fontSize: '0.9rem', fontWeight: 600 }}>{log.weight}</td>
+                  <td style={{ padding: '1rem', fontSize: '0.9rem', fontWeight: 600 }}>{log.weight ?? '—'}</td>
                   <td style={{ padding: '1rem', fontSize: '0.9rem' }}>{log.dose ? log.dose : '—'}</td>
                   <td style={{ padding: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)', maxWidth: '250px' }}>
                     {log.notes || 'Nenhuma observação.'}

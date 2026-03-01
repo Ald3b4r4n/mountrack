@@ -53,9 +53,10 @@ export default function Analytics() {
             setCurrentDose(doseLogs[doseLogs.length - 1].dose);
           }
            
-          if (fetchedLogs.length >= 2) {
-            const firstLog = fetchedLogs[0];
-            const latestLog = fetchedLogs[fetchedLogs.length - 1];
+          const weightLogs = fetchedLogs.filter(l => typeof l.weight === 'number');
+          if (weightLogs.length >= 2) {
+            const firstLog = weightLogs[0];
+            const latestLog = weightLogs[weightLogs.length - 1];
             const weightDiff = firstLog.weight - latestLog.weight;
             setTotalLoss(Number(weightDiff.toFixed(1)));
             
@@ -79,8 +80,8 @@ export default function Analytics() {
     fetchAnalytics();
   }, [user]);
 
-  // Pega os últimos 12 registros para o gráfico
-  const chartLogs = logs.slice(Math.max(logs.length - 12, 0));
+  // Pega os últimos 12 registros COM PESO para o gráfico
+  const chartLogs = logs.filter(l => typeof l.weight === 'number').slice(-12);
 
   // Dimensões do SVG viewBox
   const SVG_W = 700;
