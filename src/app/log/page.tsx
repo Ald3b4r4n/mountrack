@@ -17,8 +17,8 @@ export default function LogDose() {
   const { user } = useAuth();
   const router = useRouter();
   
-  // Tipo do registro: 'dose' ou 'weight'
-  const [logType, setLogType] = useState<'dose' | 'weight'>('dose');
+  // Tipo do registro: 'dose', 'weight' ou 'note'
+  const [logType, setLogType] = useState<'dose' | 'weight' | 'note'>('dose');
   const [date, setDate] = useState(() => {
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -34,13 +34,18 @@ export default function LogDose() {
     
     setLoading(true);
     try {
-      // Monta o objeto do registro
+      // Monta o objeto do registro básico
       const logData: Record<string, unknown> = {
         type: logType,
         date,
-        weight: parseFloat(weight),
         createdAt: serverTimestamp()
       };
+
+      // Se não for apenas nota, exige e salva o peso
+      if (logType !== 'note') {
+        if (!weight) throw new Error("Peso é obrigatório.");
+        logData.weight = parseFloat(weight);
+      }
 
       // Sempre adiciona as notas se existirem
       if (notes.trim() !== '') {
@@ -130,6 +135,30 @@ export default function LogDose() {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v18"/><path d="M8 7l4-4 4 4"/><path d="M8 17l4 4 4-4"/></svg>
               Só Pesagem
             </button>
+            <button
+              type="button"
+              onClick={() => setLogType('note')}
+              style={{
+                flex: 1,
+                padding: '0.85rem',
+                borderRadius: 'var(--radius-md)',
+                border: `2px solid ${logType === 'note' ? 'var(--accent-warning, #eab308)' : 'var(--border-glass)'}`,
+                background: logType === 'note' ? 'rgba(234, 179, 8, 0.08)' : 'transparent',
+                color: logType === 'note' ? 'var(--accent-warning, #eab308)' : 'var(--text-secondary)',
+                cursor: 'pointer',
+                fontFamily: "'Outfit', sans-serif",
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+              Diário Livre
+            </button>
           </div>
 
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -155,11 +184,13 @@ export default function LogDose() {
               </div>
             )}
 
-            {/* Peso — sempre presente */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <label htmlFor="weight" className="label">Peso Atual (kg)</label>
-              <input type="number" id="weight" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="Ex: 87.5" required className="input-field" />
-            </div>
+            {/* Peso — não aparece se for só diário */}
+            {logType !== 'note' && (
+              <div className="anim-enter" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label htmlFor="weight" className="label">Peso Atual (kg)</label>
+                <input type="number" id="weight" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="Ex: 87.5" required className="input-field" />
+              </div>
+            )}
 
             {/* Notas — sempre presente para o diário */}
             <div className="anim-enter" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -168,7 +199,7 @@ export default function LogDose() {
             </div>
 
             <button type="submit" disabled={loading} className="btn-primary" style={{ marginTop: '0.5rem', padding: '1rem', fontSize: '1rem', opacity: loading ? 0.7 : 1 }}>
-              {loading ? 'Salvando...' : logType === 'dose' ? 'Salvar Dose' : 'Salvar Pesagem'}
+              {loading ? 'Salvando...' : logType === 'dose' ? 'Salvar Dose' : logType === 'weight' ? 'Salvar Pesagem' : 'Salvar Diário'}
             </button>
           </form>
         </div>

@@ -11,8 +11,8 @@ import { collection, query, orderBy, getDocs } from 'firebase/firestore';
  */
 interface LogData {
   id: string;
-  type?: 'dose' | 'weight';
-  weight: number;
+  type?: 'dose' | 'weight' | 'note';
+  weight?: number;
   dose?: number;
   date: string;
   notes?: string;
@@ -87,7 +87,7 @@ export default function Journal() {
             <div style={{ position: 'absolute', top: '1rem', bottom: '1rem', left: '1.5rem', width: '2px', background: 'var(--border-glass)', zIndex: 0, opacity: 0.5, display: 'none' }}></div>
             
             {logs.map((log, i) => (
-              <article key={log.id} className="glass-panel anim-enter" style={{ padding: '1.5rem', position: 'relative', zIndex: 1, animationDelay: `${Math.min(i * 0.05, 0.4)}s`, borderLeft: `4px solid ${log.dose ? 'var(--accent-primary)' : 'var(--accent-secondary)'}` }}>
+              <article key={log.id} className="glass-panel anim-enter" style={{ padding: '1.5rem', position: 'relative', zIndex: 1, animationDelay: `${Math.min(i * 0.05, 0.4)}s`, borderLeft: `4px solid ${log.type === 'note' ? 'var(--accent-warning, #eab308)' : log.dose ? 'var(--accent-primary)' : 'var(--accent-secondary)'}` }}>
                 
                 {/* Header do Card (Data e Stats) */}
                 <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-glass)' }}>
@@ -96,10 +96,18 @@ export default function Journal() {
                       {new Date(log.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).replace(/^\w/, c => c.toUpperCase())}
                     </h3>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem' }}>
-                      <span className="badge" style={{ background: 'var(--bg-tertiary)' }}>{log.weight} kg</span>
+                      {log.weight !== undefined && (
+                        <span className="badge" style={{ background: 'var(--bg-tertiary)' }}>{log.weight} kg</span>
+                      )}
+                      
                       {log.dose && (
                         <span className="badge badge-success">💉 Dose {log.dose} mg</span>
                       )}
+                      
+                      {log.type === 'note' && (
+                        <span className="badge" style={{ background: 'rgba(234, 179, 8, 0.15)', color: 'var(--accent-warning, #eab308)' }}>✍️ Diário</span>
+                      )}
+                      
                       {(!log.dose && (log.type === 'weight' || log.type === undefined)) && (
                         <span className="badge badge-warning">⚖️ Pesagem</span>
                       )}
@@ -108,7 +116,9 @@ export default function Journal() {
                   
                   {/* Ícone sutil no canto indicando o tipo da nota */}
                   <div style={{ opacity: 0.2 }}>
-                    {log.dose ? (
+                    {log.type === 'note' ? (
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                    ) : log.dose ? (
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
                     ) : (
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v18"/><path d="M8 7l4-4 4 4"/><path d="M8 17l4 4 4-4"/></svg>

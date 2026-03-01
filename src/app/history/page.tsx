@@ -11,8 +11,8 @@ import { collection, query, orderBy, getDocs, doc, updateDoc, deleteDoc } from '
  */
 interface LogData {
   id: string;
-  type?: 'dose' | 'weight'; // 'dose' = aplicação semanal, 'weight' = pesagem avulsa
-  weight: number;
+  type?: 'dose' | 'weight' | 'note'; // 'dose' = aplicação semanal, 'weight' = pesagem avulsa, 'note' = diário livre
+  weight?: number;
   dose?: number;
   date: string;
   notes?: string;
@@ -149,10 +149,12 @@ export default function History() {
                         <label className="label" style={{ fontSize: '0.8rem' }}>Data</label>
                         <input type="date" value={editData.date || ''} onChange={(e) => setEditData(p => ({...p, date: e.target.value}))} className="input-field" style={{ marginTop: '0.25rem' }} />
                       </div>
-                      <div>
-                        <label className="label" style={{ fontSize: '0.8rem' }}>Peso (kg)</label>
-                        <input type="number" step="0.1" value={editData.weight || ''} onChange={(e) => setEditData(p => ({...p, weight: parseFloat(e.target.value)}))} className="input-field" style={{ marginTop: '0.25rem' }} />
-                      </div>
+                      {log.type !== 'note' && (
+                        <div>
+                          <label className="label" style={{ fontSize: '0.8rem' }}>Peso (kg)</label>
+                          <input type="number" step="0.1" value={editData.weight || ''} onChange={(e) => setEditData(p => ({...p, weight: parseFloat(e.target.value)}))} className="input-field" style={{ marginTop: '0.25rem' }} />
+                        </div>
+                      )}
                       {(log.type === 'dose' || log.dose !== undefined) && (
                         <div>
                           <label className="label" style={{ fontSize: '0.8rem' }}>Dose (mg)</label>
@@ -185,10 +187,12 @@ export default function History() {
                       {/* Indicador de tipo */}
                       <div style={{ 
                         width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: (log.type === 'weight' || !log.dose) ? 'rgba(6, 182, 212, 0.12)' : 'rgba(52, 211, 153, 0.12)',
-                        border: `1px solid ${(log.type === 'weight' || !log.dose) ? 'rgba(6, 182, 212, 0.2)' : 'rgba(52, 211, 153, 0.2)'}`
+                        background: log.type === 'note' ? 'rgba(234, 179, 8, 0.12)' : (log.type === 'weight' || !log.dose) ? 'rgba(6, 182, 212, 0.12)' : 'rgba(52, 211, 153, 0.12)',
+                        border: `1px solid ${log.type === 'note' ? 'rgba(234, 179, 8, 0.2)' : (log.type === 'weight' || !log.dose) ? 'rgba(6, 182, 212, 0.2)' : 'rgba(52, 211, 153, 0.2)'}`
                       }}>
-                        {(log.type === 'weight' || !log.dose) ? (
+                        {log.type === 'note' ? (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-warning, #eab308)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                        ) : (log.type === 'weight' || !log.dose) ? (
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v18"/><path d="M8 7l4-4 4 4"/><path d="M8 17l4 4 4-4"/></svg>
                         ) : (
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -200,9 +204,14 @@ export default function History() {
                           {new Date(log.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
                         </p>
                         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '0.25rem' }}>
-                          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{log.weight} kg</span>
+                          {log.weight !== undefined && (
+                            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{log.weight} kg</span>
+                          )}
                           {log.dose && (
                             <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>{log.dose} mg</span>
+                          )}
+                          {log.type === 'note' && (
+                            <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(234, 179, 8, 0.15)', color: 'var(--accent-warning, #eab308)' }}>Diário</span>
                           )}
                           {(!log.dose && (log.type === 'weight' || log.type === undefined)) && !log.dose && (
                             <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>Pesagem</span>

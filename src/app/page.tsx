@@ -52,9 +52,9 @@ export default function Home() {
           target = userData.targetWeight;
         }
 
-        // Buscar os últimos 10 logs para o gráfico de linha
+        // Buscar os últimos 20 logs para o gráfico de linha (podem haver notas sem peso no meio)
         const logsRef = collection(db, 'users', user.uid, 'logs');
-        const qChart = query(logsRef, orderBy('date', 'desc'), limit(10));
+        const qChart = query(logsRef, orderBy('date', 'desc'), limit(25));
         const chartSnap = await getDocs(qChart);
         
         const points: ChartPoint[] = [];
@@ -63,7 +63,11 @@ export default function Home() {
         
         chartSnap.forEach((d) => {
           const data = d.data();
-          points.push({ weight: data.weight, date: data.date, type: data.type || 'dose' });
+          
+          // Adiciona os pontos pro gráfico APENAS se tiverem peso (ignora notas puras do diário)
+          if (data.weight !== undefined && data.type !== 'note') {
+            points.push({ weight: data.weight, date: data.date, type: data.type || 'dose' });
+          }
           
           // Pegar o log mais recente com dose (para a volumetria)
           if (!latestDoseLog && (data.dose || data.type === 'dose')) {
@@ -102,10 +106,10 @@ export default function Home() {
           prevWeightLog = { weight: points[1].weight };
         }
         
-        // Inverte para ordem cronológica (ASC) para o gráfico
-        setChartPoints(points.reverse());
+        // Inverte para ordem cronológica (ASC) para o gráfico (Top 10 max depois de filtrar)
+        setChartPoints(points.slice(0, 10).reverse());
 
-        // Dados do registro mais recente (qualquer tipo)
+        // Dados do registro mais recente com peso (qualquer tipo que não seja note puro)
         if (points.length > 0) {
           const latest = points[points.length - 1];
           setCurrentWeight(latest.weight);
