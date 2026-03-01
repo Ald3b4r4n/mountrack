@@ -162,7 +162,8 @@ export default function Home() {
             // Limitando predição bizarra (> 5 anos pra frente)
             const daysFromNow = targetX - (new Date().getTime() / (1000 * 60 * 60 * 24));
             if (daysFromNow > 0 && daysFromNow < 1825) { 
-               const predictedMs = targetX * (1000 * 60 * 60 * 24);
+               // Add 12 hours to avoid timezone shift to previous day
+               const predictedMs = targetX * (1000 * 60 * 60 * 24) + (12 * 60 * 60 * 1000);
                const dt = new Date(predictedMs);
                // Formata ex: "novembro de 2026"
                setPredictedDate(dt.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }));
@@ -309,6 +310,10 @@ export default function Home() {
           <Link href="/history" className="nav-pill">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
             Histórico
+          </Link>
+          <Link href="/journal" className="nav-pill">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+            Diário
           </Link>
         </nav>
 

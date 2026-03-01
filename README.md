@@ -2,7 +2,7 @@
 
 **MounTrack** é uma aplicação web premium e responsiva desenvolvida para monitoramento meticuloso e gamificado da jornada com perda de peso (ex: Monjaro). Projetado com foco absoluto em UI/UX e performance, ele oferece um painel vítreo de análise de saúde ("Glassmorphism") utilizando ecossistemas modernos de front-end.
 
-Desenvolvido com ❤ por [A&R Software Development](https://antoniorafael.com.br).
+Desenvolvido por [A&R Software Development](https://antoniorafael.com.br).
 
 ---
 

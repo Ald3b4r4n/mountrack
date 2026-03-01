@@ -21,7 +21,7 @@ export default function RootLayout({
             {children}
             <footer style={{ marginTop: '4rem', padding: '2rem 1rem', textAlign: 'center', borderTop: '1px solid var(--border-glass)' }}>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                Desenvolvido com <span style={{ color: 'var(--accent-danger)' }}>❤</span> por{' '}
+                Desenvolvido por{' '}
                 <a 
                   href="https://antoniorafael.com.br" 
                   target="_blank" 

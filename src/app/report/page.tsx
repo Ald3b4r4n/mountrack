@@ -132,7 +132,7 @@ export default function ReportPage() {
               {logs.map((log) => (
                 <tr key={log.id} style={{ borderBottom: '1px solid var(--border-glass)' }}>
                   <td style={{ padding: '1rem', fontSize: '0.9rem' }}>
-                    {new Date(log.date).toLocaleDateString('pt-BR')}
+                    {new Date(log.date + 'T12:00:00').toLocaleDateString('pt-BR')}
                   </td>
                   <td style={{ padding: '1rem', fontSize: '0.9rem' }}>
                     {log.type === 'dose' ? (

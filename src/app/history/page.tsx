@@ -81,10 +81,12 @@ export default function History() {
         weight: editData.weight,
       };
       
-      // Se for um registro de dose, atualiza os campos extras
+      // Atualiza os campos extras se existirem editados (inclusive notas soltas)
       if (editData.dose !== undefined && editData.dose !== null) {
         updatePayload.dose = editData.dose;
-        updatePayload.notes = editData.notes || '';
+      }
+      if (editData.notes !== undefined) {
+        updatePayload.notes = editData.notes;
       }
       
       await updateDoc(ref, updatePayload);
@@ -165,12 +167,10 @@ export default function History() {
                         </div>
                       )}
                     </div>
-                    {(log.type === 'dose' || log.notes !== undefined) && (
-                      <div>
-                        <label className="label" style={{ fontSize: '0.8rem' }}>Notas</label>
-                        <textarea rows={2} value={editData.notes || ''} onChange={(e) => setEditData(p => ({...p, notes: e.target.value}))} className="input-field" style={{ marginTop: '0.25rem', resize: 'none' }} />
-                      </div>
-                    )}
+                    <div>
+                      <label className="label" style={{ fontSize: '0.8rem' }}>Notas e Relatos</label>
+                      <textarea rows={2} value={editData.notes || ''} onChange={(e) => setEditData(p => ({...p, notes: e.target.value}))} className="input-field" style={{ marginTop: '0.25rem', resize: 'none' }} placeholder="(Opcional) Adicione anotações a esse registro..." />
+                    </div>
                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                       <button onClick={cancelEdit} className="btn-outline">Cancelar</button>
                       <button onClick={() => saveEdit(log.id)} disabled={saving} className="btn-primary" style={{ padding: '0.5rem 1.25rem' }}>
@@ -197,7 +197,7 @@ export default function History() {
 
                       <div>
                         <p style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 600, fontSize: '1rem' }}>
-                          {new Date(log.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                          {new Date(log.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
                         </p>
                         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '0.25rem' }}>
                           <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{log.weight} kg</span>

@@ -19,7 +19,10 @@ export default function LogDose() {
   
   // Tipo do registro: 'dose' ou 'weight'
   const [logType, setLogType] = useState<'dose' | 'weight'>('dose');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(() => {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  });
   const [dose, setDose] = useState('2.5');
   const [weight, setWeight] = useState('');
   const [notes, setNotes] = useState('');
@@ -39,10 +42,14 @@ export default function LogDose() {
         createdAt: serverTimestamp()
       };
 
-      // Se for registro de dose, inclui os campos extras
+      // Sempre adiciona as notas se existirem
+      if (notes.trim() !== '') {
+        logData.notes = notes;
+      }
+
+      // Se for registro de dose, inclui a dose referida
       if (logType === 'dose') {
         logData.dose = parseFloat(dose);
-        logData.notes = notes;
       }
 
       await addDoc(collection(db, 'users', user.uid, 'logs'), logData);
@@ -154,13 +161,11 @@ export default function LogDose() {
               <input type="number" id="weight" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="Ex: 87.5" required className="input-field" />
             </div>
 
-            {/* Notas — só aparece se for registro de dose */}
-            {logType === 'dose' && (
-              <div className="anim-enter" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label htmlFor="notes" className="label">Efeitos Colaterais / Notas</label>
-                <textarea id="notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ex: Leve enjoo no primeiro dia, saciedade muito alta." className="input-field" style={{ resize: 'none' }} />
-              </div>
-            )}
+            {/* Notas — sempre presente para o diário */}
+            <div className="anim-enter" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label htmlFor="notes" className="label">Efeitos Colaterais / Notas</label>
+              <textarea id="notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Como você está se sentindo? Dieta, colaterais, conquistas..." className="input-field" style={{ resize: 'none' }} />
+            </div>
 
             <button type="submit" disabled={loading} className="btn-primary" style={{ marginTop: '0.5rem', padding: '1rem', fontSize: '1rem', opacity: loading ? 0.7 : 1 }}>
               {loading ? 'Salvando...' : logType === 'dose' ? 'Salvar Dose' : 'Salvar Pesagem'}

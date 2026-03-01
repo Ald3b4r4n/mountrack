@@ -59,8 +59,8 @@ export default function Analytics() {
             const weightDiff = firstLog.weight - latestLog.weight;
             setTotalLoss(Number(weightDiff.toFixed(1)));
             
-            const d1 = new Date(firstLog.date);
-            const d2 = new Date(latestLog.date);
+            const d1 = new Date(firstLog.date + 'T12:00:00');
+            const d2 = new Date(latestLog.date + 'T12:00:00');
             const diffTime = Math.abs(d2.getTime() - d1.getTime());
             let diffWeeks = diffTime / (1000 * 60 * 60 * 24 * 7);
             if (diffWeeks < 1) diffWeeks = 1;
@@ -236,7 +236,7 @@ export default function Analytics() {
                   
                   {/* Data abaixo do eixo X */}
                   <text x={pt.x} y={SVG_H - PAD_BOTTOM + 16} textAnchor="middle" fill="var(--text-muted)" fontSize="9" fontFamily="DM Sans">
-                    {new Date(pt.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                    {new Date(pt.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                   </text>
                 </g>
               ))}
@@ -248,7 +248,7 @@ export default function Analytics() {
                 {chartLogs[0].weight}<span className="stat-unit">kg</span>
               </div>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                Registrado em {new Date(chartLogs[0].date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}
+                Registrado em {new Date(chartLogs[0].date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}
               </p>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Adicione mais registros para ver o gráfico de evolução.</p>
             </div>
