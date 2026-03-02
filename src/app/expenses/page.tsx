@@ -252,7 +252,7 @@ export default function Expenses() {
         </section>
 
         {/* =============== SEÇÃO PRINCIPAL (FORMULÁRIO E LISTAGEM) =============== */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', alignItems: 'start' }}>
           
           {/* Lado Esquerdo: Novo formulário de gasto */}
           <section className="glass-panel anim-enter anim-delay-1" style={{ padding: '2rem' }}>
@@ -307,7 +307,7 @@ export default function Expenses() {
               </div>
 
               {/* Layout para Valor e Data dividindo a mesma linha */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem' }}>
                 <div className="form-group">
                   <label className="form-label">Valor Gasto (R$)</label>
                   <input 
@@ -371,17 +371,19 @@ export default function Expenses() {
                     display: 'flex', 
                     justifyContent: 'space-between', 
                     alignItems: 'center', 
+                    flexWrap: 'wrap',
+                    gap: '0.5rem',
                     padding: '1rem', 
                     backgroundColor: 'var(--bg-tertiary)', 
                     borderRadius: '8px',
                     border: '1px solid var(--border-glass)'
                   }}>
                     {/* Detalhes principais do gasto à esquerda */}
-                    <div>
+                    <div style={{ flex: '1 1 auto', minWidth: '150px' }}>
                       <h4 style={{ margin: 0, fontSize: '1rem', fontFamily: "'Outfit', sans-serif", color: 'var(--text-primary)' }}>
                         {expense.title}
                       </h4>
-                      <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.25rem' }}>
                         <span>{getExpenseLabel(expense.type)}</span> • 
                         <span>
                           {new Date(expense.date + 'T12:00:00').toLocaleDateString('pt-BR')}
@@ -390,7 +392,7 @@ export default function Expenses() {
                     </div>
 
                     {/* Preço e Botão de Deletar à direita */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginTop: '0.5rem' }}>
                       <span style={{ fontWeight: 600, color: 'var(--accent-primary)', fontSize: '1.1rem' }}>
                         {formatCurrency(expense.amount)}
                       </span>

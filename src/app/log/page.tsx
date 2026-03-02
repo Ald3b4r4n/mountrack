@@ -86,7 +86,7 @@ export default function LogDose() {
           <p className="page-subtitle" style={{ marginBottom: '1.5rem' }}>Escolha o tipo de registro que deseja fazer.</p>
 
           {/* ===== SELETOR DE TIPO ===== */}
-          <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', marginBottom: '2rem' }}>
             <button
               type="button"
               onClick={() => setLogType('dose')}

@@ -111,7 +111,7 @@ export default function Home() {
 
         // Dados do registro mais recente com peso (qualquer tipo que não seja note puro)
         if (points.length > 0) {
-          const latest = points[points.length - 1];
+          const latest = points[0];
           setCurrentWeight(latest.weight);
           
           // Calcular diferença com o registro anterior
@@ -155,7 +155,7 @@ export default function Home() {
 
           // Só gera predição se houver uma tendência clara de PERDA de peso (slope negativo)
           // e o peso atual ainda for maior que a meta.
-          const latestW = points[points.length - 1].weight;
+          const latestW = points[0].weight;
           if (slope < -0.01 && latestW > target) {
             // Equação da reta: Y = slope * X + b => b = meanY - slope * meanX
             // Queremos descobrir o X (dias absolutos) onde Y será = target (meta)
