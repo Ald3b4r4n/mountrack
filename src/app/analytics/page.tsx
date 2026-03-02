@@ -141,10 +141,10 @@ export default function Analytics() {
 
   // Dimensões do SVG viewBox
   const SVG_W = 700;
-  const SVG_H = 260;
-  const PAD_X = 50;
-  const PAD_TOP = 30;
-  const PAD_BOTTOM = 45;
+  const SVG_H = 340;
+  const PAD_X = 60;
+  const PAD_TOP = 40;
+  const PAD_BOTTOM = 55;
 
   /**
    * Gera curva bezier suave a partir dos pontos de peso
@@ -286,7 +286,7 @@ export default function Analytics() {
                 return (
                   <g key={i}>
                     <line x1={PAD_X} y1={y} x2={SVG_W - PAD_X} y2={y} stroke="rgba(255,255,255,0.05)" strokeDasharray="4 4" />
-                    <text x={PAD_X - 8} y={y + 4} textAnchor="end" fill="var(--text-muted)" fontSize="10" fontFamily="DM Sans">{val.toFixed(1)}</text>
+                    <text x={PAD_X - 8} y={y + 5} textAnchor="end" fill="var(--text-muted)" fontSize="14" fontFamily="DM Sans">{val.toFixed(1)}</text>
                   </g>
                 );
               })}
@@ -295,24 +295,24 @@ export default function Analytics() {
               <path d={generateFillPath()} fill="url(#fillGradAnalytics)" />
 
               {/* Linha da curva suave */}
-              <path d={generateSmoothPath()} fill="none" stroke="url(#lineGradAnalytics)" strokeWidth="2.5" strokeLinecap="round" />
+              <path d={generateSmoothPath()} fill="none" stroke="url(#lineGradAnalytics)" strokeWidth="4" strokeLinecap="round" />
               
               {/* Pontos nos vértices e labels */}
               {getPointCoords().map((pt, i) => (
                 <g key={i}>
                   {/* Halo no último ponto */}
-                  {pt.isLast && <circle cx={pt.x} cy={pt.y} r="8" fill="var(--accent-primary)" opacity="0.15" filter="url(#dotGlow)" />}
+                  {pt.isLast && <circle cx={pt.x} cy={pt.y} r="16" fill="var(--accent-primary)" opacity="0.15" filter="url(#dotGlow)" />}
                   
                   {/* Ponto do vértice */}
-                  <circle cx={pt.x} cy={pt.y} r={pt.isLast ? 4.5 : 3} fill={pt.isLast ? 'var(--accent-primary)' : 'var(--bg-tertiary)'} stroke={pt.dose ? 'var(--accent-primary)' : 'var(--accent-secondary)'} strokeWidth="1.5" />
+                  <circle cx={pt.x} cy={pt.y} r={pt.isLast ? 6 : 4} fill={pt.isLast ? 'var(--accent-primary)' : 'var(--bg-tertiary)'} stroke={pt.dose ? 'var(--accent-primary)' : 'var(--accent-secondary)'} strokeWidth="2.5" />
                   
                   {/* Label de peso nos pontos chave */}
                   {(pt.isFirst || pt.isLast || i % Math.max(1, Math.floor(chartLogs.length / 4)) === 0) && (
-                    <text x={pt.x} y={pt.y - 12} textAnchor="middle" fill="var(--text-primary)" fontSize="10" fontFamily="Outfit" fontWeight="600">{pt.weight}</text>
+                    <text x={pt.x} y={pt.y - 16} textAnchor="middle" fill="var(--text-primary)" fontSize="16" fontFamily="Outfit" fontWeight="600">{pt.weight}</text>
                   )}
                   
                   {/* Data abaixo do eixo X */}
-                  <text x={pt.x} y={SVG_H - PAD_BOTTOM + 16} textAnchor="middle" fill="var(--text-muted)" fontSize="9" fontFamily="DM Sans">
+                  <text x={pt.x} y={SVG_H - PAD_BOTTOM + 22} textAnchor="middle" fill="var(--text-muted)" fontSize="13" fontFamily="DM Sans">
                     {new Date(pt.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                   </text>
                 </g>

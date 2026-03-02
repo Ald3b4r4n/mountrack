@@ -253,8 +253,8 @@ export default function Home() {
   };
 
   const SVG_W = 600;
-  const SVG_H = 200;
-  const SVG_PAD = 30;
+  const SVG_H = 260;
+  const SVG_PAD = 40;
 
   /**
    * V4: Gera o Link para o Google Calendar
@@ -388,7 +388,7 @@ export default function Home() {
                   {/* Área preenchida abaixo da curva */}
                   <path d={generateFillPath(chartPoints, SVG_W, SVG_H, SVG_PAD)} fill="url(#fillGrad)" />
                   {/* Linha da curva suave */}
-                  <path d={generateSmoothPath(chartPoints, SVG_W, SVG_H, SVG_PAD)} fill="none" stroke="url(#lineGrad)" strokeWidth="2.5" strokeLinecap="round" />
+                  <path d={generateSmoothPath(chartPoints, SVG_W, SVG_H, SVG_PAD)} fill="none" stroke="url(#lineGrad)" strokeWidth="4" strokeLinecap="round" />
                   {/* Pontos nos vértices */}
                   {chartPoints.map((p, i) => {
                     const maxW = Math.max(...chartPoints.map(pp => pp.weight));
@@ -399,11 +399,11 @@ export default function Home() {
                     const isLast = i === chartPoints.length - 1;
                     return (
                       <g key={i}>
-                        {isLast && <circle cx={cx} cy={cy} r="6" fill="var(--accent-primary)" opacity="0.2" />}
-                        <circle cx={cx} cy={cy} r={isLast ? 4 : 3} fill={isLast ? 'var(--accent-primary)' : 'var(--bg-tertiary)'} stroke="var(--accent-primary)" strokeWidth="1.5" />
+                        {isLast && <circle cx={cx} cy={cy} r="14" fill="var(--accent-primary)" opacity="0.2" />}
+                        <circle cx={cx} cy={cy} r={isLast ? 6 : 4} fill={isLast ? 'var(--accent-primary)' : 'var(--bg-tertiary)'} stroke="var(--accent-primary)" strokeWidth="2" />
                         {/* Label de peso no primeiro e último ponto */}
                         {(i === 0 || isLast) && (
-                          <text x={cx} y={cy - 10} textAnchor="middle" fill="var(--text-primary)" fontSize="11" fontFamily="Outfit" fontWeight="600">{p.weight}</text>
+                          <text x={cx} y={cy - 14} textAnchor="middle" fill="var(--text-primary)" fontSize="16" fontFamily="Outfit" fontWeight="600">{p.weight}</text>
                         )}
                       </g>
                     );
