@@ -1,7 +1,8 @@
 'use client';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import html2canvas from 'html2canvas';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Logo from '@/components/Logo';
 import { useAuth } from '@/contexts/AuthContext';
@@ -30,6 +31,55 @@ export default function Analytics() {
   const [currentDose, setCurrentDose] = useState<number>(0);
   const [totalLoss, setTotalLoss] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const captureRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Função para gerar a imagem da evolução e compartilhar via Web Share API
+   */
+  const handleShare = async () => {
+    if (!captureRef.current) return;
+    
+    try {
+      setIsCapturing(true); // Exibe a marca d'água no momento da captura
+      // Aguarda o React renderizar o estado de captura para mostrar a marca d'água oculta
+      await new Promise(res => setTimeout(res, 150));
+
+      const canvas = await html2canvas(captureRef.current, {
+        backgroundColor: '#0b1120', // var(--bg-primary) background do MounTrack
+        scale: 2, // Imagem em alta resolução (retina ratio)
+        logging: false,
+        useCORS: true
+      });
+
+      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('Falha ao instanciar o arquivo da imagem.');
+
+      const file = new File([blob], 'minha-evolucao.png', { type: 'image/png' });
+
+      // Detecta suporte a Navigator.Share (padrão em dispositivos móveis modernos)
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: 'Evolução MounTrack',
+          text: 'Olha o meu progresso no processo! Acompanhe o seu também no MounTrack 🔥.',
+          files: [file]
+        });
+      } else {
+        // Fallback em computadores Desktop: Faz o download automático
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'minha-evolucao-mountrack.png';
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error("Erro no compartilhamento:", err);
+      alert('Não foi possível gerar a imagem no momento.');
+    } finally {
+      setIsCapturing(false);
+    }
+  };
 
   useEffect(() => {
     async function fetchAnalytics() {
@@ -170,12 +220,32 @@ export default function Analytics() {
             <Logo size="md" />
             <p className="page-subtitle" style={{ marginTop: '0.25rem' }}>Acompanhe sua evolução de peso e dosagem.</p>
           </div>
-          <Link href="/" className="nav-pill">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-            Dashboard
-          </Link>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            {/* Botão de Compartilhar / Print da Evolução */}
+            <button onClick={handleShare} className="btn-primary" disabled={isCapturing} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: isCapturing ? 0.7 : 1 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+              {isCapturing ? 'Processando...' : 'Compartilhar'}
+            </button>
+            <Link href="/" className="nav-pill">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              Dashboard
+            </Link>
+          </div>
         </header>
-        
+
+        {/* ===== ÁREA DE CAPTURA DE IMAGEM ===== */}
+        <div ref={captureRef} style={{ padding: isCapturing ? '2rem' : '0', background: isCapturing ? '#0b1120' : 'transparent', borderRadius: isCapturing ? '16px' : '0' }}>
+          
+          {/* Marca d'água visível apenas no Print da Evolução */}
+          {isCapturing && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
+              <Logo size="sm" />
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                Meu progresso registrado no <strong>mountrack.vercel.app</strong>
+              </div>
+            </div>
+          )}
+
         {/* ===== GRÁFICO DE LINHA SVG SUAVE ===== */}
         <div className="glass-panel anim-enter anim-delay-1" style={{ padding: '2rem', marginBottom: '1.5rem' }}>
           <h2 style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', fontFamily: "'Outfit', sans-serif" }}>
@@ -281,6 +351,8 @@ export default function Analytics() {
             {currentDose > 0 && <span className="badge badge-success" style={{ marginTop: '0.5rem' }}>Ativa</span>}
           </div>
         </section>
+
+        </div> {/* Fim da área de captura */}
       </main>
     </ProtectedRoute>
   );
