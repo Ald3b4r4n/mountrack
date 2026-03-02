@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState, useRef } from 'react';
-import html2canvas from 'html2canvas';
+import { toBlob } from 'html-to-image';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Logo from '@/components/Logo';
 import { useAuth } from '@/contexts/AuthContext';
@@ -43,16 +43,22 @@ export default function Analytics() {
     try {
       setIsCapturing(true); // Exibe a marca d'água no momento da captura
       // Aguarda o React renderizar o estado de captura para mostrar a marca d'água oculta
-      await new Promise(res => setTimeout(res, 150));
+      // Aumentado o delay para garantir que SVG e fontes renderizem corretamente no DOM limpo
+      await new Promise(res => setTimeout(res, 300));
 
-      const canvas = await html2canvas(captureRef.current, {
+      const blob = await toBlob(captureRef.current, {
         backgroundColor: '#0b1120', // var(--bg-primary) background do MounTrack
-        scale: 2, // Imagem em alta resolução (retina ratio)
-        logging: false,
-        useCORS: true
+        pixelRatio: 2, // Imagem em alta resolução
+        style: {
+          // Remove transformações que bugam o html-to-image no iOS Safari/Webkit
+          transform: 'none',
+        },
+        filter: (node) => {
+          // Evita renderizar botões ou elementos indesejados caso existam dentro da ref acidentalmente
+          return !node.classList?.contains('print-hide');
+        }
       });
 
-      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
       if (!blob) throw new Error('Falha ao instanciar o arquivo da imagem.');
 
       const file = new File([blob], 'minha-evolucao.png', { type: 'image/png' });
@@ -247,7 +253,7 @@ export default function Analytics() {
           )}
 
         {/* ===== GRÁFICO DE LINHA SVG SUAVE ===== */}
-        <div className="glass-panel anim-enter anim-delay-1" style={{ padding: '2rem', marginBottom: '1.5rem' }}>
+        <div className={`glass-panel ${!isCapturing ? 'anim-enter anim-delay-1' : ''}`} style={{ padding: '2rem', marginBottom: '1.5rem', opacity: 1, transform: 'none' }}>
           <h2 style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', fontFamily: "'Outfit', sans-serif" }}>
             Evolução do Peso
           </h2>
@@ -333,19 +339,19 @@ export default function Analytics() {
 
         {/* ===== MÉTRICAS RESUMO ===== */}
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
-          <div className="glass-panel anim-enter anim-delay-2" style={{ padding: '1.75rem' }}>
+          <div className={`glass-panel ${!isCapturing ? 'anim-enter anim-delay-2' : ''}`} style={{ padding: '1.75rem', opacity: 1, transform: 'none' }}>
             <p className="stat-label">Média Semanal</p>
             <p className="stat-number" style={{ fontSize: '2.25rem', color: 'var(--accent-primary)' }}>{avgWeeklyLoss}<span className="stat-unit">kg</span></p>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>Perda média por semana</p>
           </div>
           
-          <div className="glass-panel anim-enter anim-delay-3" style={{ padding: '1.75rem' }}>
+          <div className={`glass-panel ${!isCapturing ? 'anim-enter anim-delay-3' : ''}`} style={{ padding: '1.75rem', opacity: 1, transform: 'none' }}>
             <p className="stat-label">Perda Total</p>
             <p className="stat-number" style={{ fontSize: '2.25rem', color: totalLoss > 0 ? 'var(--accent-primary)' : 'var(--text-primary)' }}>{totalLoss}<span className="stat-unit">kg</span></p>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>Desde o primeiro registro</p>
           </div>
           
-          <div className="glass-panel anim-enter anim-delay-4" style={{ padding: '1.75rem' }}>
+          <div className={`glass-panel ${!isCapturing ? 'anim-enter anim-delay-4' : ''}`} style={{ padding: '1.75rem', opacity: 1, transform: 'none' }}>
             <p className="stat-label">Dose Atual</p>
             <p className="stat-number" style={{ fontSize: '2.25rem' }}>{currentDose > 0 ? currentDose.toFixed(1) : '—'}<span className="stat-unit">mg</span></p>
             {currentDose > 0 && <span className="badge badge-success" style={{ marginTop: '0.5rem' }}>Ativa</span>}
