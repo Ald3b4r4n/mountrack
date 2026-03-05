@@ -97,7 +97,7 @@ export default function Journal() {
                     </h3>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem' }}>
                       {log.weight !== undefined && (
-                        <span className="badge" style={{ background: 'var(--bg-tertiary)' }}>{log.weight} kg</span>
+                        <span className="badge" style={{ background: 'rgba(6, 182, 212, 0.15)', color: 'var(--accent-secondary)' }}>⚖️ {log.weight} kg</span>
                       )}
                       
                       {log.dose && (

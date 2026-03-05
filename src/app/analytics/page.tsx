@@ -29,6 +29,7 @@ export default function Analytics() {
   const [logs, setLogs] = useState<LogData[]>([]);
   const [avgWeeklyLoss, setAvgWeeklyLoss] = useState<number>(0);
   const [currentDose, setCurrentDose] = useState<number>(0);
+  const [currentWeight, setCurrentWeight] = useState<number>(0);
   const [totalLoss, setTotalLoss] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -110,20 +111,24 @@ export default function Analytics() {
           }
            
           const weightLogs = fetchedLogs.filter(l => typeof l.weight === 'number');
-          if (weightLogs.length >= 2) {
-            const firstLog = weightLogs[0];
+          if (weightLogs.length > 0) {
             const latestLog = weightLogs[weightLogs.length - 1];
-            const weightDiff = firstLog.weight - latestLog.weight;
-            setTotalLoss(Number(weightDiff.toFixed(1)));
+            setCurrentWeight(latestLog.weight);
             
-            const d1 = new Date(firstLog.date + 'T12:00:00');
-            const d2 = new Date(latestLog.date + 'T12:00:00');
-            const diffTime = Math.abs(d2.getTime() - d1.getTime());
-            let diffWeeks = diffTime / (1000 * 60 * 60 * 24 * 7);
-            if (diffWeeks < 1) diffWeeks = 1;
-            
-            const avgLoss = weightDiff / diffWeeks;
-            setAvgWeeklyLoss(avgLoss > 0 ? Number(avgLoss.toFixed(2)) : 0);
+            if (weightLogs.length >= 2) {
+              const firstLog = weightLogs[0];
+              const weightDiff = firstLog.weight - latestLog.weight;
+              setTotalLoss(Number(weightDiff.toFixed(1)));
+              
+              const d1 = new Date(firstLog.date + 'T12:00:00');
+              const d2 = new Date(latestLog.date + 'T12:00:00');
+              const diffTime = Math.abs(d2.getTime() - d1.getTime());
+              let diffWeeks = diffTime / (1000 * 60 * 60 * 24 * 7);
+              if (diffWeeks < 1) diffWeeks = 1;
+              
+              const avgLoss = weightDiff / diffWeeks;
+              setAvgWeeklyLoss(avgLoss > 0 ? Number(avgLoss.toFixed(2)) : 0);
+            }
           }
         }
       } catch (err) {
@@ -338,20 +343,26 @@ export default function Analytics() {
         </div>
 
         {/* ===== MÉTRICAS RESUMO ===== */}
-        <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
-          <div className={`glass-panel ${!isCapturing ? 'anim-enter anim-delay-2' : ''}`} style={{ padding: '1.75rem', opacity: 1, transform: 'none' }}>
+        <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+          <div className={`glass-panel ${!isCapturing ? 'anim-enter anim-delay-1' : ''}`} style={{ padding: '1.5rem', opacity: 1, transform: 'none' }}>
+            <p className="stat-label">Peso Atual</p>
+            <p className="stat-number" style={{ fontSize: '2.25rem', color: 'var(--text-primary)' }}>{currentWeight > 0 ? currentWeight.toFixed(1) : '—'}<span className="stat-unit">kg</span></p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>Último registro</p>
+          </div>
+
+          <div className={`glass-panel ${!isCapturing ? 'anim-enter anim-delay-2' : ''}`} style={{ padding: '1.5rem', opacity: 1, transform: 'none' }}>
             <p className="stat-label">Média Semanal</p>
             <p className="stat-number" style={{ fontSize: '2.25rem', color: 'var(--accent-primary)' }}>{avgWeeklyLoss}<span className="stat-unit">kg</span></p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>Perda média por semana</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>Perda por semana</p>
           </div>
           
-          <div className={`glass-panel ${!isCapturing ? 'anim-enter anim-delay-3' : ''}`} style={{ padding: '1.75rem', opacity: 1, transform: 'none' }}>
+          <div className={`glass-panel ${!isCapturing ? 'anim-enter anim-delay-3' : ''}`} style={{ padding: '1.5rem', opacity: 1, transform: 'none' }}>
             <p className="stat-label">Perda Total</p>
             <p className="stat-number" style={{ fontSize: '2.25rem', color: totalLoss > 0 ? 'var(--accent-primary)' : 'var(--text-primary)' }}>{totalLoss}<span className="stat-unit">kg</span></p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>Desde o primeiro registro</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>Desde o início</p>
           </div>
           
-          <div className={`glass-panel ${!isCapturing ? 'anim-enter anim-delay-4' : ''}`} style={{ padding: '1.75rem', opacity: 1, transform: 'none' }}>
+          <div className={`glass-panel ${!isCapturing ? 'anim-enter anim-delay-4' : ''}`} style={{ padding: '1.5rem', opacity: 1, transform: 'none' }}>
             <p className="stat-label">Dose Atual</p>
             <p className="stat-number" style={{ fontSize: '2.25rem' }}>{currentDose > 0 ? currentDose.toFixed(1) : '—'}<span className="stat-unit">mg</span></p>
             {currentDose > 0 && <span className="badge badge-success" style={{ marginTop: '0.5rem' }}>Ativa</span>}
