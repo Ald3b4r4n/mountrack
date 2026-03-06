@@ -18,7 +18,9 @@ export default function PageTransition({ children }: { children: React.ReactNode
   useEffect(() => {
     // Se a rota mudou, faz o fade out → troca conteúdo → fade in
     if (pathname !== prevPathname.current) {
-      setIsVisible(false);
+      setTimeout(() => {
+        setIsVisible(false);
+      }, 0);
 
       const timeout = setTimeout(() => {
         setDisplayChildren(children);
@@ -34,7 +36,9 @@ export default function PageTransition({ children }: { children: React.ReactNode
       return () => clearTimeout(timeout);
     } else {
       // Se é a primeira montagem ou o conteúdo mudou sem mudar de rota
-      setDisplayChildren(children);
+      setTimeout(() => {
+        setDisplayChildren(children);
+      }, 0);
       requestAnimationFrame(() => {
         setIsVisible(true);
       });
