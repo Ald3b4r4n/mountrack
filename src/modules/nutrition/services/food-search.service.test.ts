@@ -20,5 +20,15 @@ describe("food search service", () => {
 
     expect(results[0]?.barcode).toBe("7891000100103");
   });
+
+  it("matches branded whey searches through brand and tags", async () => {
+    const results = await searchFoodsByQuery("Growth", {
+      internalFoods: INTERNAL_FOODS,
+      externalResults: [],
+    });
+
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0]?.brand).toBe("Growth");
+  });
 });
 

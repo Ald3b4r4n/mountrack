@@ -3,7 +3,7 @@ import type { DiaryHistoryEntry } from "@/modules/nutrition/domain/types";
 import { requireNutritionUser } from "@/modules/nutrition/auth/require-user";
 import { toNutritionRouteErrorResponse } from "@/modules/nutrition/http/route-error";
 import { buildDailySummary } from "@/modules/nutrition/services/daily-calories.service";
-import { getGoal, listDiaryHistory } from "@/modules/nutrition/repositories/nutrition-store";
+import { getGoal, getNutritionStorageHeaders, listDiaryHistory } from "@/modules/nutrition/repositories/nutrition-store";
 
 export const runtime = "nodejs";
 
@@ -29,13 +29,16 @@ export async function GET(request: Request) {
       }),
     }));
 
-    return NextResponse.json({
-      entries,
-      page,
-      pageSize,
-      total,
-      totalPages: Math.max(1, Math.ceil(total / pageSize)),
-    });
+    return NextResponse.json(
+      {
+        entries,
+        page,
+        pageSize,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / pageSize)),
+      },
+      { headers: getNutritionStorageHeaders() },
+    );
   } catch (error) {
     return toNutritionRouteErrorResponse(error, {
       defaultMessage: "Unable to load nutrition history",

@@ -15,10 +15,15 @@ function normalizeTerm(value: string): string {
     .trim();
 }
 
+function getNormalizedTags(food: FoodItem): string[] {
+  return (food.tags ?? []).map(normalizeTerm).filter(Boolean);
+}
+
 function computeFoodScore(food: FoodItem, rawQuery: string): number {
   const query = normalizeTerm(rawQuery);
   const normalizedName = normalizeTerm(food.displayName ?? food.name);
   const normalizedBrand = normalizeTerm(food.brand ?? "");
+  const normalizedTags = getNormalizedTags(food);
 
   if (food.barcode && rawQuery.trim() === food.barcode) {
     return 1200 + food.confidenceScore * 100;
@@ -29,7 +34,10 @@ function computeFoodScore(food: FoodItem, rawQuery: string): number {
   if (normalizedName === query) score += 260;
   if (normalizedName.startsWith(query)) score += 190;
   if (normalizedName.includes(query)) score += 150;
+  if (normalizedBrand === query) score += 125;
   if (normalizedBrand.includes(query)) score += 40;
+  if (normalizedTags.includes(query)) score += 95;
+  if (normalizedTags.some((tag) => tag.includes(query))) score += 65;
   if (food.locale?.startsWith("pt")) score += 55;
   if (food.countryCode === "BR") score += 45;
   if (food.source === "openfoodfacts") score += 24;
@@ -61,10 +69,12 @@ export async function searchFoodsByQuery(
     if (!normalizedQuery) return true;
     const normalizedName = normalizeTerm(food.displayName ?? food.name);
     const normalizedBrand = normalizeTerm(food.brand ?? "");
+    const normalizedTags = getNormalizedTags(food);
     return (
       food.barcode === query.trim() ||
       normalizedName.includes(normalizedQuery) ||
-      normalizedBrand.includes(normalizedQuery)
+      normalizedBrand.includes(normalizedQuery) ||
+      normalizedTags.some((tag) => tag.includes(normalizedQuery))
     );
   });
 

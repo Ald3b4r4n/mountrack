@@ -3,7 +3,7 @@ import { requireNutritionUser } from "@/modules/nutrition/auth/require-user";
 import { toNutritionRouteErrorResponse } from "@/modules/nutrition/http/route-error";
 import { INTERNAL_FOODS } from "@/modules/nutrition/data/internal-foods";
 import { generateMealPlan } from "@/modules/nutrition/services/meal-plan.service";
-import { getGoal, listFoods, saveMealPlan } from "@/modules/nutrition/repositories/nutrition-store";
+import { getGoal, getNutritionStorageHeaders, listFoods, saveMealPlan } from "@/modules/nutrition/repositories/nutrition-store";
 import { mealPlanRequestSchema } from "@/modules/nutrition/validators";
 
 export const runtime = "nodejs";
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     const mealPlan = generateMealPlan(payload, foods);
     await saveMealPlan(user.uid, mealPlan);
 
-    return NextResponse.json({ mealPlan });
+    return NextResponse.json({ mealPlan }, { headers: getNutritionStorageHeaders() });
   } catch (error) {
     return toNutritionRouteErrorResponse(error, {
       defaultMessage: "Unable to generate meal plan",

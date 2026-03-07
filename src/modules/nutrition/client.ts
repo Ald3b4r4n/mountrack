@@ -11,6 +11,8 @@ type NutritionErrorPayload = {
   error?: string;
 };
 
+export type NutritionResponseStorage = "database" | "memory";
+
 export function isLocalDevHost(): boolean {
   if (typeof window === "undefined") {
     return false;
@@ -46,6 +48,10 @@ export async function authorizedNutritionFetch(
     ...init,
     headers,
   });
+}
+
+export function getNutritionStorageMode(response: Response): NutritionResponseStorage {
+  return response.headers.get("x-nutrition-storage") === "memory" ? "memory" : "database";
 }
 
 export async function getNutritionErrorMessage(response: Response, fallbackMessage: string): Promise<string> {

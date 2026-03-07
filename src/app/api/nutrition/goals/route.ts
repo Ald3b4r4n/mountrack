@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireNutritionUser } from "@/modules/nutrition/auth/require-user";
 import { toNutritionRouteErrorResponse } from "@/modules/nutrition/http/route-error";
 import { nutritionGoalSchema } from "@/modules/nutrition/validators";
-import { getGoal, saveGoal } from "@/modules/nutrition/repositories/nutrition-store";
+import { getGoal, getNutritionStorageHeaders, saveGoal } from "@/modules/nutrition/repositories/nutrition-store";
 
 export const runtime = "nodejs";
 
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   try {
     const { user, defaultGoal } = await requireNutritionUser(request);
     const goal = await getGoal(user.uid, defaultGoal);
-    return NextResponse.json({ goal });
+    return NextResponse.json({ goal }, { headers: getNutritionStorageHeaders() });
   } catch (error) {
     return toNutritionRouteErrorResponse(error, {
       defaultMessage: "Unable to fetch goal",
@@ -33,7 +33,7 @@ export async function PUT(request: Request) {
       targetFat: payload.targetFat,
       objective: payload.objective,
     });
-    return NextResponse.json({ goal });
+    return NextResponse.json({ goal }, { headers: getNutritionStorageHeaders() });
   } catch (error) {
     return toNutritionRouteErrorResponse(error, {
       defaultMessage: "Unable to save goal",

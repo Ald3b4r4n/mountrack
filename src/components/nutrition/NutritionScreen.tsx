@@ -7,7 +7,21 @@ import { startTransition, useCallback, useEffect, useMemo, useState, type ReactN
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { BarcodeScannerDialog } from "@/components/nutrition/BarcodeScannerDialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { authorizedNutritionFetch, getNutritionErrorMessage } from "@/modules/nutrition/client";
+import {
+  clearNutritionMealPlanFromBrowser,
+  hasNutritionBrowserSnapshot,
+  loadNutritionDashboardFromBrowser,
+  loadNutritionHistoryFromBrowser,
+  saveNutritionDiaryItemToBrowser,
+  saveNutritionGoalToBrowser,
+  saveNutritionMealPlanToBrowser,
+  saveNutritionWaterToBrowser,
+  seedNutritionBrowserFromDashboard,
+  removeNutritionDiaryItemFromBrowser,
+  type NutritionDashboardSnapshot,
+  type NutritionHistorySnapshot,
+} from "@/modules/nutrition/client-storage";
+import { authorizedNutritionFetch, getNutritionErrorMessage, getNutritionStorageMode } from "@/modules/nutrition/client";
 import type {
   DailySummary,
   DiaryHistoryEntry,
@@ -21,6 +35,7 @@ import type {
   NutritionTotals,
   NutritionUnit,
 } from "@/modules/nutrition/domain/types";
+import { createDiaryItemSnapshot } from "@/modules/nutrition/services/daily-calories.service";
 import { calculateNutritionForQuantity } from "@/modules/nutrition/services/nutrition-calc.service";
 import { getTodayLocalDate } from "@/modules/expenses/utils";
 import { buildMealPlanPdfHtml } from "@/components/nutrition/meal-plan-pdf";
@@ -63,19 +78,7 @@ const MACRO_LABELS = {
 type WorkspaceTabKey = "diary" | "goal" | "plan";
 type ActiveSurface = "search" | "workspace";
 type DiaryViewKey = "today" | "history";
-
-type DashboardPayload = {
-  diary?: { items: DiaryItemSnapshot[] };
-  summary?: DailySummary;
-  goal?: NutritionGoal;
-  mealPlan?: MealPlan | null;
-};
-
-type HistoryPayload = {
-  entries?: DiaryHistoryEntry[];
-  page?: number;
-  totalPages?: number;
-};
+type NutritionUiStorageMode = "api" | "volatile";
 
 const WORKSPACE_TABS: Array<{ key: WorkspaceTabKey; label: string }> = [
   { key: "diary", label: "Diario" },
@@ -156,6 +159,20 @@ function parseInputNumber(value: string): number | null {
   return parsedValue;
 }
 
+function parseNonNegativeInputNumber(value: string): number | null {
+  const normalizedValue = value.replace(",", ".").trim();
+  if (!normalizedValue) {
+    return null;
+  }
+
+  const parsedValue = Number(normalizedValue);
+  if (!Number.isFinite(parsedValue) || parsedValue < 0) {
+    return null;
+  }
+
+  return parsedValue;
+}
+
 function cloneMealPlan(plan: MealPlan | null): MealPlan | null {
   if (!plan) return null;
   return {
@@ -228,6 +245,13 @@ export function NutritionScreen() {
   const [diaryItems, setDiaryItems] = useState<DiaryItemSnapshot[]>([]);
   const [summary, setSummary] = useState<DailySummary>(() => createEmptySummary(today));
   const [goal, setGoal] = useState<NutritionGoal>(DEFAULT_GOAL);
+  const [goalInputs, setGoalInputs] = useState(() => ({
+    targetCalories: String(DEFAULT_GOAL.targetCalories),
+    targetWaterMl: String(DEFAULT_GOAL.targetWaterMl ?? DEFAULT_WATER_TARGET),
+    targetProtein: String(DEFAULT_GOAL.targetProtein ?? 0),
+    targetCarbs: String(DEFAULT_GOAL.targetCarbs ?? 0),
+    targetFat: String(DEFAULT_GOAL.targetFat ?? 0),
+  }));
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [mealPlanDraft, setMealPlanDraft] = useState<MealPlan | null>(null);
   const [planCalories, setPlanCalories] = useState(String(DEFAULT_GOAL.targetCalories));
@@ -253,6 +277,7 @@ export function NutritionScreen() {
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [isUpdatingWater, setIsUpdatingWater] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [storageMode, setStorageMode] = useState<NutritionUiStorageMode>("api");
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 860px)");
@@ -276,6 +301,22 @@ export function NutritionScreen() {
     setWaterDraft(String(Math.round(summary.waterIntakeMl)));
   }, [summary.waterIntakeMl]);
 
+  useEffect(() => {
+    setGoalInputs({
+      targetCalories: String(goal.targetCalories),
+      targetWaterMl: String(goal.targetWaterMl ?? DEFAULT_WATER_TARGET),
+      targetProtein: String(goal.targetProtein ?? 0),
+      targetCarbs: String(goal.targetCarbs ?? 0),
+      targetFat: String(goal.targetFat ?? 0),
+    });
+  }, [goal]);
+
+  useEffect(() => {
+    setStorageMode("api");
+  }, [activeUser?.uid]);
+
+  const canUseBrowserPersistence = Boolean(activeUser && !("devBypass" in activeUser && activeUser.devBypass));
+
   const resolveRequestError = useCallback(async (response: Response, fallbackMessage: string) => {
     const nextMessage = await getNutritionErrorMessage(response, fallbackMessage);
     setMessage(nextMessage);
@@ -283,7 +324,7 @@ export function NutritionScreen() {
   }, []);
 
   const hydrateDashboard = useCallback(
-    (payload: DashboardPayload) => {
+    (payload: Partial<NutritionDashboardSnapshot>) => {
       const nextGoal = {
         ...DEFAULT_GOAL,
         ...(payload.goal ?? {}),
@@ -307,31 +348,128 @@ export function NutritionScreen() {
     [activeUser?.uid, today],
   );
 
-  const loadDashboard = useCallback(async () => {
-    if (!activeUser) return;
+  const hydrateHistory = useCallback((payload: Partial<NutritionHistorySnapshot>) => {
+    const totalPages = Math.max(1, payload.totalPages ?? 1);
+    const safePage = Math.min(payload.page ?? 1, totalPages);
+    setHistoryEntries(payload.entries ?? []);
+    setHistoryTotalPages(totalPages);
+    setHistoryPage(safePage);
+  }, []);
+
+  const loadBrowserDashboard = useCallback(() => {
+    if (!activeUser) return null;
+
+    return loadNutritionDashboardFromBrowser(activeUser.uid, today, {
+      ...DEFAULT_GOAL,
+      ...goal,
+      userId: activeUser.uid,
+      targetWaterMl: goal.targetWaterMl ?? DEFAULT_WATER_TARGET,
+    });
+  }, [activeUser, goal, today]);
+
+  const loadBrowserHistory = useCallback(
+    (page: number) => {
+      if (!activeUser) return null;
+
+      return loadNutritionHistoryFromBrowser(
+        activeUser.uid,
+        {
+          ...DEFAULT_GOAL,
+          ...goal,
+          userId: activeUser.uid,
+          targetWaterMl: goal.targetWaterMl ?? DEFAULT_WATER_TARGET,
+        },
+        page,
+        HISTORY_PAGE_SIZE,
+      );
+    },
+    [activeUser, goal],
+  );
+
+  const loadDashboard = useCallback(async (): Promise<NutritionUiStorageMode> => {
+    if (!activeUser) return "api";
 
     setIsLoading(true);
     try {
       const response = await authorizedNutritionFetch(activeUser, `/api/nutrition/diaries/${today}`);
       if (!response.ok) {
         await resolveRequestError(response, "Nao foi possivel carregar o painel de nutricao agora.");
-        return;
+        if (canUseBrowserPersistence && hasNutritionBrowserSnapshot(activeUser.uid)) {
+          setStorageMode("volatile");
+          const browserDashboard = loadBrowserDashboard();
+          if (browserDashboard) {
+            hydrateDashboard(browserDashboard);
+            return "volatile";
+          }
+        }
+        return "api";
       }
-      const payload = (await response.json()) as DashboardPayload;
+
+      const nextStorageMode =
+        getNutritionStorageMode(response) === "memory" && canUseBrowserPersistence ? "volatile" : "api";
+      setStorageMode(nextStorageMode);
+
+      const payload = (await response.json()) as Partial<NutritionDashboardSnapshot>;
+
+      if (nextStorageMode === "volatile" && canUseBrowserPersistence) {
+        if (!hasNutritionBrowserSnapshot(activeUser.uid)) {
+          seedNutritionBrowserFromDashboard(activeUser.uid, today, payload, {
+            ...DEFAULT_GOAL,
+            ...goal,
+            userId: activeUser.uid,
+            targetWaterMl: goal.targetWaterMl ?? DEFAULT_WATER_TARGET,
+          });
+        }
+
+        const browserDashboard = loadBrowserDashboard();
+        if (browserDashboard) {
+          hydrateDashboard(browserDashboard);
+          return nextStorageMode;
+        }
+      }
+
       hydrateDashboard(payload);
+      return nextStorageMode;
     } catch {
+      if (canUseBrowserPersistence && activeUser && hasNutritionBrowserSnapshot(activeUser.uid)) {
+        setStorageMode("volatile");
+        const browserDashboard = loadBrowserDashboard();
+        if (browserDashboard) {
+          hydrateDashboard(browserDashboard);
+          return "volatile";
+        }
+      }
+
       setMessage((current) => current ?? "Nao foi possivel carregar o painel de nutricao agora.");
+      return "api";
     } finally {
       setIsLoading(false);
     }
-  }, [activeUser, hydrateDashboard, resolveRequestError, today]);
+  }, [
+    activeUser,
+    canUseBrowserPersistence,
+    goal,
+    hydrateDashboard,
+    loadBrowserDashboard,
+    resolveRequestError,
+    today,
+  ]);
 
   const loadHistory = useCallback(
-    async (nextPage: number) => {
+    async (nextPage: number, modeOverride?: NutritionUiStorageMode) => {
       if (!activeUser) return;
 
       setIsHistoryLoading(true);
       try {
+        const resolvedMode = modeOverride ?? storageMode;
+        if (resolvedMode === "volatile" && canUseBrowserPersistence) {
+          const browserHistory = loadBrowserHistory(nextPage);
+          if (browserHistory) {
+            hydrateHistory(browserHistory);
+            return;
+          }
+        }
+
         const response = await authorizedNutritionFetch(
           activeUser,
           `/api/nutrition/history?page=${nextPage}&pageSize=${HISTORY_PAGE_SIZE}`,
@@ -340,19 +478,36 @@ export function NutritionScreen() {
           await resolveRequestError(response, "Nao foi possivel carregar o historico agora.");
           return;
         }
-        const payload = (await response.json()) as HistoryPayload;
-        const totalPages = Math.max(1, payload.totalPages ?? 1);
-        const safePage = Math.min(nextPage, totalPages);
-        setHistoryEntries(payload.entries ?? []);
-        setHistoryTotalPages(totalPages);
-        setHistoryPage(safePage);
+
+        const nextStorageMode =
+          getNutritionStorageMode(response) === "memory" && canUseBrowserPersistence ? "volatile" : "api";
+        if (nextStorageMode === "volatile" && canUseBrowserPersistence) {
+          setStorageMode("volatile");
+          const browserHistory = loadBrowserHistory(nextPage);
+          if (browserHistory) {
+            hydrateHistory(browserHistory);
+            return;
+          }
+        }
+
+        const payload = (await response.json()) as Partial<NutritionHistorySnapshot>;
+        hydrateHistory(payload);
       } catch {
+        if (canUseBrowserPersistence && activeUser && hasNutritionBrowserSnapshot(activeUser.uid)) {
+          setStorageMode("volatile");
+          const browserHistory = loadBrowserHistory(nextPage);
+          if (browserHistory) {
+            hydrateHistory(browserHistory);
+            return;
+          }
+        }
+
         setMessage((current) => current ?? "Nao foi possivel carregar o historico agora.");
       } finally {
         setIsHistoryLoading(false);
       }
     },
-    [activeUser, resolveRequestError],
+    [activeUser, canUseBrowserPersistence, hydrateHistory, loadBrowserHistory, resolveRequestError, storageMode],
   );
 
   useEffect(() => {
@@ -360,7 +515,17 @@ export function NutritionScreen() {
 
     setHistoryPage(1);
     setDiaryPage(1);
-    void Promise.all([loadDashboard(), loadHistory(1)]);
+    let cancelled = false;
+
+    void (async () => {
+      const nextMode = await loadDashboard();
+      if (cancelled) return;
+      await loadHistory(1, nextMode);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [activeUser, loadDashboard, loadHistory]);
 
   function clearSearchResults() {
@@ -495,6 +660,38 @@ export function NutritionScreen() {
     }
 
     try {
+      if (storageMode === "volatile" && canUseBrowserPersistence) {
+        const snapshot = createDiaryItemSnapshot({
+          diaryId: `${activeUser.uid}:${today}`,
+          food: selectedFood,
+          quantity: parsedQuantity,
+          unit,
+          mealType,
+          consumedAt: new Date().toISOString(),
+        });
+
+        saveNutritionDiaryItemToBrowser(activeUser.uid, today, {
+          ...DEFAULT_GOAL,
+          ...goal,
+          userId: activeUser.uid,
+          targetWaterMl: goal.targetWaterMl ?? DEFAULT_WATER_TARGET,
+        }, snapshot);
+
+        const browserDashboard = loadBrowserDashboard();
+        const browserHistory = loadBrowserHistory(1);
+        if (browserDashboard) hydrateDashboard(browserDashboard);
+        if (browserHistory) hydrateHistory(browserHistory);
+
+        setActiveWorkspace("diary");
+        setActiveDiaryView("today");
+        setActiveSurface("workspace");
+        setActiveDiaryMeal(mealType);
+        setHistoryPage(1);
+        setMessage(`${getFoodLabel(selectedFood)} adicionado ao diario.`);
+        resetSearchComposer(true);
+        return;
+      }
+
       const response = await authorizedNutritionFetch(activeUser, "/api/nutrition/diary-items", {
         method: "POST",
         body: JSON.stringify({
@@ -528,6 +725,15 @@ export function NutritionScreen() {
     if (!activeUser) return;
 
     try {
+      if (storageMode === "volatile" && canUseBrowserPersistence) {
+        removeNutritionDiaryItemFromBrowser(activeUser.uid, itemId);
+        const browserDashboard = loadBrowserDashboard();
+        const browserHistory = loadBrowserHistory(historyPage);
+        if (browserDashboard) hydrateDashboard(browserDashboard);
+        if (browserHistory) hydrateHistory(browserHistory);
+        return;
+      }
+
       const response = await authorizedNutritionFetch(activeUser, `/api/nutrition/diary-items/${itemId}`, { method: "DELETE" });
       if (!response.ok) {
         await resolveRequestError(response, "Nao foi possivel remover esse item do diario.");
@@ -539,21 +745,65 @@ export function NutritionScreen() {
     }
   }
 
+  function resolveGoalFromInputs(): NutritionGoal | null {
+    const targetCalories = parseNonNegativeInputNumber(goalInputs.targetCalories);
+    const targetWaterMl = parseNonNegativeInputNumber(goalInputs.targetWaterMl);
+    const targetProtein = parseNonNegativeInputNumber(goalInputs.targetProtein);
+    const targetCarbs = parseNonNegativeInputNumber(goalInputs.targetCarbs);
+    const targetFat = parseNonNegativeInputNumber(goalInputs.targetFat);
+
+    if (targetCalories == null || targetCalories <= 0) {
+      return null;
+    }
+
+    if (targetWaterMl == null || targetProtein == null || targetCarbs == null || targetFat == null) {
+      return null;
+    }
+
+    return {
+      ...goal,
+      userId: activeUser?.uid ?? goal.userId,
+      targetCalories,
+      targetWaterMl,
+      targetProtein,
+      targetCarbs,
+      targetFat,
+    };
+  }
+
   async function handleSaveGoal() {
     if (!activeUser) return;
+
+    const requestedGoal = resolveGoalFromInputs();
+    if (!requestedGoal) {
+      setMessage("Preencha uma meta valida antes de salvar.");
+      return;
+    }
 
     setIsSavingGoal(true);
     setMessage(null);
     try {
+      if (storageMode === "volatile" && canUseBrowserPersistence) {
+        saveNutritionGoalToBrowser(activeUser.uid, requestedGoal);
+        const browserDashboard = loadBrowserDashboard();
+        const browserHistory = loadBrowserHistory(historyPage);
+        if (browserDashboard) hydrateDashboard(browserDashboard);
+        if (browserHistory) hydrateHistory(browserHistory);
+        setActiveWorkspace("goal");
+        setActiveSurface("workspace");
+        setMessage("Meta nutricional atualizada.");
+        return;
+      }
+
       const response = await authorizedNutritionFetch(activeUser, "/api/nutrition/goals", {
         method: "PUT",
         body: JSON.stringify({
-          targetCalories: goal.targetCalories,
-          targetWaterMl: goal.targetWaterMl ?? DEFAULT_WATER_TARGET,
-          targetProtein: goal.targetProtein,
-          targetCarbs: goal.targetCarbs,
-          targetFat: goal.targetFat,
-          objective: goal.objective,
+          targetCalories: requestedGoal.targetCalories,
+          targetWaterMl: requestedGoal.targetWaterMl ?? DEFAULT_WATER_TARGET,
+          targetProtein: requestedGoal.targetProtein,
+          targetCarbs: requestedGoal.targetCarbs,
+          targetFat: requestedGoal.targetFat,
+          objective: requestedGoal.objective,
         }),
       });
       if (!response.ok) {
@@ -561,20 +811,20 @@ export function NutritionScreen() {
         return;
       }
       const payload = (await response.json()) as { goal?: NutritionGoal };
-      const nextGoal = {
-        ...goal,
+      const savedGoal = {
+        ...requestedGoal,
         ...(payload.goal ?? {}),
         userId: payload.goal?.userId ?? activeUser.uid,
-        targetWaterMl: payload.goal?.targetWaterMl ?? goal.targetWaterMl ?? DEFAULT_WATER_TARGET,
+        targetWaterMl: payload.goal?.targetWaterMl ?? requestedGoal.targetWaterMl ?? DEFAULT_WATER_TARGET,
       } satisfies NutritionGoal;
 
-      setGoal(nextGoal);
-      setPlanCalories(String(nextGoal.targetCalories));
+      setGoal(savedGoal);
+      setPlanCalories(String(savedGoal.targetCalories));
       setSummary((current) => ({
         ...current,
-        targetCalories: nextGoal.targetCalories,
-        targetWaterMl: nextGoal.targetWaterMl ?? DEFAULT_WATER_TARGET,
-        remainingCalories: roundValue(nextGoal.targetCalories - current.consumedCalories),
+        targetCalories: savedGoal.targetCalories,
+        targetWaterMl: savedGoal.targetWaterMl ?? DEFAULT_WATER_TARGET,
+        remainingCalories: roundValue(savedGoal.targetCalories - current.consumedCalories),
       }));
       setActiveWorkspace("goal");
       setActiveSurface("workspace");
@@ -596,6 +846,22 @@ export function NutritionScreen() {
     setIsUpdatingWater(true);
     setMessage(null);
     try {
+      if (storageMode === "volatile" && canUseBrowserPersistence) {
+        saveNutritionWaterToBrowser(activeUser.uid, today, {
+          ...DEFAULT_GOAL,
+          ...goal,
+          userId: activeUser.uid,
+          targetWaterMl: goal.targetWaterMl ?? DEFAULT_WATER_TARGET,
+        }, nextWaterIntake);
+
+        const browserDashboard = loadBrowserDashboard();
+        const browserHistory = loadBrowserHistory(historyPage);
+        if (browserDashboard) hydrateDashboard(browserDashboard);
+        if (browserHistory) hydrateHistory(browserHistory);
+        setMessage("Ingestao de agua atualizada.");
+        return;
+      }
+
       const response = await authorizedNutritionFetch(activeUser, `/api/nutrition/diaries/${today}`, {
         method: "PATCH",
         body: JSON.stringify({ waterIntakeMl: nextWaterIntake }),
@@ -604,7 +870,7 @@ export function NutritionScreen() {
         await resolveRequestError(response, "Nao foi possivel atualizar a agua do dia.");
         return;
       }
-      const payload = (await response.json()) as DashboardPayload;
+      const payload = (await response.json()) as Partial<NutritionDashboardSnapshot>;
       hydrateDashboard(payload);
       setMessage("Ingestao de agua atualizada.");
       await loadHistory(historyPage);
@@ -650,6 +916,11 @@ export function NutritionScreen() {
       const payload = (await response.json()) as { mealPlan?: MealPlan };
       if (payload.mealPlan) {
         const nextPlan = normalizeMealPlan(payload.mealPlan);
+
+        if (storageMode === "volatile" && canUseBrowserPersistence) {
+          saveNutritionMealPlanToBrowser(activeUser.uid, nextPlan);
+        }
+
         startTransition(() => {
           setMealPlan(nextPlan);
           setMealPlanDraft(cloneMealPlan(nextPlan));
@@ -669,6 +940,15 @@ export function NutritionScreen() {
     if (!activeUser) return;
 
     try {
+      if (storageMode === "volatile" && canUseBrowserPersistence) {
+        clearNutritionMealPlanFromBrowser(activeUser.uid);
+        setMealPlan(null);
+        setMealPlanDraft(null);
+        setPlanRejectedFoods([]);
+        setMessage("Cardapio descartado.");
+        return;
+      }
+
       const response = await authorizedNutritionFetch(activeUser, "/api/nutrition/meal-plans", { method: "DELETE" });
       if (!response.ok) {
         await resolveRequestError(response, "Nao foi possivel descartar o cardapio agora.");
@@ -707,7 +987,12 @@ export function NutritionScreen() {
         };
       });
 
-      return normalizeMealPlan({ ...currentPlan, meals: nextMeals });
+      const nextPlan = normalizeMealPlan({ ...currentPlan, meals: nextMeals });
+      if (storageMode === "volatile" && canUseBrowserPersistence && activeUser) {
+        saveNutritionMealPlanToBrowser(activeUser.uid, nextPlan);
+      }
+
+      return nextPlan;
     });
   }
 
@@ -723,7 +1008,12 @@ export function NutritionScreen() {
         if (currentMealIndex !== mealIndex) return meal;
         return { ...meal, items: meal.items.filter((_, currentItemIndex) => currentItemIndex !== itemIndex) };
       });
-      return normalizeMealPlan({ ...currentPlan, meals: nextMeals });
+      const nextPlan = normalizeMealPlan({ ...currentPlan, meals: nextMeals });
+      if (storageMode === "volatile" && canUseBrowserPersistence && activeUser) {
+        saveNutritionMealPlanToBrowser(activeUser.uid, nextPlan);
+      }
+
+      return nextPlan;
     });
   }
 
@@ -1014,11 +1304,11 @@ export function NutritionScreen() {
                     <span className="badge badge-success">{OBJECTIVE_LABELS[goal.objective]}</span>
                   </div>
                   <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))" }}>
-                    <Field label="Calorias"><input className="input-field" type="number" value={goal.targetCalories} onChange={(event) => setGoal((current) => ({ ...current, targetCalories: Number(event.target.value) }))} /></Field>
-                    <Field label="Agua (ml)"><input className="input-field" type="number" value={goal.targetWaterMl ?? DEFAULT_WATER_TARGET} onChange={(event) => setGoal((current) => ({ ...current, targetWaterMl: Number(event.target.value) }))} /></Field>
-                    <Field label="Proteina"><input className="input-field" type="number" value={goal.targetProtein ?? 0} onChange={(event) => setGoal((current) => ({ ...current, targetProtein: Number(event.target.value) }))} /></Field>
-                    <Field label="Carbo"><input className="input-field" type="number" value={goal.targetCarbs ?? 0} onChange={(event) => setGoal((current) => ({ ...current, targetCarbs: Number(event.target.value) }))} /></Field>
-                    <Field label="Gordura"><input className="input-field" type="number" value={goal.targetFat ?? 0} onChange={(event) => setGoal((current) => ({ ...current, targetFat: Number(event.target.value) }))} /></Field>
+                    <Field label="Calorias"><input className="input-field" type="number" inputMode="numeric" value={goalInputs.targetCalories} onChange={(event) => setGoalInputs((current) => ({ ...current, targetCalories: event.target.value }))} /></Field>
+                    <Field label="Agua (ml)"><input className="input-field" type="number" inputMode="numeric" value={goalInputs.targetWaterMl} onChange={(event) => setGoalInputs((current) => ({ ...current, targetWaterMl: event.target.value }))} /></Field>
+                    <Field label="Proteina"><input className="input-field" type="number" inputMode="decimal" value={goalInputs.targetProtein} onChange={(event) => setGoalInputs((current) => ({ ...current, targetProtein: event.target.value }))} /></Field>
+                    <Field label="Carbo"><input className="input-field" type="number" inputMode="decimal" value={goalInputs.targetCarbs} onChange={(event) => setGoalInputs((current) => ({ ...current, targetCarbs: event.target.value }))} /></Field>
+                    <Field label="Gordura"><input className="input-field" type="number" inputMode="decimal" value={goalInputs.targetFat} onChange={(event) => setGoalInputs((current) => ({ ...current, targetFat: event.target.value }))} /></Field>
                     <Field label="Objetivo"><select className="input-field" value={goal.objective} onChange={(event) => setGoal((current) => ({ ...current, objective: event.target.value as NutritionObjective }))}><option value="lose">Emagrecimento</option><option value="maintain">Manutencao</option><option value="gain">Ganho de peso</option></select></Field>
                   </div>
                   <div style={{ display: "grid", gap: "0.6rem", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", marginTop: "1rem", marginBottom: "1rem" }}>

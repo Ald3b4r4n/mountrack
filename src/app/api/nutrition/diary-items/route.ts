@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireNutritionUser } from "@/modules/nutrition/auth/require-user";
 import { toNutritionRouteErrorResponse } from "@/modules/nutrition/http/route-error";
 import { diaryItemSchema } from "@/modules/nutrition/validators";
-import { listFoods, getGoal, saveDiaryItem } from "@/modules/nutrition/repositories/nutrition-store";
+import { listFoods, getGoal, getNutritionStorageHeaders, saveDiaryItem } from "@/modules/nutrition/repositories/nutrition-store";
 import { createDiaryItemSnapshot } from "@/modules/nutrition/services/daily-calories.service";
 
 export const runtime = "nodejs";
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       snapshot,
     );
 
-    return NextResponse.json({ diary, item: snapshot }, { status: 201 });
+    return NextResponse.json({ diary, item: snapshot }, { status: 201, headers: getNutritionStorageHeaders() });
   } catch (error) {
     return toNutritionRouteErrorResponse(error, {
       defaultMessage: "Unable to create diary item",

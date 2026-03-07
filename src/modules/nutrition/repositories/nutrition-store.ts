@@ -141,12 +141,24 @@ interface DiaryListResult {
   total: number;
 }
 
+export type NutritionStorageResponse = "database" | "memory";
+
 function getDatabaseUrl(): string {
   return process.env.DATABASE_URL ?? process.env.SUPABASE_DATABASE_URL ?? "";
 }
 
 function hasDatabaseUrl(): boolean {
   return Boolean(getDatabaseUrl());
+}
+
+export function getNutritionStorageResponse(): NutritionStorageResponse {
+  return hasDatabaseUrl() ? "database" : "memory";
+}
+
+export function getNutritionStorageHeaders(): HeadersInit {
+  return {
+    "x-nutrition-storage": getNutritionStorageResponse(),
+  };
 }
 
 function getPool(): Pool {
