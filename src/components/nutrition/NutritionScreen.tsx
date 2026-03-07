@@ -7,7 +7,7 @@ import { startTransition, useCallback, useEffect, useMemo, useState, type ReactN
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { BarcodeScannerDialog } from "@/components/nutrition/BarcodeScannerDialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { authorizedNutritionFetch } from "@/modules/nutrition/client";
+import { authorizedNutritionFetch, getNutritionErrorMessage } from "@/modules/nutrition/client";
 import type {
   DailySummary,
   DiaryHistoryEntry,
@@ -276,6 +276,12 @@ export function NutritionScreen() {
     setWaterDraft(String(Math.round(summary.waterIntakeMl)));
   }, [summary.waterIntakeMl]);
 
+  const resolveRequestError = useCallback(async (response: Response, fallbackMessage: string) => {
+    const nextMessage = await getNutritionErrorMessage(response, fallbackMessage);
+    setMessage(nextMessage);
+    return nextMessage;
+  }, []);
+
   const hydrateDashboard = useCallback(
     (payload: DashboardPayload) => {
       const nextGoal = {
@@ -307,15 +313,18 @@ export function NutritionScreen() {
     setIsLoading(true);
     try {
       const response = await authorizedNutritionFetch(activeUser, `/api/nutrition/diaries/${today}`);
-      if (!response.ok) throw new Error("dashboard_failed");
+      if (!response.ok) {
+        await resolveRequestError(response, "Nao foi possivel carregar o painel de nutricao agora.");
+        return;
+      }
       const payload = (await response.json()) as DashboardPayload;
       hydrateDashboard(payload);
     } catch {
-      setMessage("Nao foi possivel carregar o painel de nutricao agora.");
+      setMessage((current) => current ?? "Nao foi possivel carregar o painel de nutricao agora.");
     } finally {
       setIsLoading(false);
     }
-  }, [activeUser, hydrateDashboard, today]);
+  }, [activeUser, hydrateDashboard, resolveRequestError, today]);
 
   const loadHistory = useCallback(
     async (nextPage: number) => {
@@ -327,7 +336,10 @@ export function NutritionScreen() {
           activeUser,
           `/api/nutrition/history?page=${nextPage}&pageSize=${HISTORY_PAGE_SIZE}`,
         );
-        if (!response.ok) throw new Error("history_failed");
+        if (!response.ok) {
+          await resolveRequestError(response, "Nao foi possivel carregar o historico agora.");
+          return;
+        }
         const payload = (await response.json()) as HistoryPayload;
         const totalPages = Math.max(1, payload.totalPages ?? 1);
         const safePage = Math.min(nextPage, totalPages);
@@ -335,12 +347,12 @@ export function NutritionScreen() {
         setHistoryTotalPages(totalPages);
         setHistoryPage(safePage);
       } catch {
-        setMessage("Nao foi possivel carregar o historico agora.");
+        setMessage((current) => current ?? "Nao foi possivel carregar o historico agora.");
       } finally {
         setIsHistoryLoading(false);
       }
     },
-    [activeUser],
+    [activeUser, resolveRequestError],
   );
 
   useEffect(() => {
@@ -350,10 +362,6 @@ export function NutritionScreen() {
     setDiaryPage(1);
     void Promise.all([loadDashboard(), loadHistory(1)]);
   }, [activeUser, loadDashboard, loadHistory]);
-
-  useEffect(() => {
-    setDiaryPage(1);
-  }, [activeDiaryMeal, activeDiaryView]);
 
   function clearSearchResults() {
     setSearchResults([]);
@@ -420,7 +428,10 @@ export function NutritionScreen() {
 
     try {
       const response = await authorizedNutritionFetch(activeUser, `/api/nutrition/foods/search?q=${encodeURIComponent(query)}`);
-      if (!response.ok) throw new Error("search_failed");
+      if (!response.ok) {
+        await resolveRequestError(response, "Nao foi possivel buscar alimentos agora.");
+        return;
+      }
       const payload = (await response.json()) as { results?: FoodItem[] };
       const results = payload.results ?? [];
 
@@ -434,7 +445,7 @@ export function NutritionScreen() {
         setMessage("Nenhum alimento encontrado para essa busca.");
       }
     } catch {
-      setMessage("Nao foi possivel buscar alimentos agora.");
+      setMessage((current) => current ?? "Nao foi possivel buscar alimentos agora.");
     } finally {
       setIsSearching(false);
     }
@@ -453,7 +464,10 @@ export function NutritionScreen() {
         activeUser,
         `/api/nutrition/foods/barcode/${encodeURIComponent(code)}`,
       );
-      if (!response.ok) throw new Error("barcode_failed");
+      if (!response.ok) {
+        await resolveRequestError(response, "Nao foi possivel consultar esse codigo de barras.");
+        return;
+      }
       const payload = (await response.json()) as { item?: FoodItem | null };
       const foundItem = payload.item ?? null;
 
@@ -465,7 +479,7 @@ export function NutritionScreen() {
         setMessage("Nenhum item encontrado para esse codigo de barras.");
       }
     } catch {
-      setMessage("Nao foi possivel consultar esse codigo de barras.");
+      setMessage((current) => current ?? "Nao foi possivel consultar esse codigo de barras.");
     } finally {
       setIsSearching(false);
     }
@@ -492,7 +506,10 @@ export function NutritionScreen() {
           consumedAt: new Date().toISOString(),
         }),
       });
-      if (!response.ok) throw new Error("add_failed");
+      if (!response.ok) {
+        await resolveRequestError(response, "Nao foi possivel registrar esse alimento.");
+        return;
+      }
 
       setActiveWorkspace("diary");
       setActiveDiaryView("today");
@@ -503,7 +520,7 @@ export function NutritionScreen() {
       resetSearchComposer(true);
       await Promise.all([loadDashboard(), loadHistory(1)]);
     } catch {
-      setMessage("Nao foi possivel registrar esse alimento.");
+      setMessage((current) => current ?? "Nao foi possivel registrar esse alimento.");
     }
   }
 
@@ -512,10 +529,13 @@ export function NutritionScreen() {
 
     try {
       const response = await authorizedNutritionFetch(activeUser, `/api/nutrition/diary-items/${itemId}`, { method: "DELETE" });
-      if (!response.ok) throw new Error("delete_failed");
+      if (!response.ok) {
+        await resolveRequestError(response, "Nao foi possivel remover esse item do diario.");
+        return;
+      }
       await Promise.all([loadDashboard(), loadHistory(historyPage)]);
     } catch {
-      setMessage("Nao foi possivel remover esse item do diario.");
+      setMessage((current) => current ?? "Nao foi possivel remover esse item do diario.");
     }
   }
 
@@ -536,7 +556,10 @@ export function NutritionScreen() {
           objective: goal.objective,
         }),
       });
-      if (!response.ok) throw new Error("goal_failed");
+      if (!response.ok) {
+        await resolveRequestError(response, "Nao foi possivel atualizar a meta nutricional.");
+        return;
+      }
       const payload = (await response.json()) as { goal?: NutritionGoal };
       const nextGoal = {
         ...goal,
@@ -558,7 +581,7 @@ export function NutritionScreen() {
       setMessage("Meta nutricional atualizada.");
       await Promise.all([loadDashboard(), loadHistory(historyPage)]);
     } catch {
-      setMessage("Nao foi possivel atualizar a meta nutricional.");
+      setMessage((current) => current ?? "Nao foi possivel atualizar a meta nutricional.");
     } finally {
       setIsSavingGoal(false);
     }
@@ -577,13 +600,16 @@ export function NutritionScreen() {
         method: "PATCH",
         body: JSON.stringify({ waterIntakeMl: nextWaterIntake }),
       });
-      if (!response.ok) throw new Error("water_failed");
+      if (!response.ok) {
+        await resolveRequestError(response, "Nao foi possivel atualizar a agua do dia.");
+        return;
+      }
       const payload = (await response.json()) as DashboardPayload;
       hydrateDashboard(payload);
       setMessage("Ingestao de agua atualizada.");
       await loadHistory(historyPage);
     } catch {
-      setMessage("Nao foi possivel atualizar a agua do dia.");
+      setMessage((current) => current ?? "Nao foi possivel atualizar a agua do dia.");
     } finally {
       setIsUpdatingWater(false);
     }
@@ -617,7 +643,10 @@ export function NutritionScreen() {
           restrictions: [],
         }),
       });
-      if (!response.ok) throw new Error("meal_plan_failed");
+      if (!response.ok) {
+        await resolveRequestError(response, "Nao foi possivel gerar o cardapio agora.");
+        return;
+      }
       const payload = (await response.json()) as { mealPlan?: MealPlan };
       if (payload.mealPlan) {
         const nextPlan = normalizeMealPlan(payload.mealPlan);
@@ -630,7 +659,7 @@ export function NutritionScreen() {
         setMessage(planRejectedFoods.length ? "Cardapio recalculado com as rejeicoes aplicadas." : "Cardapio atualizado.");
       }
     } catch {
-      setMessage("Nao foi possivel gerar o cardapio agora.");
+      setMessage((current) => current ?? "Nao foi possivel gerar o cardapio agora.");
     } finally {
       setIsGeneratingPlan(false);
     }
@@ -641,13 +670,16 @@ export function NutritionScreen() {
 
     try {
       const response = await authorizedNutritionFetch(activeUser, "/api/nutrition/meal-plans", { method: "DELETE" });
-      if (!response.ok) throw new Error("delete_meal_plan_failed");
+      if (!response.ok) {
+        await resolveRequestError(response, "Nao foi possivel descartar o cardapio agora.");
+        return;
+      }
       setMealPlan(null);
       setMealPlanDraft(null);
       setPlanRejectedFoods([]);
       setMessage("Cardapio descartado.");
     } catch {
-      setMessage("Nao foi possivel descartar o cardapio agora.");
+      setMessage((current) => current ?? "Nao foi possivel descartar o cardapio agora.");
     }
   }
 
@@ -799,7 +831,7 @@ export function NutritionScreen() {
               <div style={{ gridColumn: isMobileLayout ? "span 1" : "span 3" }}><CompactMetricCard label="Meta diaria" value={formatCalories(summary.targetCalories)} accent="var(--accent-primary)" /></div>
               <div style={{ gridColumn: isMobileLayout ? "span 1" : "span 3" }}><CompactMetricCard label="Consumido" value={formatCalories(summary.consumedCalories)} accent="var(--accent-warm)" /></div>
               <div style={{ gridColumn: isMobileLayout ? "span 1" : "span 3" }}><CompactMetricCard label="Restante" value={formatCalories(summary.remainingCalories)} accent="var(--accent-secondary)" /></div>
-              <div style={{ gridColumn: isMobileLayout ? "span 1" : "span 3" }}><HydrationMetricCard current={summary.waterIntakeMl} target={summary.targetWaterMl} ratio={waterRatio} /></div>
+              <div style={{ gridColumn: isMobileLayout ? "1 / -1" : "span 3" }}><HydrationMetricCard current={summary.waterIntakeMl} target={summary.targetWaterMl} ratio={waterRatio} /></div>
               <div style={{ gridColumn: "1 / -1" }}><MacroHeroCard summary={summary} goal={goal} consumedRatio={consumedRatio} /></div>
             </div>
           </div>
@@ -904,8 +936,8 @@ export function NutritionScreen() {
                       <span style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>O diario de hoje e o historico agora ficam paginados para nao alongar a sessao.</span>
                     </div>
                     <div style={{ display: "flex", gap: "0.55rem", flexWrap: "wrap" }}>
-                      <SegmentButton active={activeDiaryView === "today"} label="Hoje" onClick={() => setActiveDiaryView("today")} />
-                      <SegmentButton active={activeDiaryView === "history"} label="Historico" onClick={() => setActiveDiaryView("history")} />
+                      <SegmentButton active={activeDiaryView === "today"} label="Hoje" onClick={() => { setActiveDiaryView("today"); setDiaryPage(1); }} />
+                      <SegmentButton active={activeDiaryView === "history"} label="Historico" onClick={() => { setActiveDiaryView("history"); setDiaryPage(1); }} />
                     </div>
                   </div>
 
@@ -920,17 +952,21 @@ export function NutritionScreen() {
                           <span className="badge badge-success">{Math.round(waterRatio)}% da meta</span>
                         </div>
                         <div className="progress-track" style={{ marginBottom: "0.75rem" }}><div className="progress-fill" style={{ width: `${waterRatio}%`, background: "linear-gradient(135deg, #38bdf8, #22d3ee)" }} /></div>
-                        <div style={{ display: "grid", gap: "0.6rem", gridTemplateColumns: isMobileLayout ? "repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))" }}>
+                        <div style={{ display: "grid", gap: "0.6rem", gridTemplateColumns: isMobileLayout ? "repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))", alignItems: "end" }}>
                           <button onClick={() => handleAdjustWater(250)} className="btn-outline" style={{ width: "100%" }}>+250 ml</button>
                           <button onClick={() => handleAdjustWater(500)} className="btn-outline" style={{ width: "100%" }}>+500 ml</button>
-                          <Field label="Contador"><input className="input-field" value={waterDraft} onChange={(event) => setWaterDraft(event.target.value)} inputMode="decimal" /></Field>
-                          <button onClick={() => void handleSaveWater()} className="btn-primary" style={{ width: "100%", alignSelf: "end" }} disabled={isUpdatingWater}>{isUpdatingWater ? "Salvando..." : "Salvar agua"}</button>
+                          <div style={{ gridColumn: isMobileLayout ? "1 / -1" : "auto", minWidth: 0 }}>
+                            <Field label="Contador"><input className="input-field" value={waterDraft} onChange={(event) => setWaterDraft(event.target.value)} inputMode="decimal" /></Field>
+                          </div>
+                          <div style={{ gridColumn: isMobileLayout ? "1 / -1" : "auto", display: "grid" }}>
+                            <button onClick={() => void handleSaveWater()} className="btn-primary" style={{ width: "100%", minHeight: "3rem" }} disabled={isUpdatingWater}>{isUpdatingWater ? "Salvando..." : "Salvar agua"}</button>
+                          </div>
                         </div>
                       </div>
 
                       <div style={{ display: "flex", gap: "0.55rem", flexWrap: "wrap" }}>
                         {MEAL_ORDER.map((meal) => (
-                          <SegmentButton key={meal} active={activeDiaryMeal === meal} label={MEAL_LABELS[meal]} meta={groupedDiaryItems[meal].length} onClick={() => setActiveDiaryMeal(meal)} />
+                          <SegmentButton key={meal} active={activeDiaryMeal === meal} label={MEAL_LABELS[meal]} meta={groupedDiaryItems[meal].length} onClick={() => { setActiveDiaryMeal(meal); setDiaryPage(1); }} />
                         ))}
                       </div>
 
@@ -1031,7 +1067,7 @@ function CompactMetricCard({ label, value, accent }: { label: string; value: str
 }
 
 function HydrationMetricCard({ current, target, ratio }: { current: number; target: number; ratio: number }) {
-  return <article className="glass-panel static-panel" style={{ padding: "0.95rem 1rem", background: "linear-gradient(145deg, rgba(6, 22, 45, 0.68), rgba(13, 37, 61, 0.82))", minHeight: "100%" }}><div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", alignItems: "flex-start", marginBottom: "0.6rem" }}><div><p className="stat-label" style={{ marginBottom: "0.35rem" }}>Agua hoje</p><strong style={{ fontSize: "1.22rem", color: "#e0f2fe", display: "block" }}>{formatMilliliters(current)}</strong></div><span className="badge badge-success">{formatMilliliters(target)}</span></div><div className="progress-track" style={{ marginBottom: "0.45rem" }}><div className="progress-fill" style={{ width: `${ratio}%`, background: "linear-gradient(135deg, #38bdf8, #22d3ee)" }} /></div><span style={{ color: "var(--text-secondary)", fontSize: "0.82rem" }}>{Math.round(ratio)}% da meta diaria</span></article>;
+  return <article className="glass-panel static-panel" style={{ padding: "0.95rem 1rem", background: "linear-gradient(145deg, rgba(6, 22, 45, 0.68), rgba(13, 37, 61, 0.82))", minHeight: "100%", minWidth: 0 }}><div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", alignItems: "flex-start", marginBottom: "0.6rem", flexWrap: "wrap" }}><div style={{ minWidth: 0, flex: "1 1 10rem" }}><p className="stat-label" style={{ marginBottom: "0.35rem" }}>Agua hoje</p><strong style={{ fontSize: "clamp(1.05rem, 4vw, 1.22rem)", color: "#e0f2fe", display: "block", lineHeight: 1.15 }}>{formatMilliliters(current)}</strong></div><span className="badge badge-success" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>{formatMilliliters(target)}</span></div><div className="progress-track" style={{ marginBottom: "0.45rem" }}><div className="progress-fill" style={{ width: `${ratio}%`, background: "linear-gradient(135deg, #38bdf8, #22d3ee)" }} /></div><span style={{ color: "var(--text-secondary)", fontSize: "0.82rem", display: "block" }}>{Math.round(ratio)}% da meta diaria</span></article>;
 }
 
 function MacroHeroCard({ summary, goal, consumedRatio }: { summary: DailySummary; goal: NutritionGoal; consumedRatio: number }) {

@@ -1,4 +1,12 @@
-import { authorizedNutritionFetch } from "@/modules/nutrition/client";
+import { authorizedNutritionFetch, getNutritionErrorMessage } from "@/modules/nutrition/client";
+
+function createMockResponse(status: number, payload: unknown): Response {
+  return {
+    status,
+    clone: () => createMockResponse(status, payload),
+    json: async () => payload,
+  } as Response;
+}
 
 describe("authorizedNutritionFetch", () => {
   let originalFetch: typeof globalThis.fetch | undefined;
@@ -75,5 +83,35 @@ describe("authorizedNutritionFetch", () => {
 
     expect(headers.get("x-dev-user-id")).toBeNull();
     expect(headers.get("x-dev-auth-mode")).toBeNull();
+  });
+});
+
+describe("getNutritionErrorMessage", () => {
+  it("maps auth-unavailable responses to a deploy configuration message", async () => {
+    const response = createMockResponse(503, {
+      code: "nutrition_auth_unavailable",
+      error: "Nutrition authentication is unavailable",
+    });
+
+    await expect(getNutritionErrorMessage(response, "fallback")).resolves.toBe(
+      "A autenticacao da nutricao nao esta disponivel neste deploy. Confira as variaveis do Firebase na Vercel.",
+    );
+  });
+
+  it("maps unauthorized responses to a session recovery message", async () => {
+    const response = createMockResponse(401, {
+      code: "nutrition_auth_unauthorized",
+      error: "Unauthorized",
+    });
+
+    await expect(getNutritionErrorMessage(response, "fallback")).resolves.toBe(
+      "Sua sessao da nutricao expirou ou nao foi validada. Entre novamente e tente de novo.",
+    );
+  });
+
+  it("falls back to the caller message for other failures", async () => {
+    const response = createMockResponse(500, { code: "nutrition_request_failed" });
+
+    await expect(getNutritionErrorMessage(response, "fallback")).resolves.toBe("fallback");
   });
 });

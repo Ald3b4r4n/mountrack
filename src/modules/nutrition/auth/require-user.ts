@@ -1,5 +1,9 @@
+import { verifyFirebaseIdToken } from "@/lib/firebase-admin";
 import type { NutritionGoal } from "@/modules/nutrition/domain/types";
-import { adminAuth } from "@/lib/firebase-admin";
+import {
+  createUnauthorizedNutritionError,
+  isNutritionAuthUnavailableError,
+} from "@/modules/nutrition/http/route-error";
 
 export interface NutritionUser {
   uid: string;
@@ -28,9 +32,20 @@ export async function requireNutritionUser(request: Request): Promise<{ user: Nu
   const devUserId = request.headers.get("x-dev-user-id");
   const devAuthMode = request.headers.get("x-dev-auth-mode");
 
-  if (authorization?.startsWith("Bearer ") && adminAuth) {
+  if (authorization?.startsWith("Bearer ")) {
     const token = authorization.replace("Bearer ", "");
-    const decodedToken = await adminAuth.verifyIdToken(token);
+    let decodedToken: { uid: string };
+
+    try {
+      decodedToken = await verifyFirebaseIdToken(token);
+    } catch (error) {
+      if (isNutritionAuthUnavailableError(error)) {
+        throw error;
+      }
+
+      throw createUnauthorizedNutritionError();
+    }
+
     return {
       user: { uid: decodedToken.uid, devMode: false },
       defaultGoal: defaultGoalForUser(decodedToken.uid),
@@ -44,5 +59,5 @@ export async function requireNutritionUser(request: Request): Promise<{ user: Nu
     };
   }
 
-  throw new Error("UNAUTHORIZED");
+  throw createUnauthorizedNutritionError();
 }

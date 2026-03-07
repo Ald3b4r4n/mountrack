@@ -1,10 +1,15 @@
-﻿import type { User } from "firebase/auth";
+import type { User } from "firebase/auth";
 
 interface NutritionAuthLike {
   uid: string;
   getIdToken?: () => Promise<string>;
   devBypass?: boolean;
 }
+
+type NutritionErrorPayload = {
+  code?: string;
+  error?: string;
+};
 
 export function isLocalDevHost(): boolean {
   if (typeof window === "undefined") {
@@ -41,4 +46,24 @@ export async function authorizedNutritionFetch(
     ...init,
     headers,
   });
+}
+
+export async function getNutritionErrorMessage(response: Response, fallbackMessage: string): Promise<string> {
+  let payload: NutritionErrorPayload | null = null;
+
+  try {
+    payload = (await response.clone().json()) as NutritionErrorPayload;
+  } catch {
+    payload = null;
+  }
+
+  if (payload?.code === "nutrition_auth_unavailable" || response.status === 503) {
+    return "A autenticacao da nutricao nao esta disponivel neste deploy. Confira as variaveis do Firebase na Vercel.";
+  }
+
+  if (payload?.code === "nutrition_auth_unauthorized" || response.status === 401) {
+    return "Sua sessao da nutricao expirou ou nao foi validada. Entre novamente e tente de novo.";
+  }
+
+  return fallbackMessage;
 }
