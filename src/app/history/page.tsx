@@ -1,17 +1,15 @@
 'use client';
+
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { collection, deleteDoc, doc, getDocs, orderBy, query, updateDoc } from 'firebase/firestore';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, query, orderBy, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 
-/**
- * Interface para os dados do log armazenados no Firestore
- */
 interface LogData {
   id: string;
-  type?: 'dose' | 'weight' | 'note'; // 'dose' = aplicação semanal, 'weight' = pesagem avulsa, 'note' = diário livre
+  type?: 'dose' | 'weight' | 'note';
   weight?: number;
   dose?: number;
   date: string;
@@ -19,8 +17,7 @@ interface LogData {
 }
 
 /**
- * Página de Histórico — lista todos os registros com opção de edição inline e exclusão.
- * O usuário pode corrigir erros sem precisar deletar e recriar.
+ * Página de histórico com edição inline e exclusão dos registros.
  */
 export default function History() {
   const { user } = useAuth();
@@ -30,87 +27,85 @@ export default function History() {
   const [editData, setEditData] = useState<Partial<LogData>>({});
   const [saving, setSaving] = useState(false);
 
-  // Carregar todos os registros do Firestore
   useEffect(() => {
     async function fetchLogs() {
       if (!user) return;
+
       try {
         const logsRef = collection(db, 'users', user.uid, 'logs');
-        const q = query(logsRef, orderBy('date', 'desc'));
-        const snap = await getDocs(q);
-        
+        const logsQuery = query(logsRef, orderBy('date', 'desc'));
+        const snapshot = await getDocs(logsQuery);
+
         const fetched: LogData[] = [];
-        snap.forEach((d) => {
-          fetched.push({ id: d.id, ...d.data() } as LogData);
+        snapshot.forEach((documentSnapshot) => {
+          fetched.push({ id: documentSnapshot.id, ...documentSnapshot.data() } as LogData);
         });
+
         setLogs(fetched);
-      } catch (err) {
-        console.error("Erro ao carregar histórico", err);
+      } catch (error) {
+        console.error('Erro ao carregar histórico', error);
       } finally {
         setLoading(false);
       }
     }
-    fetchLogs();
+
+    void fetchLogs();
   }, [user]);
 
-  // Inicia a edição de um registro e preenche o formulário com os dados atuais
   const startEdit = (log: LogData) => {
     setEditingId(log.id);
     setEditData({
       date: log.date,
       weight: log.weight,
       dose: log.dose,
-      notes: log.notes || ''
+      notes: log.notes || '',
     });
   };
 
-  // Cancela a edição e limpa o formulário
   const cancelEdit = () => {
     setEditingId(null);
     setEditData({});
   };
 
-  // Salva as alterações no Firestore
   const saveEdit = async (logId: string) => {
     if (!user) return;
+
     setSaving(true);
     try {
-      const ref = doc(db, 'users', user.uid, 'logs', logId);
+      const reference = doc(db, 'users', user.uid, 'logs', logId);
       const updatePayload: Record<string, unknown> = {
         date: editData.date,
         weight: editData.weight,
       };
-      
-      // Atualiza os campos extras se existirem editados (inclusive notas soltas)
+
       if (editData.dose !== undefined && editData.dose !== null) {
         updatePayload.dose = editData.dose;
       }
+
       if (editData.notes !== undefined) {
         updatePayload.notes = editData.notes;
       }
-      
-      await updateDoc(ref, updatePayload);
-      
-      // Atualiza o estado local sem recarregar
-      setLogs(prev => prev.map(l => l.id === logId ? { ...l, ...updatePayload } as LogData : l));
+
+      await updateDoc(reference, updatePayload);
+      setLogs((currentLogs) => currentLogs.map((log) => (log.id === logId ? { ...log, ...updatePayload } as LogData : log)));
       setEditingId(null);
       setEditData({});
-    } catch (err) {
-      console.error("Erro ao salvar edição", err);
-      alert("Falha ao salvar.");
+    } catch (error) {
+      console.error('Erro ao salvar edição', error);
+      alert('Não foi possível salvar as alterações.');
     } finally {
       setSaving(false);
     }
   };
 
-  // Deleta um registro do Firestore com confirmação
   const deleteLog = async (logId: string) => {
     if (!user || !confirm('Tem certeza que deseja excluir este registro?')) return;
+
     try {
       await deleteDoc(doc(db, 'users', user.uid, 'logs', logId));
-      setLogs(prev => prev.filter(l => l.id !== logId));
-    } catch (err) {
-      console.error("Erro ao deletar", err);
+      setLogs((currentLogs) => currentLogs.filter((log) => log.id !== logId));
+    } catch (error) {
+      console.error('Erro ao deletar registro', error);
     }
   };
 
@@ -123,42 +118,43 @@ export default function History() {
             <p className="page-subtitle anim-enter anim-delay-1">Todos os seus registros. Toque para editar.</p>
           </div>
           <Link href="/" className="nav-pill anim-enter anim-delay-1">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
             Dashboard
           </Link>
         </div>
 
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {[1,2,3].map(i => <div key={i} className="skeleton-pulse" style={{ height: '90px' }}></div>)}
+            {[1, 2, 3].map((item) => (
+              <div key={item} className="skeleton-pulse" style={{ height: '90px' }}></div>
+            ))}
           </div>
         ) : logs.length === 0 ? (
           <div className="glass-panel anim-enter" style={{ padding: '3rem', textAlign: 'center' }}>
             <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>Nenhum registro encontrado.</p>
-            <Link href="/log" className="btn-primary" style={{ textDecoration: 'none' }}>Criar Primeiro Registro</Link>
+            <Link href="/log" className="btn-primary" style={{ textDecoration: 'none' }}>Criar primeiro registro</Link>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {logs.map((log, i) => (
-              <div key={log.id} className={`glass-panel anim-enter`} style={{ padding: '1.5rem', animationDelay: `${Math.min(i * 0.05, 0.4)}s` }}>
+            {logs.map((log, index) => (
+              <div key={log.id} className="glass-panel anim-enter" style={{ padding: '1.5rem', animationDelay: `${Math.min(index * 0.05, 0.4)}s` }}>
                 {editingId === log.id ? (
-                  /* ===== MODO EDIÇÃO ===== */
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem' }}>
                       <div>
-                        <label className="label" style={{ fontSize: '0.8rem' }}>Data</label>
-                        <input type="date" value={editData.date || ''} onChange={(e) => setEditData(p => ({...p, date: e.target.value}))} className="input-field" style={{ marginTop: '0.25rem' }} />
+                        <label htmlFor={`history-date-${log.id}`} className="label" style={{ fontSize: '0.8rem' }}>Data</label>
+                        <input id={`history-date-${log.id}`} type="date" value={editData.date || ''} onChange={(event) => setEditData((current) => ({ ...current, date: event.target.value }))} className="input-field" style={{ marginTop: '0.25rem' }} />
                       </div>
-                      {log.type !== 'note' && (
+                      {log.type !== 'note' ? (
                         <div>
-                          <label className="label" style={{ fontSize: '0.8rem' }}>Peso (kg)</label>
-                          <input type="number" step="0.1" value={editData.weight || ''} onChange={(e) => setEditData(p => ({...p, weight: parseFloat(e.target.value)}))} className="input-field" style={{ marginTop: '0.25rem' }} />
+                          <label htmlFor={`history-weight-${log.id}`} className="label" style={{ fontSize: '0.8rem' }}>Peso (kg)</label>
+                          <input id={`history-weight-${log.id}`} type="number" step="0.1" value={editData.weight || ''} onChange={(event) => setEditData((current) => ({ ...current, weight: parseFloat(event.target.value) }))} className="input-field" style={{ marginTop: '0.25rem' }} />
                         </div>
-                      )}
-                      {(log.type === 'dose' || log.dose !== undefined) && (
+                      ) : null}
+                      {log.type === 'dose' || log.dose !== undefined ? (
                         <div>
-                          <label className="label" style={{ fontSize: '0.8rem' }}>Dose (mg)</label>
-                          <select value={editData.dose || ''} onChange={(e) => setEditData(p => ({...p, dose: parseFloat(e.target.value)}))} className="input-field" style={{ marginTop: '0.25rem' }}>
+                          <label htmlFor={`history-dose-${log.id}`} className="label" style={{ fontSize: '0.8rem' }}>Dose (mg)</label>
+                          <select id={`history-dose-${log.id}`} value={editData.dose || ''} onChange={(event) => setEditData((current) => ({ ...current, dose: parseFloat(event.target.value) }))} className="input-field" style={{ marginTop: '0.25rem' }}>
                             <option value="2.5">2.5 mg</option>
                             <option value="5.0">5.0 mg</option>
                             <option value="7.5">7.5 mg</option>
@@ -167,11 +163,11 @@ export default function History() {
                             <option value="15.0">15.0 mg</option>
                           </select>
                         </div>
-                      )}
+                      ) : null}
                     </div>
                     <div>
-                      <label className="label" style={{ fontSize: '0.8rem' }}>Notas e Relatos</label>
-                      <textarea rows={2} value={editData.notes || ''} onChange={(e) => setEditData(p => ({...p, notes: e.target.value}))} className="input-field" style={{ marginTop: '0.25rem', resize: 'none' }} placeholder="(Opcional) Adicione anotações a esse registro..." />
+                      <label htmlFor={`history-notes-${log.id}`} className="label" style={{ fontSize: '0.8rem' }}>Notas e relatos</label>
+                      <textarea id={`history-notes-${log.id}`} rows={2} value={editData.notes || ''} onChange={(event) => setEditData((current) => ({ ...current, notes: event.target.value }))} className="input-field" style={{ marginTop: '0.25rem', resize: 'none' }} placeholder="(Opcional) Adicione anotações a este registro..." />
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                       <button onClick={cancelEdit} className="btn-outline">Cancelar</button>
@@ -181,21 +177,26 @@ export default function History() {
                     </div>
                   </div>
                 ) : (
-                  /* ===== MODO VISUALIZAÇÃO ===== */
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                      {/* Indicador de tipo */}
-                      <div style={{ 
-                        width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: log.type === 'note' ? 'rgba(234, 179, 8, 0.12)' : (log.type === 'weight' || !log.dose) ? 'rgba(6, 182, 212, 0.12)' : 'rgba(52, 211, 153, 0.12)',
-                        border: `1px solid ${log.type === 'note' ? 'rgba(234, 179, 8, 0.2)' : (log.type === 'weight' || !log.dose) ? 'rgba(6, 182, 212, 0.2)' : 'rgba(52, 211, 153, 0.2)'}`
-                      }}>
+                      <div
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '10px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: log.type === 'note' ? 'rgba(234, 179, 8, 0.12)' : (log.type === 'weight' || !log.dose) ? 'rgba(6, 182, 212, 0.12)' : 'rgba(52, 211, 153, 0.12)',
+                          border: `1px solid ${log.type === 'note' ? 'rgba(234, 179, 8, 0.2)' : (log.type === 'weight' || !log.dose) ? 'rgba(6, 182, 212, 0.2)' : 'rgba(52, 211, 153, 0.2)'}`,
+                        }}
+                      >
                         {log.type === 'note' ? (
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-warning, #eab308)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-warning, #eab308)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" /></svg>
                         ) : (log.type === 'weight' || !log.dose) ? (
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v18"/><path d="M8 7l4-4 4 4"/><path d="M8 17l4 4 4-4"/></svg>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v18" /><path d="M8 7l4-4 4 4" /><path d="M8 17l4 4 4-4" /></svg>
                         ) : (
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /></svg>
                         )}
                       </div>
 
@@ -204,36 +205,60 @@ export default function History() {
                           {new Date(log.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
                         </p>
                         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '0.25rem' }}>
-                          {log.weight !== undefined && (
+                          {log.weight !== undefined ? (
                             <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{log.weight} kg</span>
-                          )}
-                          {log.dose && (
+                          ) : null}
+                          {log.dose ? (
                             <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>{log.dose} mg</span>
-                          )}
-                          {log.type === 'note' && (
+                          ) : null}
+                          {log.type === 'note' ? (
                             <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(234, 179, 8, 0.15)', color: 'var(--accent-warning, #eab308)' }}>Diário</span>
-                          )}
-                          {(!log.dose && (log.type === 'weight' || log.type === undefined)) && !log.dose && (
+                          ) : null}
+                          {!log.dose && (log.type === 'weight' || log.type === undefined) ? (
                             <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>Pesagem</span>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button onClick={() => startEdit(log)} title="Editar" style={{
-                        width: '36px', height: '36px', borderRadius: '8px', border: '1px solid var(--border-glass)',
-                        background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s'
-                      }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                      <button
+                        onClick={() => startEdit(log)}
+                        title="Editar"
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--border-glass)',
+                          background: 'transparent',
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'color 0.2s, border-color 0.2s, background-color 0.2s, opacity 0.2s',
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
                       </button>
-                      <button onClick={() => deleteLog(log.id)} title="Excluir" style={{
-                        width: '36px', height: '36px', borderRadius: '8px', border: '1px solid var(--border-glass)',
-                        background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s'
-                      }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                      <button
+                        onClick={() => deleteLog(log.id)}
+                        title="Excluir"
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--border-glass)',
+                          background: 'transparent',
+                          color: 'var(--text-muted)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'color 0.2s, border-color 0.2s, background-color 0.2s, opacity 0.2s',
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
                       </button>
                     </div>
                   </div>

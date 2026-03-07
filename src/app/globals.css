@@ -1,5 +1,5 @@
 /* ===================================================
-   MounTrack — Sistema de Design Premium v2.0
+   MounTrack - Sistema de Design Premium v2.0
    Tema: Medical-Dark Luxe com toques Esmeralda
    Tipografia: Outfit (Display) + DM Sans (Body)
    =================================================== */
@@ -11,7 +11,7 @@
 @tailwind utilities;
 
 :root {
-  /* Paleta de Cores — Profunda e Rica */
+  /* Paleta de Cores - Profunda e Rica */
   --bg-primary: #080E1A;
   --bg-secondary: #0F1729;
   --bg-tertiary: #162033;
@@ -20,7 +20,7 @@
 
   --accent-primary: #34D399;      /* Esmeralda vibrante */
   --accent-secondary: #06B6D4;    /* Ciano complementar */
-  --accent-warm: #F59E0B;         /* Âmbar para alertas */
+  --accent-warm: #F59E0B;         /* Ambar para alertas */
   --accent-danger: #F43F5E;       /* Rosa-Vermelho para doses atrasadas */
   --accent-glow: rgba(52, 211, 153, 0.25);
   --accent-glow-strong: rgba(52, 211, 153, 0.5);
@@ -41,7 +41,7 @@
   --shadow-glow: 0 0 30px var(--accent-glow);
   --shadow-card-hover: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 60px var(--accent-glow);
 
-  /* Transições suaves */
+  /* Transicoes suaves */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --duration-fast: 0.2s;
   --duration-normal: 0.4s;
@@ -73,7 +73,7 @@ body {
   position: relative;
 }
 
-/* ===== BACKGROUND ATMOSFÉRICO ===== */
+/* ===== BACKGROUND ATMOSFERICO ===== */
 /* Gradiente Mesh sutil para profundidade */
 body::before {
   content: '';
@@ -117,6 +117,13 @@ h1, h2, h3, h4 {
   transform: translateY(-4px);
 }
 
+.glass-panel.static-panel:hover {
+  background: var(--bg-glass);
+  border-color: var(--border-glass);
+  box-shadow: var(--shadow-glass);
+  transform: none;
+}
+
 /* ===== GLOW TEXT ===== */
 .glow-text {
   color: var(--accent-primary);
@@ -127,7 +134,7 @@ h1, h2, h3, h4 {
   font-weight: 700;
 }
 
-/* ===== BOTÃO PRIMÁRIO ===== */
+/* ===== BOTAO PRIMARIO ===== */
 .btn-primary {
   background: linear-gradient(135deg, var(--accent-primary) 0%, #059669 100%);
   color: #fff;
@@ -173,7 +180,7 @@ h1, h2, h3, h4 {
   padding: 2rem;
 }
 
-/* ===== ANIMAÇÕES DE ENTRADA ===== */
+/* ===== ANIMACOES DE ENTRADA ===== */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -211,7 +218,7 @@ h1, h2, h3, h4 {
   100% { background-position: 200% 0; }
 }
 
-/* Classes de animação staggered */
+/* Classes de animacao staggered */
 .anim-enter {
   animation: fadeInUp var(--duration-slow) var(--ease-out-expo) both;
 }
@@ -249,7 +256,7 @@ h1, h2, h3, h4 {
   color: var(--text-primary);
 }
 
-/* ===== ETIQUETAS DOS FORMULÁRIOS ===== */
+/* ===== ETIQUETAS DOS FORMULARIOS ===== */
 .label {
   color: var(--text-primary);
   font-weight: 500;
@@ -349,7 +356,7 @@ h1, h2, h3, h4 {
   color: var(--accent-primary);
 }
 
-/* ===== BOTÃO OUTLINE (Sair) ===== */
+/* ===== BOTAO OUTLINE (Sair) ===== */
 .btn-outline {
   background: transparent;
   border: 1px solid var(--border-glass);
@@ -380,7 +387,7 @@ h1, h2, h3, h4 {
   border-radius: var(--radius-md);
 }
 
-/* ===== SUBTÍTULO DA PÁGINA ===== */
+/* ===== SUBTITULO DA PAGINA ===== */
 .page-subtitle {
   color: var(--text-secondary);
   font-size: 1rem;
@@ -452,8 +459,8 @@ h1, h2, h3, h4 {
 }
 
 /* =========================================
-   V4 PREMIUM: CSS para Impressão/PDF
-   (Relatório Médico Laudo Format)
+   V4 PREMIUM: CSS para Impressao/PDF
+   (Relatorio Medico Laudo Format)
 ========================================= */
 @media print {
   @page {
@@ -561,3 +568,4 @@ h1, h2, h3, h4 {
     --chart-5: 340 75% 55%;
   }
 }
+
