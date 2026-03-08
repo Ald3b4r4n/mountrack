@@ -1,4 +1,4 @@
-export type FoodSource = "openfoodfacts" | "usda" | "tbca" | "internal";
+export type FoodSource = "openfoodfacts" | "usda" | "tbca" | "internal" | "custom";
 export type FoodBaseUnit = "g" | "ml" | "unit";
 export type NutritionUnit = "g" | "ml" | "serving" | "unit";
 export type MealType = "breakfast" | "lunch" | "dinner" | "snack";

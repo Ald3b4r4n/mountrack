@@ -8,20 +8,20 @@ const PDF_CANVAS_WIDTH = 794;
 const PDF_MARGIN = 24;
 
 const MEAL_LABELS: Record<MealPlan["meals"][number]["mealType"], string> = {
-  breakfast: "Cafe da manha",
-  lunch: "Almoco",
+  breakfast: "Café da manhã",
+  lunch: "Almoço",
   snack: "Lanches",
   dinner: "Jantar",
 };
 
 const OBJECTIVE_LABELS: Record<NutritionObjective, string> = {
   lose: "Emagrecimento",
-  maintain: "Manutencao",
+  maintain: "Manutenção",
   gain: "Ganho de peso",
 };
 
 const MACRO_LABELS = {
-  protein: "Proteina",
+  protein: "Proteína",
   carbs: "Carboidratos",
   fat: "Gorduras",
 };
@@ -59,7 +59,9 @@ export const MEAL_PLAN_PDF_STYLES = `
     --mint: #e7f6ef;
     --shadow: 0 14px 34px rgba(15, 35, 63, 0.07);
   }
-  * { box-sizing: border-box; }
+  * { 
+    box-sizing: border-box;
+  }
   body {
     margin: 0;
     background: #ffffff;
@@ -176,8 +178,10 @@ export const MEAL_PLAN_PDF_STYLES = `
   .summary-card strong {
     display: block;
     margin-top: 6px;
-    font-size: 22px;
+    font-size: 16px;
     color: var(--navy);
+    line-height: 1.2;
+    word-break: break-word;
   }
   .metrics-shell {
     margin-bottom: 18px;
@@ -357,29 +361,28 @@ export function buildMealPlanPdfMarkup({
         <div class="header-body">
           <div class="header-top">
             <div>
-              <p class="eyebrow">MounTrack / Nutricao</p>
-              <h1 class="title">Cardapio diario</h1>
-              <p class="subtitle">Documento nutricional pronto para compartilhar, com distribuicao de macros, meta calorica e refeicoes organizadas em leitura limpa para impressao ou envio.</p>
+              <p class="eyebrow">MounTrack / Nutrição</p>
+              <h1 class="title">Cardápio Diário</h1>
+              <p class="subtitle">Seu planejamento nutricional estruturado, com metas calóricas, distribuição de macronutrientes e refeições organizadas para o seu dia a dia.</p>
             </div>
             <div class="date-chip">${escapeHtml(dateLabel)}</div>
           </div>
 
           <div class="header-signature">
-            <div class="company-chip">${escapeHtml(NUTRITION_COMPANY_SIGNATURE)}</div>
-            <div class="signature-copy">Assinatura oficial do modulo nutricional</div>
+            <a href="https://antoniorafael.com.br" target="_blank" rel="noopener noreferrer" class="company-chip" style="text-decoration: none;">${escapeHtml(NUTRITION_COMPANY_SIGNATURE)}</a>
           </div>
 
           <div class="summary-grid">
             <div class="summary-card"><span>Objetivo</span><strong>${escapeHtml(OBJECTIVE_LABELS[objective])}</strong></div>
             <div class="summary-card"><span>Meta do plano</span><strong>${escapeHtml(formatCalories(targetCalories))}</strong></div>
             <div class="summary-card"><span>Total planejado</span><strong>${escapeHtml(formatCalories(plan.totalCalories))}</strong></div>
-            <div class="summary-card"><span>Refeicoes</span><strong>${escapeHtml(String(plan.meals.length))}</strong></div>
+            <div class="summary-card"><span>Refeições</span><strong>${escapeHtml(String(plan.meals.length))}</strong></div>
           </div>
         </div>
       </section>
 
       <section class="metrics-shell">
-        <p class="section-title">Distribuicao nutricional</p>
+        <p class="section-title">Distribuição Nutricional</p>
         <div class="metrics-grid">
           <div class="metric-card protein"><span class="metric-label">${MACRO_LABELS.protein}</span><strong>${escapeHtml(formatGrams(totals.protein))}</strong></div>
           <div class="metric-card carbs"><span class="metric-label">${MACRO_LABELS.carbs}</span><strong>${escapeHtml(formatGrams(totals.carbs))}</strong></div>
@@ -394,7 +397,7 @@ export function buildMealPlanPdfMarkup({
 
       <div class="footer-copy">
         <span><strong>${escapeHtml(NUTRITION_COMPANY_SIGNATURE)}</strong> / ${escapeHtml(NUTRITION_COMPANY_URL)}</span>
-        <span>Gerado automaticamente pelo modulo de nutricao.</span>
+        <span>Gerado automaticamente pelo módulo de nutrição.</span>
       </div>
     </main>
   `;
@@ -418,7 +421,7 @@ export function buildMealPlanPdfHtml({
     <html lang="pt-BR">
       <head>
         <meta charset="utf-8" />
-        <title>Cardapio de Nutricao</title>
+        <title>Cardápio de Nutrição</title>
         <style>${MEAL_PLAN_PDF_STYLES}</style>
       </head>
       <body>
@@ -448,19 +451,73 @@ async function waitForPdfRenderReady(): Promise<void> {
   await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 }
 
-function addCanvasPagesToPdf(pdf: jsPDF, canvas: HTMLCanvasElement): void {
+function addCanvasPagesToPdf(pdf: jsPDF, canvas: HTMLCanvasElement, targetElement: HTMLElement): void {
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   const usableWidth = pageWidth - PDF_MARGIN * 2;
   const usableHeight = pageHeight - PDF_MARGIN * 2;
   const renderScale = usableWidth / canvas.width;
-  const sliceHeight = Math.max(1, Math.floor(usableHeight / renderScale));
+  const maxSliceHeightCanvas = Math.max(1, Math.floor(usableHeight / renderScale));
+
+  // Determine safe cut points based on major sections and rows
+  // html2canvas uses a scale of 2
+  const SCALE = 2;
+  const cutPointsCanvas = [canvas.height];
+  const targetRect = targetElement.getBoundingClientRect();
+  
+  // We specify granular elements so we can cut INSIDE the meal card if it's too big,
+  // preventing arbitrary geometric cuts that slice text in half.
+  const elements = Array.from(
+    targetElement.querySelectorAll('.header-shell, .metrics-shell, .summary-card, .meal-header, .item-row, .empty-copy, .footer-copy')
+  ) as HTMLElement[];
+
+  // Sort elements by their vertical position to ensure linear processing
+  elements.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+
+  for (let i = 0; i < elements.length - 1; i++) {
+    const el1 = elements[i];
+    const el2 = elements[i + 1];
+
+    const el1Rect = el1.getBoundingClientRect();
+    const el2Rect = el2.getBoundingClientRect();
+
+    const el1Bottom = el1Rect.bottom - targetRect.top;
+    const el2Top = el2Rect.top - targetRect.top;
+
+    // Only make a cut if el2 is strictly below el1 and there's a gap
+    if (el2Top >= el1Bottom) {
+      const gapCenter = (el1Bottom + el2Top) / 2;
+      cutPointsCanvas.push(gapCenter * SCALE);
+    }
+  }
+
+  cutPointsCanvas.sort((a, b) => a - b);
 
   let renderedHeight = 0;
   let pageIndex = 0;
 
-  while (renderedHeight < canvas.height) {
-    const currentSliceHeight = Math.min(sliceHeight, canvas.height - renderedHeight);
+  while (renderedHeight < canvas.height - 5) { // 5px tolerance
+    // Filter to cuts that are ahead of our progress and fit in one page
+    const possibleCuts = cutPointsCanvas.filter(
+      (c) => c > renderedHeight + 5 && c <= renderedHeight + maxSliceHeightCanvas
+    );
+
+    let nextPossibleCut = renderedHeight + maxSliceHeightCanvas;
+    
+    if (possibleCuts.length > 0) {
+      // Pick the largest safe cut within this page limit
+      nextPossibleCut = possibleCuts[possibleCuts.length - 1];
+    } else {
+      // No safe cut found in the max slice height.
+      // E.g. a huge card that takes more than one full page.
+      // We must fallback to max slice height.
+      if (canvas.height - renderedHeight <= maxSliceHeightCanvas) {
+        nextPossibleCut = canvas.height;
+      }
+    }
+
+    const currentSliceHeight = Math.min(nextPossibleCut - renderedHeight, canvas.height - renderedHeight);
+
     const pageCanvas = document.createElement("canvas");
     pageCanvas.width = canvas.width;
     pageCanvas.height = currentSliceHeight;
@@ -485,6 +542,10 @@ function addCanvasPagesToPdf(pdf: jsPDF, canvas: HTMLCanvasElement): void {
     if (pageIndex > 0) {
       pdf.addPage();
     }
+
+    // Fill white background just in case
+    pdf.setFillColor(255, 255, 255);
+    pdf.rect(0, 0, pageWidth, pageHeight, "F");
 
     pdf.addImage(
       pageCanvas.toDataURL("image/png", 1),
@@ -557,7 +618,7 @@ export async function downloadMealPlanPdf({
       compress: true,
     });
 
-    addCanvasPagesToPdf(pdf, canvas);
+    addCanvasPagesToPdf(pdf, canvas, target);
     pdf.save(filename);
   } finally {
     exportContainer.remove();

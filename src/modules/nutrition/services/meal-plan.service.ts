@@ -115,13 +115,19 @@ function pickBestFood(
   preferredFoods: string[] = [],
   usedIds: Set<string>,
 ): FoodItem | undefined {
-  return candidates
+  const scored = candidates
     .filter((food) => food.category === category && food.mealCategories.includes(mealType) && !usedIds.has(food.id))
-    .sort((left, right) => {
-      const leftScore = left.confidenceScore * 100 + getPreferredBoost(left.name, preferredFoods) + (left.completenessScore ?? 0) * 20;
-      const rightScore = right.confidenceScore * 100 + getPreferredBoost(right.name, preferredFoods) + (right.completenessScore ?? 0) * 20;
-      return rightScore - leftScore;
-    })[0];
+    .map((food) => {
+      const score = food.confidenceScore * 100 + getPreferredBoost(food.name, preferredFoods) + (food.completenessScore ?? 0) * 20;
+      return { food, score };
+    })
+    .sort((left, right) => right.score - left.score);
+
+  if (scored.length === 0) return undefined;
+
+  const topCandidates = scored.slice(0, 4); // Picks randomly among the top 4 candidates for variety
+  const randomIndex = Math.floor(Math.random() * topCandidates.length);
+  return topCandidates[randomIndex].food;
 }
 
 function buildPlanItem(food: FoodItem, targetCaloriesForItem: number): MealPlanItem {
@@ -158,10 +164,10 @@ function sumMealCalories(items: MealPlanItem[]): number {
 function rebalanceMealToTarget(items: MealPlanItem[], sourceFoods: FoodItem[], targetCalories: number): MealPlanItem[] {
   const nextItems = [...items];
 
-  for (let iteration = 0; iteration < 6; iteration += 1) {
+  for (let iteration = 0; iteration < 15; iteration += 1) {
     const currentTotal = sumMealCalories(nextItems);
     const diff = Number((targetCalories - currentTotal).toFixed(2));
-    if (Math.abs(diff) <= 8) {
+    if (Math.abs(diff) <= 1) {
       break;
     }
 
@@ -244,7 +250,7 @@ export function generateMealPlan(request: MealPlanRequest, foods: FoodItem[]): M
   const currentTotal = Number(meals.reduce((total, meal) => total + meal.totalCalories, 0).toFixed(2));
   const totalDiff = Number((request.targetCalories - currentTotal).toFixed(2));
 
-  if (Math.abs(totalDiff) > 8) {
+  if (Math.abs(totalDiff) > 1) {
     const lastMealWithItems = [...meals].reverse().find((meal) => meal.items.length > 0);
     if (lastMealWithItems) {
       const mealIndex = meals.findIndex((meal) => meal === lastMealWithItems);

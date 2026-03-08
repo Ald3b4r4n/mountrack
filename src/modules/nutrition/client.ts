@@ -64,11 +64,11 @@ export async function getNutritionErrorMessage(response: Response, fallbackMessa
   }
 
   if (payload?.code === "nutrition_auth_unavailable" || response.status === 503) {
-    return "A autenticacao da nutricao nao esta disponivel neste deploy. Confira as variaveis do Firebase na Vercel.";
+    return "A autenticação da nutrição não está disponível neste deploy. Confira as variáveis do Firebase na Vercel.";
   }
 
   if (payload?.code === "nutrition_auth_unauthorized" || response.status === 401) {
-    return "Sua sessao da nutricao expirou ou nao foi validada. Entre novamente e tente de novo.";
+    return "Sua sessão da nutrição expirou ou não foi validada. Entre novamente e tente de novo.";
   }
 
   return fallbackMessage;

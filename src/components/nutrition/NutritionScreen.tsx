@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { BarcodeScannerDialog } from "@/components/nutrition/BarcodeScannerDialog";
+import { CustomFoodDialog } from "./CustomFoodDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   clearNutritionMealPlanFromBrowser,
@@ -97,7 +98,7 @@ type GoalInputState = {
 };
 
 const WORKSPACE_TABS: Array<{ key: WorkspaceTabKey; label: string }> = [
-  { key: "diary", label: "Diario" },
+  { key: "diary", label: "Diário" },
   { key: "goal", label: "Meta" },
   { key: "plan", label: "Cardapio" },
 ];
@@ -322,6 +323,9 @@ export function NutritionScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [isSavingGoal, setIsSavingGoal] = useState(false);
+  const [customFoodOpen, setCustomFoodOpen] = useState(false);
+
+  // Search & add items
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [isUpdatingWater, setIsUpdatingWater] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
@@ -452,7 +456,7 @@ export function NutritionScreen() {
     try {
       const response = await authorizedNutritionFetch(activeUser, `/api/nutrition/diaries/${today}`);
       if (!response.ok) {
-        await resolveRequestError(response, "Nao foi possivel carregar o painel de nutricao agora.");
+        await resolveRequestError(response, "Não foi possível carregar o painel de nutrição agora.");
         if (canUseBrowserPersistence && hasNutritionBrowserSnapshot(activeUser.uid)) {
           setStorageMode("volatile");
           const browserDashboard = loadBrowserDashboard();
@@ -498,7 +502,7 @@ export function NutritionScreen() {
         }
       }
 
-      setMessage((current) => current ?? "Nao foi possivel carregar o painel de nutricao agora.");
+      setMessage((current) => current ?? "Não foi possível carregar o painel de nutrição agora.");
       return canUseBrowserPersistence ? "volatile" : "memory";
     } finally {
       setIsLoading(false);
@@ -532,7 +536,7 @@ export function NutritionScreen() {
           `/api/nutrition/history?page=${nextPage}&pageSize=${HISTORY_PAGE_SIZE}`,
         );
         if (!response.ok) {
-          await resolveRequestError(response, "Nao foi possivel carregar o historico agora.");
+          await resolveRequestError(response, "Não foi possível carregar o histórico agora.");
           return;
         }
 
@@ -558,7 +562,7 @@ export function NutritionScreen() {
           }
         }
 
-        setMessage((current) => current ?? "Nao foi possivel carregar o historico agora.");
+        setMessage((current) => current ?? "Não foi possível carregar o histórico agora.");
       } finally {
         setIsHistoryLoading(false);
       }
@@ -750,7 +754,7 @@ export function NutritionScreen() {
         setActiveSurface("workspace");
         setActiveDiaryMeal(mealType);
         setHistoryPage(1);
-        setMessage(`${getFoodLabel(selectedFood)} adicionado ao diario.`);
+        setMessage(`${getFoodLabel(selectedFood)} adicionado ao diário.`);
         resetSearchComposer(true);
         return;
       }
@@ -776,7 +780,7 @@ export function NutritionScreen() {
       setActiveSurface("workspace");
       setActiveDiaryMeal(mealType);
       setHistoryPage(1);
-      setMessage(`${getFoodLabel(selectedFood)} adicionado ao diario.`);
+      setMessage(`${getFoodLabel(selectedFood)} adicionado ao diário.`);
       resetSearchComposer(true);
       await Promise.all([loadDashboard(), loadHistory(1)]);
     } catch {
@@ -799,12 +803,12 @@ export function NutritionScreen() {
 
       const response = await authorizedNutritionFetch(activeUser, `/api/nutrition/diary-items/${itemId}`, { method: "DELETE" });
       if (!response.ok) {
-        await resolveRequestError(response, "Nao foi possivel remover esse item do diario.");
+        await resolveRequestError(response, "Não foi possível remover esse item do diário.");
         return;
       }
       await Promise.all([loadDashboard(), loadHistory(historyPage)]);
     } catch {
-      setMessage((current) => current ?? "Nao foi possivel remover esse item do diario.");
+      setMessage((current) => current ?? "Não foi possível remover esse item do diário.");
     }
   }
 
@@ -1159,8 +1163,8 @@ export function NutritionScreen() {
     storageMode === "database"
       ? "Catalogo persistente"
       : storageMode === "checking"
-        ? "Verificando storage"
-        : "Sem DB ativo";
+        ? "Verificando base de dados"
+        : "Base de dados inativa";
   const searchSourceLabel = formatSearchSourceLabel(lastSearchSource);
   const resultState = selectedFood && !resultsVisible
     ? { title: "Resultados recolhidos", text: "Selecao pronta. Limpe ou faca outra busca para trocar o alimento." }
@@ -1168,7 +1172,7 @@ export function NutritionScreen() {
 
   const pageContent = (
     <div style={{ position: "relative", minHeight: "100vh", overflow: "hidden" }}>
-      <div style={{ position: isMobileLayout ? "absolute" : "fixed", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden" }}>
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden", backgroundColor: "#020617" }}>
         {!isMobileLayout ? (
           <Image
             src="/images/nutrition-bg.png"
@@ -1178,29 +1182,50 @@ export function NutritionScreen() {
             sizes="100vw"
             style={{ objectFit: "cover", objectPosition: "center center", opacity: 0.42 }}
           />
-        ) : null}
-        <div style={{ position: "absolute", inset: 0, background: isMobileLayout ? "linear-gradient(180deg, rgba(7, 16, 31, 0.92) 0%, rgba(7, 16, 31, 0.97) 34%, rgba(4, 10, 22, 1) 100%)" : "linear-gradient(180deg, rgba(4, 10, 22, 0.42) 0%, rgba(4, 10, 22, 0.86) 58%, rgba(4, 10, 22, 0.96) 100%)" }} />
-        <div style={{ position: "absolute", inset: 0, background: isMobileLayout ? "radial-gradient(circle at 50% -5%, rgba(52, 211, 153, 0.12), transparent 38%)" : "radial-gradient(circle at 85% 10%, rgba(34, 211, 238, 0.12), transparent 24%)" }} />
+        ) : (
+          <div style={{ position: "absolute", inset: 0, opacity: 0.08, backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%2334d399\" fill-opacity=\"1\"%3E%3Cpath d=\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')" }} />
+        )}
+        <div style={{ position: "absolute", inset: 0, background: isMobileLayout ? "linear-gradient(165deg, rgba(8, 14, 26, 0.96) 0%, rgba(3, 7, 14, 0.99) 100%)" : "linear-gradient(180deg, rgba(4, 10, 22, 0.42) 0%, rgba(4, 10, 22, 0.86) 58%, rgba(4, 10, 22, 0.96) 100%)" }} />
+        
+        {isMobileLayout && (
+          <>
+            <div style={{ position: "absolute", zIndex: 0, inset: 0, backgroundImage: "url(/images/nutrition-mobile-bg.png)", backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat", opacity: 0.85, mixBlendMode: "overlay" }} />
+            <div style={{ position: "absolute", top: "-10%", left: "-20%", width: "140vw", height: "140vw", background: "radial-gradient(circle, rgba(15, 159, 110, 0.15) 0%, transparent 60%)", filter: "blur(80px)", transform: "translateZ(0)" }} />
+            <div style={{ position: "absolute", bottom: "-10%", right: "-20%", width: "120vw", height: "120vw", background: "radial-gradient(circle, rgba(6, 182, 212, 0.12) 0%, transparent 60%)", filter: "blur(80px)", transform: "translateZ(0)" }} />
+          </>
+        )}
+        {!isMobileLayout && (
+          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 85% 10%, rgba(34, 211, 238, 0.12), transparent 24%)" }} />
+        )}
       </div>
 
       <main className="container" style={{ position: "relative", zIndex: 1, paddingTop: isMobileLayout ? "1.25rem" : "2rem", paddingBottom: "3rem" }}>
-        <BarcodeScannerDialog open={scannerOpen} onClose={() => setScannerOpen(false)} onDetected={(code) => void handleBarcodeLookup(code)} />
-        <header className="glass-panel static-panel anim-enter" style={{ padding: isMobileLayout ? "0.95rem" : "1.2rem", marginBottom: "0.9rem", overflow: "hidden", position: "relative" }}>
+        <BarcodeScannerDialog
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onDetected={(code) => { setScannerOpen(false); void handleBarcodeLookup(code); }}
+      />
+      <CustomFoodDialog
+        open={customFoodOpen}
+        onClose={() => setCustomFoodOpen(false)}
+        onCreated={(food) => {
+          setCustomFoodOpen(false);
+          setMessage(`Alimento ${food.name} cadastrado!`);
+          setSelectedFood(food);
+        }}
+      />
+    <header className="glass-panel static-panel anim-enter" style={{ padding: isMobileLayout ? "0.95rem" : "1.2rem", marginBottom: "0.9rem", overflow: "hidden", position: "relative" }}>
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(52, 211, 153, 0.08), rgba(6, 182, 212, 0.03) 45%, rgba(8, 14, 26, 0) 100%)" }} />
           {!isMobileLayout ? <div style={{ position: "absolute", top: "-3.5rem", right: "-4rem", width: "15rem", height: "15rem", borderRadius: "999px", background: "radial-gradient(circle, rgba(52, 211, 153, 0.18), transparent 68%)", filter: "blur(10px)" }} /> : null}
           <div style={{ position: "relative", display: "grid", gap: isMobileLayout ? "0.75rem" : "1rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: isMobileLayout ? "0.75rem" : "1rem", flexWrap: "wrap" }}>
               <div style={{ maxWidth: "42rem" }}>
-                <span className="badge badge-success" style={{ marginBottom: isMobileLayout ? "0.5rem" : "0.75rem" }}>Nutricao</span>
-                <h1 className="glow-text" style={{ fontSize: isMobileLayout ? "clamp(1.75rem, 7vw, 2.15rem)" : "clamp(2rem, 4vw, 3rem)", marginBottom: "0.25rem" }}>Diario nutricional</h1>
+                <span className="badge badge-success" style={{ marginBottom: isMobileLayout ? "0.5rem" : "0.75rem" }}>Nutrição</span>
+                <h1 className="glow-text" style={{ fontSize: isMobileLayout ? "clamp(1.75rem, 7vw, 2.15rem)" : "clamp(2rem, 4vw, 3rem)", marginBottom: "0.25rem" }}>Diário Nutricional</h1>
                 <p className="page-subtitle" style={{ maxWidth: "58ch" }}>
-                  {isMobileLayout ? "Registre refeicoes, acompanhe macros, agua e historico do dia sem friccao." : "Registre refeicoes, acompanhe agua, ajuste metas e monte o cardapio do dia sem empilhar logs enormes."}
+                  {isMobileLayout ? "Registre refeições, acompanhe macros e água do dia sem fricção." : "Registre refeições, acompanhe água, ajuste metas e monte seu plano alimentar ideal."}
                 </p>
-                <div style={{ display: "flex", gap: "0.55rem", flexWrap: "wrap", alignItems: "center", marginTop: "0.7rem" }}>
-                  <span className="badge badge-success" style={{ background: "rgba(15, 23, 42, 0.38)", color: "#d1fae5", borderColor: "rgba(52, 211, 153, 0.18)" }}>{NUTRITION_COMPANY_SIGNATURE}</span>
-                  <span style={{ color: "var(--text-secondary)", fontSize: "0.82rem" }}>Assinatura oficial do modulo nutricional</span>
-                </div>
-                {!isMobileLayout && isPreview ? <p style={{ color: "var(--accent-secondary)", marginTop: "0.55rem", fontSize: "0.85rem" }}>Preview local ativo. O fluxo real continua disponivel com login normal.</p> : null}
+                {!isMobileLayout && isPreview ? <p style={{ color: "var(--accent-secondary)", marginTop: "0.55rem", fontSize: "0.85rem" }}>Preview local ativo. O fluxo real continua disponível com login normal.</p> : null}
               </div>
               <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", alignSelf: "flex-start", width: isMobileLayout ? "100%" : "auto" }}>
                 <Link href="/" className="nav-pill" style={{ flex: isMobileLayout ? 1 : undefined, justifyContent: "center" }}>Dashboard</Link>
@@ -1222,7 +1247,7 @@ export function NutritionScreen() {
         {isMobileLayout ? (
           <div style={{ display: "flex", gap: "0.55rem", flexWrap: "wrap", marginBottom: "1rem" }}>
             <SegmentButton active={activeSurface === "search"} label="Busca" onClick={() => setActiveSurface("search")} />
-            <SegmentButton active={activeSurface === "workspace"} label={activeWorkspace === "diary" ? "Diario" : activeWorkspace === "goal" ? "Meta" : "Cardapio"} onClick={() => setActiveSurface("workspace")} />
+            <SegmentButton active={activeSurface === "workspace"} label={activeWorkspace === "diary" ? "Diário" : activeWorkspace === "goal" ? "Meta" : "Cardápio"} onClick={() => setActiveSurface("workspace")} />
           </div>
         ) : null}
 
@@ -1237,8 +1262,8 @@ export function NutritionScreen() {
                 {storageMode === "database"
                   ? "Busca com catalogo persistido e reforco por fontes externas quando necessario."
                   : storageMode === "checking"
-                    ? "Validando o modo de armazenamento deste ambiente."
-                    : "Fontes externas ativas, mas sem conexao Postgres o catalogo nao persiste no Supabase neste ambiente."}
+                    ? "Conectando ao banco de dados e APIs de alimentos..."
+                    : "Servicos externos de alimentos ativados."}
               </p>
 
               <div style={{ display: "grid", gap: "0.8rem", marginBottom: "0.9rem" }}>
@@ -1253,7 +1278,7 @@ export function NutritionScreen() {
                   <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap" }}>
                     <input className="input-field" value={barcodeQuery} onChange={(event) => handleBarcodeQueryChange(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void handleBarcodeLookup(barcodeQuery); } }} placeholder="EAN / GTIN" style={{ flex: 1, minWidth: "12rem" }} />
                     <button onClick={() => void handleBarcodeLookup(barcodeQuery)} className="btn-outline">Consultar</button>
-                    {isMobileLayout ? <button onClick={() => setScannerOpen(true)} className="btn-outline">Escanear</button> : null}
+                    {isMobileLayout ? <button onClick={() => setScannerOpen(true)} className="btn-outline">Leitor de código de barras</button> : null}
                   </div>
                 </Field>
               </div>
@@ -1265,6 +1290,7 @@ export function NutritionScreen() {
                     <div style={{ display: "flex", gap: "0.45rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
                       {searchSourceLabel ? <span className="badge badge-success">{searchSourceLabel}</span> : null}
                       {resultsVisible && searchResults.length ? <span className="badge badge-success">{searchResults.length} itens</span> : null}
+                      <button onClick={() => setCustomFoodOpen(true)} className="btn-outline" style={{ minWidth: "auto", padding: "0.45rem 0.8rem" }}>Cadastrar Alimento</button>
                       {searchResults.length || selectedFood ? <button onClick={() => { resetSearchComposer(); setMessage(null); }} className="btn-outline" style={{ minWidth: "auto", padding: "0.45rem 0.8rem" }}>Limpar</button> : null}
                     </div>
                   </div>
@@ -1295,9 +1321,9 @@ export function NutritionScreen() {
                         <Field label="Refeicao"><select className="input-field" value={mealType} onChange={(event) => setMealType(event.target.value as MealType)}>{MEAL_ORDER.map((value) => <option key={value} value={value}>{MEAL_LABELS[value]}</option>)}</select></Field>
                       </div>
 
-                      <button onClick={() => void handleAddDiaryItem()} className="btn-primary" style={{ width: "100%" }}>Adicionar ao diario</button>
+                      <button onClick={() => void handleAddDiaryItem()} className="btn-primary" style={{ width: "100%" }}>Adicionar ao diário</button>
                     </div>
-                  ) : <EmptyState title="Nenhum alimento selecionado" text="Escolha um resultado da busca para liberar o lancamento no diario." compact />}
+                  ) : <EmptyState title="Nenhum alimento selecionado" text="Escolha um resultado da busca para liberar o lançamento no diário." compact />}
                 </div>
               </div>
             </section>
@@ -1320,12 +1346,12 @@ export function NutritionScreen() {
                 <div className="glass-panel static-panel" style={{ padding: "1rem", background: "rgba(6, 22, 45, 0.64)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap", marginBottom: "0.95rem" }}>
                     <div>
-                      <strong style={{ display: "block" }}>Historico e diario</strong>
-                      <span style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>O diario de hoje e o historico agora ficam paginados para nao alongar a sessao.</span>
+                      <strong style={{ display: "block" }}>Histórico e diário</strong>
+                      <span style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>Revise aqui todos os consumos e registros de água do seu dia.</span>
                     </div>
                     <div style={{ display: "flex", gap: "0.55rem", flexWrap: "wrap" }}>
                       <SegmentButton active={activeDiaryView === "today"} label="Hoje" onClick={() => { setActiveDiaryView("today"); setDiaryPage(1); }} />
-                      <SegmentButton active={activeDiaryView === "history"} label="Historico" onClick={() => { setActiveDiaryView("history"); setDiaryPage(1); }} />
+                      <SegmentButton active={activeDiaryView === "history"} label="Histórico" onClick={() => { setActiveDiaryView("history"); setDiaryPage(1); }} />
                     </div>
                   </div>
 
@@ -1334,7 +1360,7 @@ export function NutritionScreen() {
                       <div className="glass-panel static-panel" style={{ padding: "0.95rem", background: "rgba(4, 15, 32, 0.72)" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", flexWrap: "wrap", marginBottom: "0.7rem" }}>
                           <div>
-                            <strong style={{ display: "block" }}>Agua do dia</strong>
+                            <strong style={{ display: "block" }}>Água do dia</strong>
                             <span style={{ color: "var(--text-secondary)", fontSize: "0.84rem" }}>Meta {formatMilliliters(summary.targetWaterMl)} · Atual {formatMilliliters(summary.waterIntakeMl)}</span>
                           </div>
                           <span className="badge badge-success">{Math.round(waterRatio)}% da meta</span>
@@ -1346,7 +1372,7 @@ export function NutritionScreen() {
                         </div>
                         {hydrationMode === "absolute" ? (
                           <p style={{ color: "var(--text-secondary)", fontSize: "0.8rem", marginBottom: "0.7rem" }}>
-                            Use este modo para corrigir o total do dia quando houver erro no lancamento.
+                            Use este modo para corrigir o total do dia quando houver erro no lançamento.
                           </p>
                         ) : null}
                         <div
@@ -1381,7 +1407,7 @@ export function NutritionScreen() {
                           </div>
                           <div style={{ gridColumn: isMobileLayout ? "1 / -1" : "auto", display: "grid" }}>
                             <button onClick={() => void handleSaveWater()} className="btn-primary" style={{ width: "100%", minHeight: "3rem" }} disabled={isUpdatingWater}>
-                              {isUpdatingWater ? "Salvando..." : hydrationMode === "absolute" ? "Salvar total" : "Adicionar agua"}
+                              {isUpdatingWater ? "Salvando..." : hydrationMode === "absolute" ? "Salvar total" : "Adicionar água"}
                             </button>
                           </div>
                         </div>
@@ -1398,10 +1424,10 @@ export function NutritionScreen() {
                           <strong style={{ display: "block" }}>{MEAL_LABELS[activeDiaryMeal]}</strong>
                           <span style={{ color: "var(--text-secondary)", fontSize: "0.84rem" }}>{activeDiaryItems.length} item(ns) · {formatCalories(summary.meals[activeDiaryMeal] ?? 0)}</span>
                         </div>
-                        <span className="badge badge-success">Pagina {diaryPage}/{diaryTotalPages}</span>
+                        <span className="badge badge-success">Página {diaryPage}/{diaryTotalPages}</span>
                       </div>
 
-                      {isLoading ? <p style={{ color: "var(--text-secondary)" }}>Carregando diario...</p> : null}
+                      {isLoading ? <p style={{ color: "var(--text-secondary)" }}>Carregando diário...</p> : null}
                       {!isLoading && activeDiaryItems.length === 0 ? <EmptyState title="Sem itens nesta refeicao" text="Escolha um alimento na coluna ao lado e registre no horario desejado." compact /> : null}
                       {!isLoading && pagedDiaryItems.length > 0 ? (
                         <div style={{ display: "grid", gap: "0.65rem", maxHeight: "min(36vh, 310px)", overflowY: "auto", paddingRight: "0.25rem" }}>
@@ -1421,8 +1447,8 @@ export function NutritionScreen() {
                     </div>
                   ) : (
                     <div style={{ display: "grid", gap: "0.75rem" }}>
-                      {isHistoryLoading ? <p style={{ color: "var(--text-secondary)" }}>Carregando historico...</p> : null}
-                      {!isHistoryLoading && historyEntries.length === 0 ? <EmptyState title="Sem historico ainda" text="Os dias registrados aparecerao aqui, com paginacao pronta para navegacao." compact /> : null}
+                      {isHistoryLoading ? <p style={{ color: "var(--text-secondary)" }}>Carregando histórico...</p> : null}
+                      {!isHistoryLoading && historyEntries.length === 0 ? <EmptyState title="Sem histórico ainda" text="Os dias registrados aparecerão aqui, com paginação pronta para navegação." compact /> : null}
                       {!isHistoryLoading && historyEntries.length > 0 ? <div style={{ display: "grid", gap: "0.7rem", maxHeight: "min(44vh, 380px)", overflowY: "auto", paddingRight: "0.25rem" }}>{historyEntries.map((entry) => <HistoryEntryCard key={entry.date} entry={entry} />)}</div> : null}
                       <PaginationControls page={historyPage} totalPages={historyTotalPages} onPageChange={(page) => void loadHistory(page)} />
                     </div>
@@ -1433,7 +1459,7 @@ export function NutritionScreen() {
               {activeWorkspace === "goal" ? (
                 <div className="glass-panel static-panel" style={{ padding: "1rem", background: "rgba(6, 22, 45, 0.64)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap", marginBottom: "0.95rem" }}>
-                    <div><strong style={{ display: "block" }}>Meta nutricional</strong><span style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>Calorias, macros e agua diaria refletem no topo da sessao e no diario.</span></div>
+                    <div><strong style={{ display: "block" }}>Meta nutricional</strong><span style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>Configure sua rotina para que possamos traçar os melhores caminhos e sugestoes.</span></div>
                     <span className="badge badge-success">{OBJECTIVE_LABELS[goalObjectiveDraft]}</span>
                   </div>
                   <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))" }}>
@@ -1458,8 +1484,8 @@ export function NutritionScreen() {
               {activeWorkspace === "plan" ? (
                 <div className="glass-panel static-panel" style={{ padding: "1rem", background: "rgba(6, 22, 45, 0.64)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap", marginBottom: "0.95rem" }}>
-                    <div><strong style={{ display: "block" }}>Cardapio diario</strong><span style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>Meta calorica respeitada, botoes alinhados no desktop e edicao de quantidades sem deformar o layout.</span></div>
-                    {displayedMealPlan ? <span className="badge badge-success">{displayedMealPlan.meals.length} refeicoes</span> : null}
+                    <div><strong style={{ display: "block" }}>Cardápio Diário</strong><span style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>Monte refeições estratégicas em uma ficha de planejamento rápida de editar.</span></div>
+                    {displayedMealPlan ? <span className="badge badge-success">{displayedMealPlan.meals.length} refeições</span> : null}
                   </div>
                   <div style={{ display: "grid", gap: "0.8rem", gridTemplateColumns: isMobileLayout ? "1fr" : "minmax(0, 170px) minmax(0, 1fr)" }}>
                     <Field label="Calorias do cardapio"><input className="input-field" type="number" value={planCalories} onChange={(event) => setPlanCalories(event.target.value)} /></Field>
@@ -1478,6 +1504,11 @@ export function NutritionScreen() {
           ) : null}
         </section>
       </main>
+      
+      {/* Footer */}
+      <footer style={{ padding: "1.5rem", textAlign: "center", display: "flex", justifyContent: "center", zIndex: 10, position: "relative" }}>
+        <a href="https://antoniorafael.com.br" target="_blank" rel="noopener noreferrer" className="badge badge-success" style={{ background: "rgba(15, 23, 42, 0.38)", color: "#d1fae5", borderColor: "rgba(52, 211, 153, 0.18)", textDecoration: "none" }}>{NUTRITION_COMPANY_SIGNATURE}</a>
+      </footer>
     </div>
   );
 
@@ -1490,7 +1521,7 @@ function CompactMetricCard({ label, value, accent }: { label: string; value: str
 }
 
 function HydrationMetricCard({ current, target, ratio }: { current: number; target: number; ratio: number }) {
-  return <article className="glass-panel static-panel" style={{ padding: "0.95rem 1rem", background: "linear-gradient(145deg, rgba(6, 22, 45, 0.68), rgba(13, 37, 61, 0.82))", minHeight: "100%", minWidth: 0 }}><div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", alignItems: "flex-start", marginBottom: "0.6rem", flexWrap: "wrap" }}><div style={{ minWidth: 0, flex: "1 1 10rem" }}><p className="stat-label" style={{ marginBottom: "0.35rem" }}>Agua hoje</p><strong style={{ fontSize: "clamp(1.05rem, 4vw, 1.22rem)", color: "#e0f2fe", display: "block", lineHeight: 1.15 }}>{formatMilliliters(current)}</strong></div><span className="badge badge-success" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>{formatMilliliters(target)}</span></div><div className="progress-track" style={{ marginBottom: "0.45rem" }}><div className="progress-fill" style={{ width: `${ratio}%`, background: "linear-gradient(135deg, #38bdf8, #22d3ee)" }} /></div><span style={{ color: "var(--text-secondary)", fontSize: "0.82rem", display: "block" }}>{Math.round(ratio)}% da meta diaria</span></article>;
+  return <article className="glass-panel static-panel" style={{ padding: "0.95rem 1rem", background: "linear-gradient(145deg, rgba(6, 22, 45, 0.68), rgba(13, 37, 61, 0.82))", minHeight: "100%", minWidth: 0 }}><div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", alignItems: "flex-start", marginBottom: "0.6rem", flexWrap: "wrap" }}><div style={{ minWidth: 0, flex: "1 1 10rem" }}><p className="stat-label" style={{ marginBottom: "0.35rem" }}>Água hoje</p><strong style={{ fontSize: "clamp(1.05rem, 4vw, 1.22rem)", color: "#e0f2fe", display: "block", lineHeight: 1.15 }}>{formatMilliliters(current)}</strong></div><span className="badge badge-success" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>{formatMilliliters(target)}</span></div><div className="progress-track" style={{ marginBottom: "0.45rem" }}><div className="progress-fill" style={{ width: `${ratio}%`, background: "linear-gradient(135deg, #38bdf8, #22d3ee)" }} /></div><span style={{ color: "var(--text-secondary)", fontSize: "0.82rem", display: "block" }}>{Math.round(ratio)}% da meta diaria</span></article>;
 }
 
 function MacroHeroCard({ summary, goal, consumedRatio }: { summary: DailySummary; goal: NutritionGoal; consumedRatio: number }) {

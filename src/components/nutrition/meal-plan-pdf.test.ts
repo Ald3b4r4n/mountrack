@@ -62,7 +62,7 @@ describe("meal plan pdf html", () => {
 
     expect(MEAL_PLAN_PDF_STYLES).toContain(".page");
     expect(markup).toContain('data-pdf-root="meal-plan"');
-    expect(markup).toContain("Cardapio diario");
+    expect(markup).toContain("Cardápio Diário");
     expect(markup).toContain("Banana prata");
     expect(markup).toContain(NUTRITION_COMPANY_SIGNATURE.replace("&", "&amp;"));
     expect(markup).toContain(NUTRITION_COMPANY_URL);

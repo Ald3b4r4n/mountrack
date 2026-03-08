@@ -196,7 +196,7 @@ export function BarcodeScannerDialog({
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>
           <div>
-            <h3 id={titleId} style={{ fontSize: "1.1rem", fontWeight: 600 }}>Escanear codigo de barras</h3>
+            <h3 id={titleId} style={{ fontSize: "1.1rem", fontWeight: 600 }}>Leitor de código de barras</h3>
             <p id={descriptionId} style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
               Aponte a camera para o EAN, GTIN ou QR do alimento.
             </p>

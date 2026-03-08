@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireNutritionUser } from "@/modules/nutrition/auth/require-user";
 import { toNutritionRouteErrorResponse } from "@/modules/nutrition/http/route-error";
 import { INTERNAL_FOODS } from "@/modules/nutrition/data/internal-foods";
+import { TACO_FOODS } from "@/modules/nutrition/data/taco-foods";
 import { generateMealPlan } from "@/modules/nutrition/services/meal-plan.service";
 import { getGoal, getNutritionStorageHeaders, listFoods, saveMealPlan } from "@/modules/nutrition/repositories/nutrition-store";
 import { mealPlanRequestSchema } from "@/modules/nutrition/validators";
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
     });
 
     const catalogFoods = await listFoods({ includeInternal: false });
-    const foods = catalogFoods.length >= 12 ? [...catalogFoods, ...INTERNAL_FOODS] : [...catalogFoods, ...INTERNAL_FOODS];
+    const foods = catalogFoods.length >= 12 ? [...catalogFoods, ...INTERNAL_FOODS, ...TACO_FOODS] : [...catalogFoods, ...INTERNAL_FOODS, ...TACO_FOODS];
     const mealPlan = generateMealPlan(payload, foods);
     await saveMealPlan(user.uid, mealPlan);
 

@@ -1,5 +1,6 @@
 import { Pool } from "pg";
 import { INTERNAL_FOODS } from "@/modules/nutrition/data/internal-foods";
+import { TACO_FOODS } from "@/modules/nutrition/data/taco-foods";
 import type {
   DiaryItemSnapshot,
   FoodItem,
@@ -14,24 +15,34 @@ import {
 } from "@/modules/nutrition/repositories/memory-store";
 
 const BRAND_WATCHLIST = [
-  "Growth",
+  "Growth Supplements",
   "Max Titanium",
-  "Integralmédica",
+  "Integralmedica",
   "Probiótica",
-  "DUX",
+  "Dux Nutrition",
   "Black Skull",
-  "Darkness",
-  "Atlhetica",
-  "Bodyaction",
+  "Vitafor",
+  "Nutrify",
+  "True Source",
+  "Caffeine Army",
+  "ElementoPuro",
+  "Essential Nutrition",
+  "Puravida",
+  "Adaptogen Science",
+  "Iridium Labs",
+  "Dark Lab",
   "New Millen",
-  "Essential",
+  "Under Labz",
+  "Equaliv",
+  "Atlhetica Nutrition",
+  "Darkness",
+  "Bodyaction",
 ];
 
 const globalPgState = globalThis as typeof globalThis & {
   __nutritionPool__?: Pool;
   __nutritionSchemaPromise__?: Promise<void>;
 };
-
 const SCHEMA_SQL = `
 create extension if not exists pg_trgm;
 
@@ -238,13 +249,13 @@ export async function listFoods({ includeInternal = true }: ListFoodsOptions = {
   if (!hasDatabaseUrl()) {
     const store = getNutritionMemoryStore();
     const cachedFoods = Array.from(store.cachedFoods.values());
-    return includeInternal ? [...cachedFoods, ...INTERNAL_FOODS] : cachedFoods;
+    return includeInternal ? [...cachedFoods, ...INTERNAL_FOODS, ...TACO_FOODS] : cachedFoods;
   }
 
   await ensureSchema();
   const result = await getPool().query<{ payload: FoodItem }>("select payload from nutrition_foods");
   const storedFoods = result.rows.map((row: { payload: FoodItem }) => row.payload);
-  return includeInternal ? [...storedFoods, ...INTERNAL_FOODS] : storedFoods;
+  return includeInternal ? [...storedFoods, ...INTERNAL_FOODS, ...TACO_FOODS] : storedFoods;
 }
 
 export async function upsertFoods(foods: FoodItem[]): Promise<void> {
