@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { startTransition, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { BarcodeScannerDialog } from "@/components/nutrition/BarcodeScannerDialog";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,6 +22,10 @@ import {
   type NutritionHistorySnapshot,
 } from "@/modules/nutrition/client-storage";
 import { authorizedNutritionFetch, getNutritionErrorMessage, getNutritionStorageMode } from "@/modules/nutrition/client";
+import {
+  downloadMealPlanPdf,
+  NUTRITION_COMPANY_SIGNATURE,
+} from "@/components/nutrition/meal-plan-pdf";
 import type {
   DailySummary,
   DiaryHistoryEntry,
@@ -36,9 +40,13 @@ import type {
   NutritionUnit,
 } from "@/modules/nutrition/domain/types";
 import { createDiaryItemSnapshot } from "@/modules/nutrition/services/daily-calories.service";
+import {
+  buildNextHydrationDraft,
+  buildNextWaterIntake,
+  type HydrationInputMode,
+} from "@/modules/nutrition/services/hydration-input";
 import { calculateNutritionForQuantity } from "@/modules/nutrition/services/nutrition-calc.service";
 import { getTodayLocalDate } from "@/modules/expenses/utils";
-import { buildMealPlanPdfHtml } from "@/components/nutrition/meal-plan-pdf";
 
 const DEFAULT_WATER_TARGET = 2200;
 const DIARY_PAGE_SIZE = 6;
@@ -78,7 +86,15 @@ const MACRO_LABELS = {
 type WorkspaceTabKey = "diary" | "goal" | "plan";
 type ActiveSurface = "search" | "workspace";
 type DiaryViewKey = "today" | "history";
-type NutritionUiStorageMode = "api" | "volatile";
+type NutritionUiStorageMode = "checking" | "database" | "memory" | "volatile";
+type NutritionSearchSource = "catalog" | "external" | "fallback" | "none" | "openfoodfacts" | null;
+type GoalInputState = {
+  targetCalories: string;
+  targetWaterMl: string;
+  targetProtein: string;
+  targetCarbs: string;
+  targetFat: string;
+};
 
 const WORKSPACE_TABS: Array<{ key: WorkspaceTabKey; label: string }> = [
   { key: "diary", label: "Diario" },
@@ -144,10 +160,6 @@ function formatDeltaCalories(value: number): string {
 
 function roundValue(value: number): number {
   return Number(value.toFixed(2));
-}
-
-function clampValue(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 function parseInputNumber(value: string): number | null {
@@ -230,6 +242,44 @@ function formatHistoryDate(date: string): string {
   );
 }
 
+function formatSearchSourceLabel(source: NutritionSearchSource): string | null {
+  switch (source) {
+    case "catalog":
+      return "Catalogo local";
+    case "external":
+      return "Fonte externa";
+    case "fallback":
+      return "Fallback interno";
+    case "openfoodfacts":
+      return "Open Food Facts";
+    case "none":
+      return "Sem match";
+    default:
+      return null;
+  }
+}
+
+function resolveUiStorageMode(
+  response: Response,
+  canUseBrowserPersistence: boolean,
+): NutritionUiStorageMode {
+  if (getNutritionStorageMode(response) === "memory") {
+    return canUseBrowserPersistence ? "volatile" : "memory";
+  }
+
+  return "database";
+}
+
+function createGoalInputState(sourceGoal: NutritionGoal): GoalInputState {
+  return {
+    targetCalories: String(sourceGoal.targetCalories),
+    targetWaterMl: String(sourceGoal.targetWaterMl ?? DEFAULT_WATER_TARGET),
+    targetProtein: String(sourceGoal.targetProtein ?? 0),
+    targetCarbs: String(sourceGoal.targetCarbs ?? 0),
+    targetFat: String(sourceGoal.targetFat ?? 0),
+  };
+}
+
 export function NutritionScreen() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
@@ -240,18 +290,15 @@ export function NutritionScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [barcodeQuery, setBarcodeQuery] = useState("");
   const [searchResults, setSearchResults] = useState<FoodItem[]>([]);
+  const [lastSearchSource, setLastSearchSource] = useState<NutritionSearchSource>(null);
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
   const [resultsVisible, setResultsVisible] = useState(false);
   const [diaryItems, setDiaryItems] = useState<DiaryItemSnapshot[]>([]);
   const [summary, setSummary] = useState<DailySummary>(() => createEmptySummary(today));
   const [goal, setGoal] = useState<NutritionGoal>(DEFAULT_GOAL);
-  const [goalInputs, setGoalInputs] = useState(() => ({
-    targetCalories: String(DEFAULT_GOAL.targetCalories),
-    targetWaterMl: String(DEFAULT_GOAL.targetWaterMl ?? DEFAULT_WATER_TARGET),
-    targetProtein: String(DEFAULT_GOAL.targetProtein ?? 0),
-    targetCarbs: String(DEFAULT_GOAL.targetCarbs ?? 0),
-    targetFat: String(DEFAULT_GOAL.targetFat ?? 0),
-  }));
+  const [goalInputs, setGoalInputs] = useState<GoalInputState>(() => createGoalInputState(DEFAULT_GOAL));
+  const [goalObjectiveDraft, setGoalObjectiveDraft] = useState<NutritionObjective>(DEFAULT_GOAL.objective);
+  const [goalInputsDirty, setGoalInputsDirty] = useState(false);
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [mealPlanDraft, setMealPlanDraft] = useState<MealPlan | null>(null);
   const [planCalories, setPlanCalories] = useState(String(DEFAULT_GOAL.targetCalories));
@@ -259,7 +306,8 @@ export function NutritionScreen() {
   const [quantity, setQuantity] = useState("100");
   const [unit, setUnit] = useState<NutritionUnit>("g");
   const [mealType, setMealType] = useState<MealType>("breakfast");
-  const [waterDraft, setWaterDraft] = useState("0");
+  const [waterDraft, setWaterDraft] = useState("");
+  const [hydrationMode, setHydrationMode] = useState<HydrationInputMode>("increment");
   const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceTabKey>("diary");
   const [activeSurface, setActiveSurface] = useState<ActiveSurface>("search");
   const [activeDiaryView, setActiveDiaryView] = useState<DiaryViewKey>("today");
@@ -276,8 +324,19 @@ export function NutritionScreen() {
   const [isSavingGoal, setIsSavingGoal] = useState(false);
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [isUpdatingWater, setIsUpdatingWater] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [storageMode, setStorageMode] = useState<NutritionUiStorageMode>("api");
+  const [storageMode, setStorageMode] = useState<NutritionUiStorageMode>("checking");
+  const goalRef = useRef(goal);
+  const storageModeRef = useRef(storageMode);
+
+  useEffect(() => {
+    goalRef.current = goal;
+  }, [goal]);
+
+  useEffect(() => {
+    storageModeRef.current = storageMode;
+  }, [storageMode]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 860px)");
@@ -298,21 +357,13 @@ export function NutritionScreen() {
   }, []);
 
   useEffect(() => {
-    setWaterDraft(String(Math.round(summary.waterIntakeMl)));
-  }, [summary.waterIntakeMl]);
+    if (goalInputsDirty) return;
+    setGoalInputs(createGoalInputState(goal));
+    setGoalObjectiveDraft(goal.objective);
+  }, [goal, goalInputsDirty]);
 
   useEffect(() => {
-    setGoalInputs({
-      targetCalories: String(goal.targetCalories),
-      targetWaterMl: String(goal.targetWaterMl ?? DEFAULT_WATER_TARGET),
-      targetProtein: String(goal.targetProtein ?? 0),
-      targetCarbs: String(goal.targetCarbs ?? 0),
-      targetFat: String(goal.targetFat ?? 0),
-    });
-  }, [goal]);
-
-  useEffect(() => {
-    setStorageMode("api");
+    setStorageMode("checking");
   }, [activeUser?.uid]);
 
   const canUseBrowserPersistence = Boolean(activeUser && !("devBypass" in activeUser && activeUser.devBypass));
@@ -322,6 +373,11 @@ export function NutritionScreen() {
     setMessage(nextMessage);
     return nextMessage;
   }, []);
+
+  function updateGoalInput(field: keyof GoalInputState, value: string) {
+    setGoalInputsDirty(true);
+    setGoalInputs((current) => ({ ...current, [field]: value }));
+  }
 
   const hydrateDashboard = useCallback(
     (payload: Partial<NutritionDashboardSnapshot>) => {
@@ -358,36 +414,39 @@ export function NutritionScreen() {
 
   const loadBrowserDashboard = useCallback(() => {
     if (!activeUser) return null;
+    const currentGoal = goalRef.current;
 
     return loadNutritionDashboardFromBrowser(activeUser.uid, today, {
       ...DEFAULT_GOAL,
-      ...goal,
+      ...currentGoal,
       userId: activeUser.uid,
-      targetWaterMl: goal.targetWaterMl ?? DEFAULT_WATER_TARGET,
+      targetWaterMl: currentGoal.targetWaterMl ?? DEFAULT_WATER_TARGET,
     });
-  }, [activeUser, goal, today]);
+  }, [activeUser, today]);
 
   const loadBrowserHistory = useCallback(
     (page: number) => {
       if (!activeUser) return null;
+      const currentGoal = goalRef.current;
 
       return loadNutritionHistoryFromBrowser(
         activeUser.uid,
         {
           ...DEFAULT_GOAL,
-          ...goal,
+          ...currentGoal,
           userId: activeUser.uid,
-          targetWaterMl: goal.targetWaterMl ?? DEFAULT_WATER_TARGET,
+          targetWaterMl: currentGoal.targetWaterMl ?? DEFAULT_WATER_TARGET,
         },
         page,
         HISTORY_PAGE_SIZE,
       );
     },
-    [activeUser, goal],
+    [activeUser],
   );
 
   const loadDashboard = useCallback(async (): Promise<NutritionUiStorageMode> => {
-    if (!activeUser) return "api";
+    if (!activeUser) return "checking";
+    const currentGoal = goalRef.current;
 
     setIsLoading(true);
     try {
@@ -402,11 +461,10 @@ export function NutritionScreen() {
             return "volatile";
           }
         }
-        return "api";
+        return "memory";
       }
 
-      const nextStorageMode =
-        getNutritionStorageMode(response) === "memory" && canUseBrowserPersistence ? "volatile" : "api";
+      const nextStorageMode = resolveUiStorageMode(response, canUseBrowserPersistence);
       setStorageMode(nextStorageMode);
 
       const payload = (await response.json()) as Partial<NutritionDashboardSnapshot>;
@@ -415,9 +473,9 @@ export function NutritionScreen() {
         if (!hasNutritionBrowserSnapshot(activeUser.uid)) {
           seedNutritionBrowserFromDashboard(activeUser.uid, today, payload, {
             ...DEFAULT_GOAL,
-            ...goal,
+            ...currentGoal,
             userId: activeUser.uid,
-            targetWaterMl: goal.targetWaterMl ?? DEFAULT_WATER_TARGET,
+            targetWaterMl: currentGoal.targetWaterMl ?? DEFAULT_WATER_TARGET,
           });
         }
 
@@ -441,14 +499,13 @@ export function NutritionScreen() {
       }
 
       setMessage((current) => current ?? "Nao foi possivel carregar o painel de nutricao agora.");
-      return "api";
+      return canUseBrowserPersistence ? "volatile" : "memory";
     } finally {
       setIsLoading(false);
     }
   }, [
     activeUser,
     canUseBrowserPersistence,
-    goal,
     hydrateDashboard,
     loadBrowserDashboard,
     resolveRequestError,
@@ -461,7 +518,7 @@ export function NutritionScreen() {
 
       setIsHistoryLoading(true);
       try {
-        const resolvedMode = modeOverride ?? storageMode;
+        const resolvedMode = modeOverride ?? storageModeRef.current;
         if (resolvedMode === "volatile" && canUseBrowserPersistence) {
           const browserHistory = loadBrowserHistory(nextPage);
           if (browserHistory) {
@@ -479,10 +536,9 @@ export function NutritionScreen() {
           return;
         }
 
-        const nextStorageMode =
-          getNutritionStorageMode(response) === "memory" && canUseBrowserPersistence ? "volatile" : "api";
+        const nextStorageMode = resolveUiStorageMode(response, canUseBrowserPersistence);
+        setStorageMode(nextStorageMode);
         if (nextStorageMode === "volatile" && canUseBrowserPersistence) {
-          setStorageMode("volatile");
           const browserHistory = loadBrowserHistory(nextPage);
           if (browserHistory) {
             hydrateHistory(browserHistory);
@@ -507,7 +563,7 @@ export function NutritionScreen() {
         setIsHistoryLoading(false);
       }
     },
-    [activeUser, canUseBrowserPersistence, hydrateHistory, loadBrowserHistory, resolveRequestError, storageMode],
+    [activeUser, canUseBrowserPersistence, hydrateHistory, loadBrowserHistory, resolveRequestError],
   );
 
   useEffect(() => {
@@ -530,6 +586,7 @@ export function NutritionScreen() {
 
   function clearSearchResults() {
     setSearchResults([]);
+    setLastSearchSource(null);
     setResultsVisible(false);
   }
 
@@ -597,10 +654,13 @@ export function NutritionScreen() {
         await resolveRequestError(response, "Nao foi possivel buscar alimentos agora.");
         return;
       }
-      const payload = (await response.json()) as { results?: FoodItem[] };
+      setStorageMode(resolveUiStorageMode(response, canUseBrowserPersistence));
+      const payload = (await response.json()) as { results?: FoodItem[]; source?: NutritionSearchSource };
       const results = payload.results ?? [];
+      const nextSource = payload.source ?? (results.length ? "catalog" : "none");
 
       setSearchResults(results);
+      setLastSearchSource(nextSource);
       setResultsVisible(results.length > 0);
 
       if (results.length === 1) {
@@ -633,14 +693,17 @@ export function NutritionScreen() {
         await resolveRequestError(response, "Nao foi possivel consultar esse codigo de barras.");
         return;
       }
-      const payload = (await response.json()) as { item?: FoodItem | null };
+      setStorageMode(resolveUiStorageMode(response, canUseBrowserPersistence));
+      const payload = (await response.json()) as { item?: FoodItem | null; source?: NutritionSearchSource };
       const foundItem = payload.item ?? null;
 
       if (foundItem) {
         setSearchResults([foundItem]);
+        setLastSearchSource(payload.source ?? "openfoodfacts");
         applyFoodSelection(foundItem);
         setMessage(`Produto encontrado: ${getFoodLabel(foundItem)}`);
       } else {
+        setLastSearchSource(payload.source ?? "none");
         setMessage("Nenhum item encontrado para esse codigo de barras.");
       }
     } catch {
@@ -768,6 +831,7 @@ export function NutritionScreen() {
       targetProtein,
       targetCarbs,
       targetFat,
+      objective: goalObjectiveDraft,
     };
   }
 
@@ -785,6 +849,7 @@ export function NutritionScreen() {
     try {
       if (storageMode === "volatile" && canUseBrowserPersistence) {
         saveNutritionGoalToBrowser(activeUser.uid, requestedGoal);
+        setGoalInputsDirty(false);
         const browserDashboard = loadBrowserDashboard();
         const browserHistory = loadBrowserHistory(historyPage);
         if (browserDashboard) hydrateDashboard(browserDashboard);
@@ -818,6 +883,7 @@ export function NutritionScreen() {
         targetWaterMl: payload.goal?.targetWaterMl ?? requestedGoal.targetWaterMl ?? DEFAULT_WATER_TARGET,
       } satisfies NutritionGoal;
 
+      setGoalInputsDirty(false);
       setGoal(savedGoal);
       setPlanCalories(String(savedGoal.targetCalories));
       setSummary((current) => ({
@@ -840,8 +906,15 @@ export function NutritionScreen() {
   async function handleSaveWater() {
     if (!activeUser) return;
 
-    const parsedWater = parseInputNumber(waterDraft);
-    const nextWaterIntake = parsedWater == null ? 0 : clampValue(parsedWater, 0, 12000);
+    const nextWaterIntake = buildNextWaterIntake(summary.waterIntakeMl, waterDraft, hydrationMode);
+    if (nextWaterIntake == null) {
+      setMessage(
+        hydrationMode === "absolute"
+          ? "Informe o total correto de agua antes de salvar."
+          : "Informe quantos ml deseja adicionar antes de salvar.",
+      );
+      return;
+    }
 
     setIsUpdatingWater(true);
     setMessage(null);
@@ -858,7 +931,8 @@ export function NutritionScreen() {
         const browserHistory = loadBrowserHistory(historyPage);
         if (browserDashboard) hydrateDashboard(browserDashboard);
         if (browserHistory) hydrateHistory(browserHistory);
-        setMessage("Ingestao de agua atualizada.");
+        setWaterDraft(hydrationMode === "absolute" ? String(Math.round(nextWaterIntake)) : "");
+        setMessage(hydrationMode === "absolute" ? "Total de agua corrigido." : "Ingestao de agua atualizada.");
         return;
       }
 
@@ -872,7 +946,8 @@ export function NutritionScreen() {
       }
       const payload = (await response.json()) as Partial<NutritionDashboardSnapshot>;
       hydrateDashboard(payload);
-      setMessage("Ingestao de agua atualizada.");
+      setWaterDraft(hydrationMode === "absolute" ? String(Math.round(nextWaterIntake)) : "");
+      setMessage(hydrationMode === "absolute" ? "Total de agua corrigido." : "Ingestao de agua atualizada.");
       await loadHistory(historyPage);
     } catch {
       setMessage((current) => current ?? "Nao foi possivel atualizar a agua do dia.");
@@ -882,8 +957,15 @@ export function NutritionScreen() {
   }
 
   function handleAdjustWater(delta: number) {
-    const nextValue = clampValue(summary.waterIntakeMl + delta, 0, 12000);
-    setWaterDraft(String(Math.round(nextValue)));
+    setHydrationMode("increment");
+    setWaterDraft((currentValue) => buildNextHydrationDraft(currentValue, delta));
+  }
+
+  function handleSelectHydrationMode(nextMode: HydrationInputMode) {
+    if (nextMode === hydrationMode) return;
+
+    setHydrationMode(nextMode);
+    setWaterDraft(nextMode === "absolute" ? String(Math.round(summary.waterIntakeMl)) : "");
   }
 
   async function handleGenerateMealPlan() {
@@ -903,7 +985,7 @@ export function NutritionScreen() {
         body: JSON.stringify({
           targetCalories: requestedCalories,
           mealsPerDay: 4,
-          objective: goal.objective,
+          objective: goalObjectiveDraft,
           preferredFoods: selectedFood ? [getFoodLabel(selectedFood)] : [],
           excludedFoods: planRejectedFoods,
           restrictions: [],
@@ -1017,31 +1099,26 @@ export function NutritionScreen() {
     });
   }
 
-  function handleExportMealPlanPdf() {
+  async function handleExportMealPlanPdf() {
     if (!mealPlanDraft) return;
+    setIsExportingPdf(true);
+    setMessage(null);
 
-    const printWindow = window.open("", "_blank", "noopener,noreferrer,width=1120,height=780");
-    if (!printWindow) {
-      setMessage("Nao foi possivel abrir a exportacao de PDF. Verifique se o navegador bloqueou a janela.");
-      return;
+    try {
+      await downloadMealPlanPdf({
+        filename: `cardapio-nutricao-${today}.pdf`,
+        plan: mealPlanDraft,
+        targetCalories: parseInputNumber(planCalories) ?? goal.targetCalories,
+        objective: goalObjectiveDraft,
+        dateLabel: new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(new Date()),
+        totals: summarizeMealPlan(mealPlanDraft),
+      });
+      setMessage("PDF gerado com sucesso.");
+    } catch {
+      setMessage("Nao foi possivel gerar o PDF agora.");
+    } finally {
+      setIsExportingPdf(false);
     }
-
-    const html = buildMealPlanPdfHtml({
-      plan: mealPlanDraft,
-      targetCalories: parseInputNumber(planCalories) ?? goal.targetCalories,
-      objective: goal.objective,
-      dateLabel: new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(new Date()),
-      totals: summarizeMealPlan(mealPlanDraft),
-    });
-
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
-
-    window.setTimeout(() => {
-      printWindow.focus();
-      printWindow.print();
-    }, 250);
   }
 
   const selectedFoodTotals = useMemo(() => {
@@ -1078,30 +1155,39 @@ export function NutritionScreen() {
   const planTotals = useMemo(() => (displayedMealPlan ? summarizeMealPlan(displayedMealPlan) : null), [displayedMealPlan]);
   const requestedPlanCalories = parseInputNumber(planCalories) ?? goal.targetCalories;
   const planDelta = displayedMealPlan ? roundValue(displayedMealPlan.totalCalories - requestedPlanCalories) : 0;
+  const searchCatalogBadge =
+    storageMode === "database"
+      ? "Catalogo persistente"
+      : storageMode === "checking"
+        ? "Verificando storage"
+        : "Sem DB ativo";
+  const searchSourceLabel = formatSearchSourceLabel(lastSearchSource);
   const resultState = selectedFood && !resultsVisible
     ? { title: "Resultados recolhidos", text: "Selecao pronta. Limpe ou faca outra busca para trocar o alimento." }
     : { title: "Nenhum alimento listado", text: isSearching ? "Consultando fontes de alimentos..." : "Faca uma busca para ver resultados aqui." };
 
   const pageContent = (
     <div style={{ position: "relative", minHeight: "100vh", overflow: "hidden" }}>
-      <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
-        <Image
-          src={isMobileLayout ? "/images/nutrition-bg.svg" : "/images/nutrition-bg.png"}
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          style={{ objectFit: "cover", objectPosition: isMobileLayout ? "center top" : "center center", opacity: isMobileLayout ? 0.24 : 0.55, transform: isMobileLayout ? "scale(1.08)" : "none" }}
-        />
-        <div style={{ position: "absolute", inset: 0, background: isMobileLayout ? "linear-gradient(180deg, rgba(4, 10, 22, 0.16) 0%, rgba(4, 10, 22, 0.74) 28%, rgba(4, 10, 22, 0.94) 100%)" : "linear-gradient(180deg, rgba(4, 10, 22, 0.42) 0%, rgba(4, 10, 22, 0.86) 58%, rgba(4, 10, 22, 0.96) 100%)" }} />
-        <div style={{ position: "absolute", inset: 0, background: isMobileLayout ? "radial-gradient(circle at 50% 0%, rgba(52, 211, 153, 0.18), transparent 40%)" : "radial-gradient(circle at 85% 10%, rgba(34, 211, 238, 0.12), transparent 24%)" }} />
+      <div style={{ position: isMobileLayout ? "absolute" : "fixed", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden" }}>
+        {!isMobileLayout ? (
+          <Image
+            src="/images/nutrition-bg.png"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            style={{ objectFit: "cover", objectPosition: "center center", opacity: 0.42 }}
+          />
+        ) : null}
+        <div style={{ position: "absolute", inset: 0, background: isMobileLayout ? "linear-gradient(180deg, rgba(7, 16, 31, 0.92) 0%, rgba(7, 16, 31, 0.97) 34%, rgba(4, 10, 22, 1) 100%)" : "linear-gradient(180deg, rgba(4, 10, 22, 0.42) 0%, rgba(4, 10, 22, 0.86) 58%, rgba(4, 10, 22, 0.96) 100%)" }} />
+        <div style={{ position: "absolute", inset: 0, background: isMobileLayout ? "radial-gradient(circle at 50% -5%, rgba(52, 211, 153, 0.12), transparent 38%)" : "radial-gradient(circle at 85% 10%, rgba(34, 211, 238, 0.12), transparent 24%)" }} />
       </div>
 
       <main className="container" style={{ position: "relative", zIndex: 1, paddingTop: isMobileLayout ? "1.25rem" : "2rem", paddingBottom: "3rem" }}>
         <BarcodeScannerDialog open={scannerOpen} onClose={() => setScannerOpen(false)} onDetected={(code) => void handleBarcodeLookup(code)} />
         <header className="glass-panel static-panel anim-enter" style={{ padding: isMobileLayout ? "0.95rem" : "1.2rem", marginBottom: "0.9rem", overflow: "hidden", position: "relative" }}>
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(52, 211, 153, 0.08), rgba(6, 182, 212, 0.03) 45%, rgba(8, 14, 26, 0) 100%)" }} />
-          <div style={{ position: "absolute", top: isMobileLayout ? "-5rem" : "-3.5rem", right: isMobileLayout ? "-5rem" : "-4rem", width: isMobileLayout ? "12rem" : "15rem", height: isMobileLayout ? "12rem" : "15rem", borderRadius: "999px", background: "radial-gradient(circle, rgba(52, 211, 153, 0.18), transparent 68%)", filter: "blur(10px)" }} />
+          {!isMobileLayout ? <div style={{ position: "absolute", top: "-3.5rem", right: "-4rem", width: "15rem", height: "15rem", borderRadius: "999px", background: "radial-gradient(circle, rgba(52, 211, 153, 0.18), transparent 68%)", filter: "blur(10px)" }} /> : null}
           <div style={{ position: "relative", display: "grid", gap: isMobileLayout ? "0.75rem" : "1rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: isMobileLayout ? "0.75rem" : "1rem", flexWrap: "wrap" }}>
               <div style={{ maxWidth: "42rem" }}>
@@ -1110,6 +1196,10 @@ export function NutritionScreen() {
                 <p className="page-subtitle" style={{ maxWidth: "58ch" }}>
                   {isMobileLayout ? "Registre refeicoes, acompanhe macros, agua e historico do dia sem friccao." : "Registre refeicoes, acompanhe agua, ajuste metas e monte o cardapio do dia sem empilhar logs enormes."}
                 </p>
+                <div style={{ display: "flex", gap: "0.55rem", flexWrap: "wrap", alignItems: "center", marginTop: "0.7rem" }}>
+                  <span className="badge badge-success" style={{ background: "rgba(15, 23, 42, 0.38)", color: "#d1fae5", borderColor: "rgba(52, 211, 153, 0.18)" }}>{NUTRITION_COMPANY_SIGNATURE}</span>
+                  <span style={{ color: "var(--text-secondary)", fontSize: "0.82rem" }}>Assinatura oficial do modulo nutricional</span>
+                </div>
                 {!isMobileLayout && isPreview ? <p style={{ color: "var(--accent-secondary)", marginTop: "0.55rem", fontSize: "0.85rem" }}>Preview local ativo. O fluxo real continua disponivel com login normal.</p> : null}
               </div>
               <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", alignSelf: "flex-start", width: isMobileLayout ? "100%" : "auto" }}>
@@ -1141,8 +1231,15 @@ export function NutritionScreen() {
             <section className="glass-panel static-panel" style={{ padding: "1rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap", marginBottom: "0.9rem" }}>
                 <PanelHeader title="Busca rapida" subtitle="Pesquise por nome ou codigo de barras e registre o alimento em poucos passos." />
-                <span className="badge badge-success" style={{ alignSelf: "flex-start" }}>Catalogo vivo</span>
+                <span className="badge badge-success" style={{ alignSelf: "flex-start" }}>{searchCatalogBadge}</span>
               </div>
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.82rem", marginBottom: "0.9rem" }}>
+                {storageMode === "database"
+                  ? "Busca com catalogo persistido e reforco por fontes externas quando necessario."
+                  : storageMode === "checking"
+                    ? "Validando o modo de armazenamento deste ambiente."
+                    : "Fontes externas ativas, mas sem conexao Postgres o catalogo nao persiste no Supabase neste ambiente."}
+              </p>
 
               <div style={{ display: "grid", gap: "0.8rem", marginBottom: "0.9rem" }}>
                 <Field label="Nome do alimento">
@@ -1166,6 +1263,7 @@ export function NutritionScreen() {
                   <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
                     <strong style={{ fontFamily: "Outfit, sans-serif" }}>Resultados</strong>
                     <div style={{ display: "flex", gap: "0.45rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      {searchSourceLabel ? <span className="badge badge-success">{searchSourceLabel}</span> : null}
                       {resultsVisible && searchResults.length ? <span className="badge badge-success">{searchResults.length} itens</span> : null}
                       {searchResults.length || selectedFood ? <button onClick={() => { resetSearchComposer(); setMessage(null); }} className="btn-outline" style={{ minWidth: "auto", padding: "0.45rem 0.8rem" }}>Limpar</button> : null}
                     </div>
@@ -1242,14 +1340,49 @@ export function NutritionScreen() {
                           <span className="badge badge-success">{Math.round(waterRatio)}% da meta</span>
                         </div>
                         <div className="progress-track" style={{ marginBottom: "0.75rem" }}><div className="progress-fill" style={{ width: `${waterRatio}%`, background: "linear-gradient(135deg, #38bdf8, #22d3ee)" }} /></div>
-                        <div style={{ display: "grid", gap: "0.6rem", gridTemplateColumns: isMobileLayout ? "repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))", alignItems: "end" }}>
-                          <button onClick={() => handleAdjustWater(250)} className="btn-outline" style={{ width: "100%" }}>+250 ml</button>
-                          <button onClick={() => handleAdjustWater(500)} className="btn-outline" style={{ width: "100%" }}>+500 ml</button>
-                          <div style={{ gridColumn: isMobileLayout ? "1 / -1" : "auto", minWidth: 0 }}>
-                            <Field label="Contador"><input className="input-field" value={waterDraft} onChange={(event) => setWaterDraft(event.target.value)} inputMode="decimal" /></Field>
+                        <div style={{ display: "flex", gap: "0.55rem", flexWrap: "wrap", marginBottom: "0.7rem" }}>
+                          <SegmentButton active={hydrationMode === "increment"} label="Adicionar" onClick={() => handleSelectHydrationMode("increment")} />
+                          <SegmentButton active={hydrationMode === "absolute"} label="Corrigir total" onClick={() => handleSelectHydrationMode("absolute")} />
+                        </div>
+                        {hydrationMode === "absolute" ? (
+                          <p style={{ color: "var(--text-secondary)", fontSize: "0.8rem", marginBottom: "0.7rem" }}>
+                            Use este modo para corrigir o total do dia quando houver erro no lancamento.
+                          </p>
+                        ) : null}
+                        <div
+                          style={{
+                            display: "grid",
+                            gap: "0.6rem",
+                            gridTemplateColumns: hydrationMode === "increment"
+                              ? (isMobileLayout ? "repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))")
+                              : (isMobileLayout ? "repeat(2, minmax(0, 1fr))" : "minmax(0, 2fr) minmax(220px, 1fr)"),
+                            alignItems: "end",
+                          }}
+                        >
+                          {hydrationMode === "increment" ? <button onClick={() => handleAdjustWater(250)} className="btn-outline" style={{ width: "100%" }}>+250 ml</button> : null}
+                          {hydrationMode === "increment" ? <button onClick={() => handleAdjustWater(500)} className="btn-outline" style={{ width: "100%" }}>+500 ml</button> : null}
+                          <div
+                            style={{
+                              gridColumn: hydrationMode === "increment"
+                                ? (isMobileLayout ? "1 / -1" : "auto")
+                                : "auto",
+                              minWidth: 0,
+                            }}
+                          >
+                            <Field label={hydrationMode === "absolute" ? "Total correto do dia (ml)" : "Adicionar (ml)"}>
+                              <input
+                                className="input-field"
+                                value={waterDraft}
+                                onChange={(event) => setWaterDraft(event.target.value)}
+                                inputMode="decimal"
+                                placeholder={hydrationMode === "absolute" ? "Ex.: 1800" : "Ex.: 250"}
+                              />
+                            </Field>
                           </div>
                           <div style={{ gridColumn: isMobileLayout ? "1 / -1" : "auto", display: "grid" }}>
-                            <button onClick={() => void handleSaveWater()} className="btn-primary" style={{ width: "100%", minHeight: "3rem" }} disabled={isUpdatingWater}>{isUpdatingWater ? "Salvando..." : "Salvar agua"}</button>
+                            <button onClick={() => void handleSaveWater()} className="btn-primary" style={{ width: "100%", minHeight: "3rem" }} disabled={isUpdatingWater}>
+                              {isUpdatingWater ? "Salvando..." : hydrationMode === "absolute" ? "Salvar total" : "Adicionar agua"}
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -1301,15 +1434,15 @@ export function NutritionScreen() {
                 <div className="glass-panel static-panel" style={{ padding: "1rem", background: "rgba(6, 22, 45, 0.64)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap", marginBottom: "0.95rem" }}>
                     <div><strong style={{ display: "block" }}>Meta nutricional</strong><span style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>Calorias, macros e agua diaria refletem no topo da sessao e no diario.</span></div>
-                    <span className="badge badge-success">{OBJECTIVE_LABELS[goal.objective]}</span>
+                    <span className="badge badge-success">{OBJECTIVE_LABELS[goalObjectiveDraft]}</span>
                   </div>
                   <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))" }}>
-                    <Field label="Calorias"><input className="input-field" type="number" inputMode="numeric" value={goalInputs.targetCalories} onChange={(event) => setGoalInputs((current) => ({ ...current, targetCalories: event.target.value }))} /></Field>
-                    <Field label="Agua (ml)"><input className="input-field" type="number" inputMode="numeric" value={goalInputs.targetWaterMl} onChange={(event) => setGoalInputs((current) => ({ ...current, targetWaterMl: event.target.value }))} /></Field>
-                    <Field label="Proteina"><input className="input-field" type="number" inputMode="decimal" value={goalInputs.targetProtein} onChange={(event) => setGoalInputs((current) => ({ ...current, targetProtein: event.target.value }))} /></Field>
-                    <Field label="Carbo"><input className="input-field" type="number" inputMode="decimal" value={goalInputs.targetCarbs} onChange={(event) => setGoalInputs((current) => ({ ...current, targetCarbs: event.target.value }))} /></Field>
-                    <Field label="Gordura"><input className="input-field" type="number" inputMode="decimal" value={goalInputs.targetFat} onChange={(event) => setGoalInputs((current) => ({ ...current, targetFat: event.target.value }))} /></Field>
-                    <Field label="Objetivo"><select className="input-field" value={goal.objective} onChange={(event) => setGoal((current) => ({ ...current, objective: event.target.value as NutritionObjective }))}><option value="lose">Emagrecimento</option><option value="maintain">Manutencao</option><option value="gain">Ganho de peso</option></select></Field>
+                    <Field label="Calorias"><input className="input-field" inputMode="numeric" value={goalInputs.targetCalories} onChange={(event) => updateGoalInput("targetCalories", event.target.value)} /></Field>
+                    <Field label="Agua (ml)"><input className="input-field" inputMode="numeric" value={goalInputs.targetWaterMl} onChange={(event) => updateGoalInput("targetWaterMl", event.target.value)} /></Field>
+                    <Field label="Proteina"><input className="input-field" inputMode="decimal" value={goalInputs.targetProtein} onChange={(event) => updateGoalInput("targetProtein", event.target.value)} /></Field>
+                    <Field label="Carbo"><input className="input-field" inputMode="decimal" value={goalInputs.targetCarbs} onChange={(event) => updateGoalInput("targetCarbs", event.target.value)} /></Field>
+                    <Field label="Gordura"><input className="input-field" inputMode="decimal" value={goalInputs.targetFat} onChange={(event) => updateGoalInput("targetFat", event.target.value)} /></Field>
+                    <Field label="Objetivo"><select className="input-field" value={goalObjectiveDraft} onChange={(event) => { setGoalInputsDirty(true); setGoalObjectiveDraft(event.target.value as NutritionObjective); }}><option value="lose">Emagrecimento</option><option value="maintain">Manutencao</option><option value="gain">Ganho de peso</option></select></Field>
                   </div>
                   <div style={{ display: "grid", gap: "0.6rem", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", marginTop: "1rem", marginBottom: "1rem" }}>
                     <MiniValue label="Meta" value={formatCalories(goal.targetCalories)} accent="var(--accent-secondary)" />
@@ -1333,7 +1466,7 @@ export function NutritionScreen() {
                     <div style={{ display: "grid", gap: "0.6rem", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", alignItems: "stretch" }}>
                       <button onClick={() => void handleGenerateMealPlan()} className="btn-primary" style={{ width: "100%", minHeight: "3rem" }} disabled={isGeneratingPlan}>{isGeneratingPlan ? "Gerando..." : "Gerar cardapio"}</button>
                       <button onClick={() => setPlanCalories(String(goal.targetCalories))} className="btn-outline" style={{ width: "100%", minHeight: "3rem" }}>Usar meta</button>
-                      <button onClick={handleExportMealPlanPdf} className="btn-outline" style={{ width: "100%", minHeight: "3rem" }} disabled={!mealPlanDraft}>Exportar PDF</button>
+                      <button onClick={() => void handleExportMealPlanPdf()} className="btn-outline" style={{ width: "100%", minHeight: "3rem" }} disabled={!mealPlanDraft || isExportingPdf}>{isExportingPdf ? "Gerando PDF..." : "Exportar PDF"}</button>
                       <button onClick={() => void handleDiscardMealPlan()} className="btn-outline" style={{ width: "100%", minHeight: "3rem" }} disabled={!displayedMealPlan}>Descartar</button>
                     </div>
                   </div>

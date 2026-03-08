@@ -1,5 +1,9 @@
 import type { FoodItem } from "@/modules/nutrition/domain/types";
 import { normalizeOpenFoodFactsProduct } from "@/modules/nutrition/normalizers/normalize-food";
+import {
+  buildOpenFoodFactsSearchTerms,
+  rankOpenFoodFactsResults,
+} from "@/modules/nutrition/providers/open-food-facts-search";
 
 const OPEN_FOOD_FACTS_FIELDS = [
   "code",
@@ -18,7 +22,7 @@ const OPEN_FOOD_FACTS_FIELDS = [
   "nutriments",
 ].join(",");
 
-const OPEN_FOOD_FACTS_TIMEOUT_MS = 1800;
+const OPEN_FOOD_FACTS_TIMEOUT_MS = 4500;
 
 async function fetchWithTimeout(url: string): Promise<Response | null> {
   const controller = new AbortController();
@@ -39,9 +43,7 @@ async function fetchWithTimeout(url: string): Promise<Response | null> {
   }
 }
 
-export async function searchOpenFoodFacts(query: string): Promise<FoodItem[]> {
-  if (!query.trim()) return [];
-
+async function fetchOpenFoodFactsSearchTerm(query: string): Promise<FoodItem[]> {
   const response = await fetchWithTimeout(
     `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=8&fields=${OPEN_FOOD_FACTS_FIELDS}&lc=pt&cc=br`,
   );
@@ -56,6 +58,24 @@ export async function searchOpenFoodFacts(query: string): Promise<FoodItem[]> {
   } catch {
     return [];
   }
+}
+
+export async function searchOpenFoodFacts(query: string): Promise<FoodItem[]> {
+  if (!query.trim()) return [];
+
+  const queryVariants = buildOpenFoodFactsSearchTerms(query);
+  const collectedResults: FoodItem[] = [];
+
+  for (const queryVariant of queryVariants) {
+    const nextResults = await fetchOpenFoodFactsSearchTerm(queryVariant);
+    collectedResults.push(...nextResults);
+
+    if (rankOpenFoodFactsResults(query, collectedResults).length >= 8) {
+      break;
+    }
+  }
+
+  return rankOpenFoodFactsResults(query, collectedResults).slice(0, 8);
 }
 
 export async function fetchOpenFoodFactsBarcode(barcode: string): Promise<FoodItem | null> {

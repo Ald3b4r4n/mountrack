@@ -107,21 +107,11 @@ h1, h2, h3, h4 {
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-glass);
-  transition: all var(--duration-normal) var(--ease-out-expo);
-}
-
-.glass-panel:hover {
-  background: var(--bg-glass-hover);
-  border-color: rgba(52, 211, 153, 0.12);
-  box-shadow: var(--shadow-card-hover);
-  transform: translateY(-4px);
-}
-
-.glass-panel.static-panel:hover {
-  background: var(--bg-glass);
-  border-color: var(--border-glass);
-  box-shadow: var(--shadow-glass);
-  transform: none;
+  transition:
+    background-color var(--duration-normal) var(--ease-out-expo),
+    border-color var(--duration-normal) var(--ease-out-expo),
+    box-shadow var(--duration-normal) var(--ease-out-expo),
+    transform var(--duration-normal) var(--ease-out-expo);
 }
 
 /* ===== GLOW TEXT ===== */
@@ -145,7 +135,11 @@ h1, h2, h3, h4 {
   font-family: 'DM Sans', sans-serif;
   font-size: 0.95rem;
   cursor: pointer;
-  transition: all var(--duration-normal) var(--ease-out-expo);
+  transition:
+    background var(--duration-normal) var(--ease-out-expo),
+    box-shadow var(--duration-normal) var(--ease-out-expo),
+    transform var(--duration-normal) var(--ease-out-expo),
+    opacity var(--duration-fast) ease;
   box-shadow: 0 4px 14px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.15);
   position: relative;
   overflow: hidden;
@@ -160,17 +154,33 @@ h1, h2, h3, h4 {
   transition: opacity var(--duration-fast);
 }
 
-.btn-primary:hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 8px 25px var(--accent-glow-strong), inset 0 1px 0 rgba(255,255,255,0.2);
-}
-
-.btn-primary:hover::after {
-  opacity: 1;
-}
-
 .btn-primary:active {
   transform: translateY(-1px) scale(0.98);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .glass-panel:hover {
+    background: var(--bg-glass-hover);
+    border-color: rgba(52, 211, 153, 0.12);
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-4px);
+  }
+
+  .glass-panel.static-panel:hover {
+    background: var(--bg-glass);
+    border-color: var(--border-glass);
+    box-shadow: var(--shadow-glass);
+    transform: none;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 25px var(--accent-glow-strong), inset 0 1px 0 rgba(255,255,255,0.2);
+  }
+
+  .btn-primary:hover::after {
+    opacity: 1;
+  }
 }
 
 /* ===== CONTAINER ===== */
@@ -276,7 +286,11 @@ h1, h2, h3, h4 {
   font-size: 0.875rem;
   font-family: 'DM Sans', sans-serif;
   font-weight: 500;
-  transition: all var(--duration-normal) var(--ease-out-expo);
+  transition:
+    background-color var(--duration-normal) var(--ease-out-expo),
+    border-color var(--duration-normal) var(--ease-out-expo),
+    color var(--duration-normal) var(--ease-out-expo),
+    transform var(--duration-normal) var(--ease-out-expo);
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -366,7 +380,11 @@ h1, h2, h3, h4 {
   cursor: pointer;
   font-family: 'DM Sans', sans-serif;
   font-size: 0.875rem;
-  transition: all var(--duration-fast);
+  transition:
+    background-color var(--duration-fast) ease,
+    border-color var(--duration-fast) ease,
+    color var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
 }
 
 .btn-outline:hover {
@@ -445,6 +463,36 @@ h1, h2, h3, h4 {
 
 /* ===== RESPONSIVO MOBILE ===== */
 @media (max-width: 768px) {
+  body::before {
+    display: none;
+  }
+
+  .glass-panel {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+    transition: none;
+  }
+
+  .btn-primary::after {
+    display: none;
+  }
+
+  .anim-enter,
+  .anim-delay-1,
+  .anim-delay-2,
+  .anim-delay-3,
+  .anim-delay-4 {
+    animation: none !important;
+  }
+
+  .btn-primary,
+  .btn-outline,
+  .nav-pill,
+  .progress-fill {
+    transition: none !important;
+  }
+
   .container {
     padding: 1.25rem;
   }
@@ -455,6 +503,33 @@ h1, h2, h3, h4 {
 
   h1.glow-text {
     font-size: 2rem !important;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .glass-panel {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .anim-enter,
+  .anim-delay-1,
+  .anim-delay-2,
+  .anim-delay-3,
+  .anim-delay-4 {
+    animation: none !important;
+  }
+
+  .glass-panel:hover,
+  .glass-panel.static-panel:hover,
+  .btn-primary:hover,
+  .btn-primary:active {
+    transform: none;
+    box-shadow: var(--shadow-glass);
+  }
+
+  .btn-primary:hover::after {
+    opacity: 0;
   }
 }
 

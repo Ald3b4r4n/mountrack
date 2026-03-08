@@ -1,4 +1,11 @@
-﻿import type { MealPlan, NutritionObjective, NutritionTotals } from "@/modules/nutrition/domain/types";
+import type { jsPDF } from "jspdf";
+import type { MealPlan, NutritionObjective, NutritionTotals } from "@/modules/nutrition/domain/types";
+
+export const NUTRITION_COMPANY_SIGNATURE = "A&R Software Development";
+export const NUTRITION_COMPANY_URL = "antoniorafael.com.br";
+
+const PDF_CANVAS_WIDTH = 794;
+const PDF_MARGIN = 24;
 
 const MEAL_LABELS: Record<MealPlan["meals"][number]["mealType"], string> = {
   breakfast: "Cafe da manha",
@@ -32,35 +39,275 @@ function escapeHtml(value: string): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
+    .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
 
-export function buildMealPlanPdfHtml({
-  plan,
-  targetCalories,
-  objective,
-  dateLabel,
-  totals,
-}: {
-  plan: MealPlan;
-  targetCalories: number;
-  objective: NutritionObjective;
-  dateLabel: string;
-  totals: Pick<NutritionTotals, "calories" | "protein" | "carbs" | "fat">;
-}): string {
-  const mealSections = plan.meals
+export const MEAL_PLAN_PDF_STYLES = `
+  :root {
+    color-scheme: light;
+    --page: #f2f6fb;
+    --surface: #ffffff;
+    --surface-soft: #f7fafc;
+    --ink: #0f172a;
+    --muted: #5e6b7f;
+    --line: #d8e2ee;
+    --emerald: #0f9f6e;
+    --cyan: #1282a9;
+    --rose: #d44366;
+    --navy: #10233f;
+    --mint: #e7f6ef;
+    --shadow: 0 14px 34px rgba(15, 35, 63, 0.07);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #ffffff;
+    color: var(--ink);
+    font-family: "Segoe UI", Arial, sans-serif;
+  }
+  .page {
+    width: 794px;
+    padding: 30px;
+    background:
+      radial-gradient(circle at top right, rgba(18, 130, 169, 0.05), transparent 28%),
+      linear-gradient(180deg, #f7fafd 0%, #eef4f9 100%);
+  }
+  .header-shell,
+  .meal-card,
+  .metric-card,
+  .summary-card {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .header-shell {
+    border-radius: 28px;
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+  .header-stripe {
+    height: 12px;
+    background: linear-gradient(90deg, #0f9f6e 0%, #1282a9 48%, #10233f 100%);
+  }
+  .header-body {
+    padding: 24px;
+  }
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    align-items: flex-start;
+    margin-bottom: 18px;
+  }
+  .eyebrow {
+    margin: 0 0 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .title {
+    margin: 0 0 8px;
+    font-size: 32px;
+    line-height: 1.08;
+    color: var(--navy);
+  }
+  .subtitle {
+    margin: 0;
+    max-width: 54ch;
+    color: var(--muted);
+    line-height: 1.6;
+    font-size: 13px;
+  }
+  .date-chip,
+  .company-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface-soft);
+    color: var(--navy);
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .company-chip {
+    background: linear-gradient(135deg, rgba(15, 159, 110, 0.12), rgba(18, 130, 169, 0.08));
+    color: #0c684a;
+    border-color: rgba(15, 159, 110, 0.2);
+  }
+  .header-signature {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .signature-copy {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .summary-grid,
+  .metrics-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .summary-card,
+  .metric-card {
+    border-radius: 20px;
+    padding: 16px 18px;
+  }
+  .summary-card {
+    background: linear-gradient(180deg, #fbfdff 0%, #f4f8fc 100%);
+  }
+  .summary-card span,
+  .metric-label,
+  .meal-target,
+  .item-meta,
+  .item-macros,
+  .footer-copy {
+    color: var(--muted);
+  }
+  .summary-card strong {
+    display: block;
+    margin-top: 6px;
+    font-size: 22px;
+    color: var(--navy);
+  }
+  .metrics-shell {
+    margin-bottom: 18px;
+  }
+  .section-title {
+    margin: 0 0 10px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+  }
+  .metric-card strong {
+    display: block;
+    margin-top: 8px;
+    font-size: 20px;
+  }
+  .metric-card.protein strong { color: var(--emerald); }
+  .metric-card.carbs strong { color: var(--cyan); }
+  .metric-card.fat strong { color: var(--rose); }
+  .metric-card.kcal strong { color: var(--navy); }
+  .content {
+    display: grid;
+    gap: 14px;
+  }
+  .meal-card {
+    border-radius: 24px;
+    padding: 20px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .meal-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    align-items: flex-start;
+    margin-bottom: 12px;
+  }
+  .meal-overline {
+    margin: 0 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .meal-header h2 {
+    margin: 0 0 6px;
+    font-size: 28px;
+    line-height: 1.08;
+    color: var(--navy);
+  }
+  .meal-target {
+    margin: 0;
+    font-size: 13px;
+  }
+  .meal-calories {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: var(--mint);
+    color: var(--emerald);
+    font-weight: 700;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  .item-list {
+    display: grid;
+    gap: 10px;
+  }
+  .item-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: var(--surface-soft);
+    border: 1px solid #e5eef7;
+  }
+  .item-row strong {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 15px;
+    color: var(--navy);
+  }
+  .item-meta {
+    margin: 0;
+    font-size: 13px;
+  }
+  .item-macros {
+    display: grid;
+    gap: 4px;
+    min-width: 92px;
+    text-align: right;
+    font-size: 12px;
+  }
+  .empty-copy {
+    margin: 0;
+    padding: 18px;
+    border-radius: 18px;
+    border: 1px dashed var(--line);
+    background: var(--surface-soft);
+    color: var(--muted);
+  }
+  .footer-copy {
+    margin-top: 18px;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 12px;
+  }
+  .footer-copy strong {
+    color: var(--ink);
+  }
+`;
+
+function buildMealSections(plan: MealPlan): string {
+  return plan.meals
     .map(
       (meal) => `
         <section class="meal-card">
           <div class="meal-header">
             <div>
-              <p class="eyebrow">${escapeHtml(MEAL_LABELS[meal.mealType])}</p>
+              <p class="meal-overline">${escapeHtml(MEAL_LABELS[meal.mealType])}</p>
               <h2>${escapeHtml(meal.name)}</h2>
+              <p class="meal-target">Alvo da refeicao: ${escapeHtml(formatCalories(meal.targetCalories))}</p>
             </div>
             <div class="meal-calories">${escapeHtml(formatCalories(meal.totalCalories))}</div>
           </div>
-          <p class="meal-target">Alvo: ${escapeHtml(formatCalories(meal.targetCalories))}</p>
           <div class="item-list">
             ${
               meal.items.length
@@ -70,9 +317,9 @@ export function buildMealPlanPdfHtml({
                         <article class="item-row">
                           <div>
                             <strong>${escapeHtml(item.name)}</strong>
-                            <p>${escapeHtml(String(item.quantity))} ${escapeHtml(item.unit)} · ${escapeHtml(formatCalories(item.calories))}</p>
+                            <p class="item-meta">${escapeHtml(String(item.quantity))} ${escapeHtml(item.unit)} - ${escapeHtml(formatCalories(item.calories))}</p>
                           </div>
-                          <div class="macro-copy">
+                          <div class="item-macros">
                             <span>${escapeHtml(formatGrams(item.protein))} prot</span>
                             <span>${escapeHtml(formatGrams(item.carbs))} carb</span>
                             <span>${escapeHtml(formatGrams(item.fat))} gord</span>
@@ -88,132 +335,231 @@ export function buildMealPlanPdfHtml({
       `,
     )
     .join("");
+}
 
+export function buildMealPlanPdfMarkup({
+  plan,
+  targetCalories,
+  objective,
+  dateLabel,
+  totals,
+}: {
+  plan: MealPlan;
+  targetCalories: number;
+  objective: NutritionObjective;
+  dateLabel: string;
+  totals: Pick<NutritionTotals, "calories" | "protein" | "carbs" | "fat">;
+}): string {
+  return `
+    <main class="page" data-pdf-root="meal-plan">
+      <section class="header-shell">
+        <div class="header-stripe"></div>
+        <div class="header-body">
+          <div class="header-top">
+            <div>
+              <p class="eyebrow">MounTrack / Nutricao</p>
+              <h1 class="title">Cardapio diario</h1>
+              <p class="subtitle">Documento nutricional pronto para compartilhar, com distribuicao de macros, meta calorica e refeicoes organizadas em leitura limpa para impressao ou envio.</p>
+            </div>
+            <div class="date-chip">${escapeHtml(dateLabel)}</div>
+          </div>
+
+          <div class="header-signature">
+            <div class="company-chip">${escapeHtml(NUTRITION_COMPANY_SIGNATURE)}</div>
+            <div class="signature-copy">Assinatura oficial do modulo nutricional</div>
+          </div>
+
+          <div class="summary-grid">
+            <div class="summary-card"><span>Objetivo</span><strong>${escapeHtml(OBJECTIVE_LABELS[objective])}</strong></div>
+            <div class="summary-card"><span>Meta do plano</span><strong>${escapeHtml(formatCalories(targetCalories))}</strong></div>
+            <div class="summary-card"><span>Total planejado</span><strong>${escapeHtml(formatCalories(plan.totalCalories))}</strong></div>
+            <div class="summary-card"><span>Refeicoes</span><strong>${escapeHtml(String(plan.meals.length))}</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="metrics-shell">
+        <p class="section-title">Distribuicao nutricional</p>
+        <div class="metrics-grid">
+          <div class="metric-card protein"><span class="metric-label">${MACRO_LABELS.protein}</span><strong>${escapeHtml(formatGrams(totals.protein))}</strong></div>
+          <div class="metric-card carbs"><span class="metric-label">${MACRO_LABELS.carbs}</span><strong>${escapeHtml(formatGrams(totals.carbs))}</strong></div>
+          <div class="metric-card fat"><span class="metric-label">${MACRO_LABELS.fat}</span><strong>${escapeHtml(formatGrams(totals.fat))}</strong></div>
+          <div class="metric-card kcal"><span class="metric-label">Calorias planejadas</span><strong>${escapeHtml(formatCalories(totals.calories))}</strong></div>
+        </div>
+      </section>
+
+      <section class="content">
+        ${buildMealSections(plan)}
+      </section>
+
+      <div class="footer-copy">
+        <span><strong>${escapeHtml(NUTRITION_COMPANY_SIGNATURE)}</strong> / ${escapeHtml(NUTRITION_COMPANY_URL)}</span>
+        <span>Gerado automaticamente pelo modulo de nutricao.</span>
+      </div>
+    </main>
+  `;
+}
+
+export function buildMealPlanPdfHtml({
+  plan,
+  targetCalories,
+  objective,
+  dateLabel,
+  totals,
+}: {
+  plan: MealPlan;
+  targetCalories: number;
+  objective: NutritionObjective;
+  dateLabel: string;
+  totals: Pick<NutritionTotals, "calories" | "protein" | "carbs" | "fat">;
+}): string {
   return `
     <!DOCTYPE html>
     <html lang="pt-BR">
       <head>
         <meta charset="utf-8" />
         <title>Cardapio de Nutricao</title>
-        <style>
-          :root {
-            color-scheme: light;
-            --ink: #0f172a;
-            --muted: #475569;
-            --line: #dbe4ef;
-            --brand: #059669;
-            --brand-soft: #ecfdf5;
-            --rose: #e11d48;
-          }
-          * { box-sizing: border-box; }
-          body {
-            margin: 0;
-            font-family: "Outfit", "Segoe UI", sans-serif;
-            color: var(--ink);
-            background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
-          }
-          .page { padding: 36px; }
-          .hero {
-            background: linear-gradient(135deg, #052e2b 0%, #0f172a 100%);
-            color: #f8fafc;
-            border-radius: 28px;
-            padding: 28px;
-            margin-bottom: 24px;
-          }
-          .hero-top {
-            display: flex;
-            justify-content: space-between;
-            gap: 24px;
-            align-items: flex-start;
-            margin-bottom: 18px;
-          }
-          .hero h1 { margin: 10px 0 8px; font-size: 32px; line-height: 1.05; }
-          .eyebrow { margin: 0; letter-spacing: 0.14em; text-transform: uppercase; font-size: 11px; opacity: 0.76; }
-          .hero-copy { margin: 0; max-width: 52ch; color: rgba(248, 250, 252, 0.82); line-height: 1.6; }
-          .hero-badge { padding: 10px 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); font-size: 13px; }
-          .summary-grid, .metrics-grid { display: grid; gap: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-          .metric, .summary-card, .meal-card {
-            border-radius: 22px;
-            background: #ffffff;
-            border: 1px solid var(--line);
-            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
-          }
-          .summary-card, .metric { padding: 18px; }
-          .summary-card strong, .metric strong { display: block; margin-top: 6px; font-size: 24px; }
-          .summary-card span, .metric span, .meal-target, .item-row p, .macro-copy, .footer-copy { color: var(--muted); }
-          .content { display: grid; gap: 18px; }
-          .metrics-grid { margin-bottom: 24px; }
-          .metric.protein strong { color: var(--brand); }
-          .metric.carbs strong { color: #0891b2; }
-          .metric.fat strong { color: var(--rose); }
-          .meal-card { padding: 22px; page-break-inside: avoid; }
-          .meal-header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 6px; }
-          .meal-header h2 { margin: 6px 0 0; font-size: 22px; }
-          .meal-calories {
-            padding: 10px 14px;
-            border-radius: 999px;
-            background: var(--brand-soft);
-            color: var(--brand);
-            font-weight: 700;
-            white-space: nowrap;
-          }
-          .meal-target { margin: 0 0 16px; }
-          .item-list { display: grid; gap: 10px; }
-          .item-row {
-            display: flex;
-            justify-content: space-between;
-            gap: 16px;
-            padding: 14px 16px;
-            border-radius: 18px;
-            background: #f8fafc;
-            border: 1px solid #edf2f7;
-          }
-          .item-row strong { display: block; margin-bottom: 4px; font-size: 15px; }
-          .item-row p { margin: 0; font-size: 13px; }
-          .macro-copy { display: grid; gap: 4px; text-align: right; font-size: 12px; }
-          .empty-copy {
-            margin: 0;
-            padding: 18px;
-            border-radius: 18px;
-            border: 1px dashed var(--line);
-            background: #f8fafc;
-            color: var(--muted);
-          }
-          .footer-copy { margin-top: 18px; text-align: right; font-size: 12px; }
-        </style>
+        <style>${MEAL_PLAN_PDF_STYLES}</style>
       </head>
       <body>
-        <main class="page">
-          <section class="hero">
-            <div class="hero-top">
-              <div>
-                <p class="eyebrow">MounTrack · Nutricao</p>
-                <h1>Cardapio diario</h1>
-                <p class="hero-copy">Plano alimentar exportado a partir do modulo de nutricao, com calorias ajustadas e refeicoes prontas para impressao em PDF.</p>
-              </div>
-              <div class="hero-badge">${escapeHtml(dateLabel)}</div>
-            </div>
-            <div class="summary-grid">
-              <div class="summary-card"><span>Objetivo</span><strong>${escapeHtml(OBJECTIVE_LABELS[objective])}</strong></div>
-              <div class="summary-card"><span>Meta do plano</span><strong>${escapeHtml(formatCalories(targetCalories))}</strong></div>
-              <div class="summary-card"><span>Total planejado</span><strong>${escapeHtml(formatCalories(plan.totalCalories))}</strong></div>
-              <div class="summary-card"><span>Refeicoes</span><strong>${escapeHtml(String(plan.meals.length))}</strong></div>
-            </div>
-          </section>
-
-          <section class="content">
-            <div class="metrics-grid">
-              <div class="metric protein"><span>${MACRO_LABELS.protein}</span><strong>${escapeHtml(formatGrams(totals.protein))}</strong></div>
-              <div class="metric carbs"><span>${MACRO_LABELS.carbs}</span><strong>${escapeHtml(formatGrams(totals.carbs))}</strong></div>
-              <div class="metric fat"><span>${MACRO_LABELS.fat}</span><strong>${escapeHtml(formatGrams(totals.fat))}</strong></div>
-              <div class="metric"><span>Calorias planejadas</span><strong>${escapeHtml(formatCalories(totals.calories))}</strong></div>
-            </div>
-            ${mealSections}
-          </section>
-
-          <p class="footer-copy">Abra a janela de impressao do navegador e escolha “Salvar como PDF”.</p>
-        </main>
+        ${buildMealPlanPdfMarkup({ plan, targetCalories, objective, dateLabel, totals })}
       </body>
     </html>
   `;
+}
+
+function createMealPlanExportContainer(markup: string): HTMLDivElement {
+  const exportContainer = document.createElement("div");
+  exportContainer.style.position = "fixed";
+  exportContainer.style.left = "-10000px";
+  exportContainer.style.top = "0";
+  exportContainer.style.width = `${PDF_CANVAS_WIDTH}px`;
+  exportContainer.style.background = "#ffffff";
+  exportContainer.style.pointerEvents = "none";
+  exportContainer.innerHTML = `<style>${MEAL_PLAN_PDF_STYLES}</style>${markup}`;
+  return exportContainer;
+}
+
+async function waitForPdfRenderReady(): Promise<void> {
+  if ("fonts" in document && document.fonts) {
+    await document.fonts.ready;
+  }
+
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+}
+
+function addCanvasPagesToPdf(pdf: jsPDF, canvas: HTMLCanvasElement): void {
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const usableWidth = pageWidth - PDF_MARGIN * 2;
+  const usableHeight = pageHeight - PDF_MARGIN * 2;
+  const renderScale = usableWidth / canvas.width;
+  const sliceHeight = Math.max(1, Math.floor(usableHeight / renderScale));
+
+  let renderedHeight = 0;
+  let pageIndex = 0;
+
+  while (renderedHeight < canvas.height) {
+    const currentSliceHeight = Math.min(sliceHeight, canvas.height - renderedHeight);
+    const pageCanvas = document.createElement("canvas");
+    pageCanvas.width = canvas.width;
+    pageCanvas.height = currentSliceHeight;
+
+    const context = pageCanvas.getContext("2d");
+    if (!context) {
+      throw new Error("Canvas context unavailable for PDF export.");
+    }
+
+    context.drawImage(
+      canvas,
+      0,
+      renderedHeight,
+      canvas.width,
+      currentSliceHeight,
+      0,
+      0,
+      canvas.width,
+      currentSliceHeight,
+    );
+
+    if (pageIndex > 0) {
+      pdf.addPage();
+    }
+
+    pdf.addImage(
+      pageCanvas.toDataURL("image/png", 1),
+      "PNG",
+      PDF_MARGIN,
+      PDF_MARGIN,
+      usableWidth,
+      currentSliceHeight * renderScale,
+      undefined,
+      "FAST",
+    );
+
+    renderedHeight += currentSliceHeight;
+    pageIndex += 1;
+  }
+}
+
+export async function downloadMealPlanPdf({
+  filename,
+  plan,
+  targetCalories,
+  objective,
+  dateLabel,
+  totals,
+}: {
+  filename: string;
+  plan: MealPlan;
+  targetCalories: number;
+  objective: NutritionObjective;
+  dateLabel: string;
+  totals: Pick<NutritionTotals, "calories" | "protein" | "carbs" | "fat">;
+}): Promise<void> {
+  if (typeof document === "undefined") {
+    throw new Error("Meal plan PDF export requires a browser environment.");
+  }
+
+  const exportContainer = createMealPlanExportContainer(
+    buildMealPlanPdfMarkup({
+      plan,
+      targetCalories,
+      objective,
+      dateLabel,
+      totals,
+    }),
+  );
+
+  document.body.appendChild(exportContainer);
+
+  try {
+    await waitForPdfRenderReady();
+    const target = exportContainer.querySelector("[data-pdf-root='meal-plan']");
+    if (!(target instanceof HTMLElement)) {
+      throw new Error("Meal plan PDF root not found.");
+    }
+
+    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]);
+    const canvas = await html2canvas(target, {
+      backgroundColor: "#ffffff",
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      width: target.scrollWidth,
+      windowWidth: target.scrollWidth,
+    });
+
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "pt",
+      format: "a4",
+      compress: true,
+    });
+
+    addCanvasPagesToPdf(pdf, canvas);
+    pdf.save(filename);
+  } finally {
+    exportContainer.remove();
+  }
 }

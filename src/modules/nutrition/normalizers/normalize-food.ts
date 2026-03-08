@@ -38,8 +38,23 @@ function toNumber(value: number | string | undefined): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function repairMojibake(value: string | undefined): string | undefined {
+  if (!value) return value;
+  if (!/[ÃÂâ€]/.test(value)) {
+    return value;
+  }
+
+  try {
+    return Buffer.from(value, "latin1").toString("utf8");
+  } catch {
+    return value;
+  }
+}
+
 function pickOpenFoodFactsName(product: OpenFoodFactsProduct): string | undefined {
-  return product.product_name_pt || product.product_name || product.generic_name_pt || product.generic_name;
+  return repairMojibake(
+    product.product_name_pt || product.product_name || product.generic_name_pt || product.generic_name,
+  );
 }
 
 function parseServingGrams(servingSize?: string): number | undefined {
@@ -75,7 +90,7 @@ export function normalizeOpenFoodFactsProduct(product: OpenFoodFactsProduct): Fo
   const name = pickOpenFoodFactsName(product);
   if (!name) return null;
 
-  const tags = ["industrializado", ...(product.categories_tags ?? [])];
+  const tags = ["industrializado", ...(product.categories_tags ?? []).map((tag) => repairMojibake(tag) ?? tag)];
   const classification = inferFoodClassification(name, tags);
   const countryCode = product.countries_tags?.some((tag) => /brazil|brasil/i.test(tag)) ? "BR" : undefined;
   const locale = product.product_name_pt || product.generic_name_pt ? "pt-BR" : undefined;
@@ -86,7 +101,7 @@ export function normalizeOpenFoodFactsProduct(product: OpenFoodFactsProduct): Fo
     sourceId: product.code,
     name,
     displayName: name,
-    brand: product.brands?.split(",")[0]?.trim(),
+    brand: repairMojibake(product.brands?.split(",")[0]?.trim()),
     barcode: product.code,
     baseUnit: "g",
     servingDescription: product.serving_size,
@@ -111,17 +126,20 @@ export function normalizeOpenFoodFactsProduct(product: OpenFoodFactsProduct): Fo
 }
 
 export function normalizeUsdaFood(food: UsdaFoodSearchItem): FoodItem | null {
-  const name = food.description?.trim();
+  const name = repairMojibake(food.description?.trim());
   if (!name || !food.fdcId) return null;
 
-  const classification = inferFoodClassification(name, [food.brandOwner ?? "", food.dataType ?? ""]);
+  const classification = inferFoodClassification(name, [
+    repairMojibake(food.brandOwner ?? "") ?? "",
+    repairMojibake(food.dataType ?? "") ?? "",
+  ]);
   const normalizedFood: FoodItem = {
     id: `usda-${food.fdcId}`,
     source: "usda",
     sourceId: String(food.fdcId),
     name,
     displayName: name,
-    brand: food.brandOwner?.trim() || undefined,
+    brand: repairMojibake(food.brandOwner?.trim()) || undefined,
     barcode: food.gtinUpc?.trim() || undefined,
     baseUnit: "g",
     caloriesPer100: readUsdaNutrient(food.foodNutrients, ["Energy"]),
