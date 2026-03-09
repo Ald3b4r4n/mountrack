@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { deleteField, doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { DEFAULT_DOSES_PER_AMPOULE } from '@/modules/dashboard/utils';
 
@@ -9,6 +9,10 @@ export interface AmpouleSettings {
 
 const AMPOULES_COLLECTION = 'ampoules';
 const AMPOULES_SETTINGS_DOC = 'settings';
+
+function getUserRef(userId: string) {
+  return doc(db, 'users', userId);
+}
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
@@ -33,7 +37,25 @@ export function normalizeAmpouleSettings(source?: Record<string, unknown> | null
 }
 
 export function getAmpouleSettingsRef(userId: string) {
-  return doc(db, 'users', userId, AMPOULES_COLLECTION, AMPOULES_SETTINGS_DOC);
+  return doc(getUserRef(userId), AMPOULES_COLLECTION, AMPOULES_SETTINGS_DOC);
+}
+
+async function clearLegacyAmpouleSettings(userId: string) {
+  const userRef = getUserRef(userId);
+  const userSnap = await getDoc(userRef);
+
+  if (!userSnap.exists() || !hasLegacyAmpouleSettings(userSnap.data())) {
+    return;
+  }
+
+  await setDoc(
+    userRef,
+    {
+      dosesPerAmpoule: deleteField(),
+      previousDoseApplications: deleteField(),
+    },
+    { merge: true },
+  );
 }
 
 export async function loadAmpouleSettings(
@@ -44,6 +66,9 @@ export async function loadAmpouleSettings(
   const settingsSnap = await getDoc(settingsRef);
 
   if (settingsSnap.exists()) {
+    if (hasLegacyAmpouleSettings(legacySource)) {
+      await clearLegacyAmpouleSettings(userId);
+    }
     return normalizeAmpouleSettings(settingsSnap.data());
   }
 
@@ -61,13 +86,15 @@ export async function loadAmpouleSettings(
       },
       { merge: true },
     );
+
+    await clearLegacyAmpouleSettings(userId);
   }
 
   return normalized;
 }
 
 export async function loadAmpouleSettingsWithUserFallback(userId: string): Promise<AmpouleSettings> {
-  const userSnap = await getDoc(doc(db, 'users', userId));
+  const userSnap = await getDoc(getUserRef(userId));
   return loadAmpouleSettings(userId, userSnap.data());
 }
 
@@ -85,6 +112,8 @@ export async function saveAmpouleSettings(
     },
     { merge: true },
   );
+
+  await clearLegacyAmpouleSettings(userId);
 
   return normalized;
 }
