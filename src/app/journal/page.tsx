@@ -24,6 +24,10 @@ export default function Journal() {
   const [logs, setLogs] = useState<LogData[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
+
   useEffect(() => {
     async function fetchLogs() {
       if (!user) return;
@@ -51,6 +55,9 @@ export default function Journal() {
 
     void fetchLogs();
   }, [user]);
+
+  const pageCount = Math.ceil(logs.length / ITEMS_PER_PAGE);
+  const paginatedLogs = logs.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   return (
     <ProtectedRoute>
@@ -87,7 +94,7 @@ export default function Journal() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'relative' }}>
             <div style={{ position: 'absolute', top: '1rem', bottom: '1rem', left: '1.5rem', width: '2px', background: 'var(--border-glass)', zIndex: 0, opacity: 0.5, display: 'none' }}></div>
 
-            {logs.map((log, index) => (
+            {paginatedLogs.map((log, index) => (
               <article
                 key={log.id}
                 className="glass-panel anim-enter"
@@ -141,6 +148,36 @@ export default function Journal() {
                 </div>
               </article>
             ))}
+
+            {pageCount > 1 ? (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', padding: '1rem 0' }}>
+                <button
+                  className="btn-outline"
+                  disabled={currentPage === 1}
+                  onClick={() => {
+                    setCurrentPage(p => p - 1);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{ padding: '0.6rem 1.25rem' }}
+                >
+                  Anterior
+                </button>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                  Página {currentPage} de {pageCount}
+                </span>
+                <button
+                  className="btn-outline"
+                  disabled={currentPage === pageCount}
+                  onClick={() => {
+                    setCurrentPage(p => p + 1);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{ padding: '0.6rem 1.25rem' }}
+                >
+                  Próxima
+                </button>
+              </div>
+            ) : null}
           </div>
         )}
       </main>

@@ -1,0 +1,30 @@
+import { MealType, NutritionObjective } from "./domain/types";
+
+export const MEAL_ORDER: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
+
+export const MEAL_LABELS: Record<MealType, string> = {
+  breakfast: "Cafe da manha",
+  lunch: "Almoco",
+  snack: "Lanche",
+  dinner: "Jantar",
+};
+
+export const OBJECTIVE_LABELS: Record<NutritionObjective, string> = {
+  lose: "Emagrecimento",
+  maintain: "Manutencao",
+  gain: "Ganho de peso",
+};
+
+export const MACRO_LABELS = {
+  protein: "Proteina",
+  carbs: "Carboidratos",
+  fat: "Gorduras",
+};
+
+export const WORKSPACE_TABS = [
+  { key: "diary" as const, label: "Diário" },
+  { key: "goal" as const, label: "Metas" },
+  { key: "plan" as const, label: "Plano Alimentar" },
+] as const;
+
+export type ActiveWorkspace = typeof WORKSPACE_TABS[number]["key"];

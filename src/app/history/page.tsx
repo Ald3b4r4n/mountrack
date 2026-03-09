@@ -26,6 +26,10 @@ export default function History() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<LogData>>({});
   const [saving, setSaving] = useState(false);
+  
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
 
   useEffect(() => {
     async function fetchLogs() {
@@ -109,9 +113,12 @@ export default function History() {
     }
   };
 
+  const pageCount = Math.ceil(logs.length / ITEMS_PER_PAGE);
+  const paginatedLogs = logs.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
   return (
     <ProtectedRoute>
-      <main className="container" style={{ maxWidth: '800px', paddingTop: '3rem' }}>
+      <main className="container" style={{ maxWidth: '800px', paddingTop: '3rem', paddingBottom: '4rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <h1 className="glow-text anim-enter" style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>Histórico</h1>
@@ -136,7 +143,7 @@ export default function History() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {logs.map((log, index) => (
+            {paginatedLogs.map((log, index) => (
               <div key={log.id} className="glass-panel anim-enter" style={{ padding: '1.5rem', animationDelay: `${Math.min(index * 0.05, 0.4)}s` }}>
                 {editingId === log.id ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -265,6 +272,36 @@ export default function History() {
                 )}
               </div>
             ))}
+
+            {pageCount > 1 ? (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', padding: '1rem 0' }}>
+                <button
+                  className="btn-outline"
+                  disabled={currentPage === 1}
+                  onClick={() => {
+                    setCurrentPage(p => p - 1);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{ padding: '0.6rem 1.25rem' }}
+                >
+                  Anterior
+                </button>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                  Página {currentPage} de {pageCount}
+                </span>
+                <button
+                  className="btn-outline"
+                  disabled={currentPage === pageCount}
+                  onClick={() => {
+                    setCurrentPage(p => p + 1);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{ padding: '0.6rem 1.25rem' }}
+                >
+                  Próxima
+                </button>
+              </div>
+            ) : null}
           </div>
         )}
       </main>

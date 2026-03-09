@@ -36,6 +36,12 @@ export default function Home() {
   const [currentDose, setCurrentDose] = useState<number | null>(null);
   const [weeklyChange, setWeeklyChange] = useState<number | null>(null);
   const [chartPoints, setChartPoints] = useState<ChartPoint[]>([]);
+  /** Data da última dose aplicada (para exibir no card) */
+  const [lastDoseDate, setLastDoseDate] = useState<string | null>(null);
+  /** Data/hora exata da próxima dose (última dose + 7 dias) para o countdown */
+  const [nextDoseTarget, setNextDoseTarget] = useState<Date | null>(null);
+  /** Contador regressivo atualizado a cada segundo: { d, h, m, s } */
+  const [countdown, setCountdown] = useState<{ d: number; h: number; m: number; s: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -175,7 +181,7 @@ export default function Home() {
           }
         }
         
-        // Dados da última dose aplicada (para volumetria + dias)
+        // Dados da última dose aplicada (para volumetria + dias + countdown)
         const doseLog = latestDoseLog as { weight: number; date: string; dose?: number; notes?: string } | null;
         if (doseLog) {
           setCurrentDose(doseLog.dose || null);
@@ -190,6 +196,14 @@ export default function Home() {
 
           setDaysSince(diffDays);
           setDaysUntil(Math.max(0, 7 - diffDays));
+
+          // Salvar data da última dose (formato legível) e data-alvo da próxima
+          setLastDoseDate(logDateLocal.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }));
+          const nextDose = new Date(logDateLocal);
+          nextDose.setDate(nextDose.getDate() + 7);
+          // Definir hora como 08:00 AM para o countdown
+          nextDose.setHours(8, 0, 0, 0);
+          setNextDoseTarget(nextDose);
 
           // V4: Insight de Sintomas
           if (doseLog.notes) {
@@ -213,6 +227,36 @@ export default function Home() {
 
   const progressBarWidth = daysSince !== null ? Math.min(100, (daysSince / 7) * 100) : 0;
   const isDoseOverdue = progressBarWidth >= 100;
+
+  /**
+   * useEffect — Contador regressivo em tempo real (atualiza a cada segundo)
+   * Calcula a diferença entre agora e a data da próxima dose
+   */
+  useEffect(() => {
+    if (!nextDoseTarget) return;
+
+    function tick() {
+      const now = new Date().getTime();
+      const diff = nextDoseTarget!.getTime() - now;
+
+      if (diff <= 0) {
+        // A dose já está atrasada — contagem zerada
+        setCountdown({ d: 0, h: 0, m: 0, s: 0 });
+        return;
+      }
+
+      const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+      setCountdown({ d, h, m, s });
+    }
+
+    // Calcular imediatamente e depois a cada 1 segundo
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [nextDoseTarget]);
 
   /**
    * Gera o SVG path "d" para uma curva suave (catmull-rom → bezier)
@@ -419,29 +463,59 @@ export default function Home() {
             {/* ===== ROW DE CARDS ===== */}
             <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
               
-              {/* Card: Dias desde a última dose */}
+              {/* Card: Próxima Dose — dias restantes em destaque + countdown ao vivo */}
               <article className="glass-panel anim-enter anim-delay-2" style={{ padding: '1.75rem' }}>
                 <p className="stat-label">Próxima Dose</p>
-                <div className="stat-number" style={{ color: isDoseOverdue ? 'var(--accent-danger)' : 'var(--text-primary)' }}>
-                  {daysSince !== null ? daysSince : '—'}
-                  <span className="stat-unit">dias atrás</span>
-                </div>
-                <div className="progress-track">
+
+                {/* Número em destaque: dias que faltam */}
+                {daysUntil !== null ? (
+                  <div className="stat-number" style={{ color: isDoseOverdue ? 'var(--accent-danger)' : 'var(--accent-primary)' }}>
+                    {isDoseOverdue ? '0' : daysUntil}
+                    <span className="stat-unit">{isDoseOverdue ? 'atrasada' : `dia${daysUntil !== 1 ? 's' : ''} restante${daysUntil !== 1 ? 's' : ''}`}</span>
+                  </div>
+                ) : (
+                  <div className="stat-number">—<span className="stat-unit">sem registro</span></div>
+                )}
+
+                {/* Countdown ao vivo: dd hh:mm:ss */}
+                {countdown && !isDoseOverdue && (
+                  <div style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: '1.3rem', fontWeight: 700, color: 'var(--accent-secondary)', letterSpacing: '1px', marginTop: '0.5rem', textAlign: 'center' }}>
+                    <span style={{ color: 'var(--accent-primary)' }}>{String(countdown.d).padStart(2, '0')}</span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: '0 2px' }}>d</span>
+                    <span>{String(countdown.h).padStart(2, '0')}</span>
+                    <span style={{ opacity: 0.5 }}>:</span>
+                    <span>{String(countdown.m).padStart(2, '0')}</span>
+                    <span style={{ opacity: 0.5 }}>:</span>
+                    <span>{String(countdown.s).padStart(2, '0')}</span>
+                  </div>
+                )}
+
+                {/* Barra de progresso do ciclo de 7 dias */}
+                <div className="progress-track" style={{ marginTop: '0.75rem' }}>
                   <div className={`progress-fill ${isDoseOverdue ? 'danger' : ''}`} style={{ width: `${progressBarWidth}%` }}></div>
                 </div>
-                <p style={{ fontSize: '0.75rem', color: isDoseOverdue ? 'var(--accent-danger)' : 'var(--text-muted)', marginTop: '0.5rem', textAlign: 'right', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  {daysUntil !== null && !isDoseOverdue && (
-                    <a href={getGoogleCalendarLink()} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                      Agendar
-                    </a>
-                  )}
-                  <span>
-                    {daysUntil !== null
-                      ? (isDoseOverdue ? '⚠ Dose atrasada!' : `Em ${daysUntil} dia${daysUntil !== 1 ? 's' : ''}`)
-                      : 'Registre uma dose'}
+
+                {/* Rodapé: data da última dose + botão agendar */}
+                <div style={{ fontSize: '0.75rem', color: isDoseOverdue ? 'var(--accent-danger)' : 'var(--text-muted)', marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  {/* Data da última dose (fonte pequena) */}
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                    {lastDoseDate ? `Última: ${lastDoseDate}` : ''}
                   </span>
-                </p>
+
+                  {/* Agendar ou alerta de atraso */}
+                  <span>
+                    {daysUntil !== null && !isDoseOverdue ? (
+                      <a href={getGoogleCalendarLink()} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        Agendar
+                      </a>
+                    ) : isDoseOverdue ? (
+                      <span>⚠ Dose atrasada!</span>
+                    ) : (
+                      <span>Registre uma dose</span>
+                    )}
+                  </span>
+                </div>
               </article>
 
               {/* Card: Dose Atual (Volumetria) */}
