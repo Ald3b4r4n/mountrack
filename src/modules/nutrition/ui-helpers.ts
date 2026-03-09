@@ -1,0 +1,47 @@
+import { FoodItem, NutritionUnit } from "@/modules/nutrition/domain/types";
+
+export function getFoodLabel(food: FoodItem): string {
+  return food.displayName ?? food.name;
+}
+
+export function getFoodDefaultUnit(food: FoodItem): NutritionUnit {
+  if (food.servingGrams) return "serving";
+  if (food.baseUnit === "unit") return "unit";
+  return food.baseUnit === "ml" ? "ml" : "g";
+}
+
+export function getFoodDefaultQuantity(food: FoodItem): string {
+  if (food.baseUnit === "unit") return "1";
+  return food.servingGrams ? "1" : "100";
+}
+
+export function formatCalories(value: number): string {
+  return `${value.toFixed(0)} kcal`;
+}
+
+export function formatGrams(value: number): string {
+  return `${value.toFixed(0)} g`;
+}
+
+export function formatMilliliters(value: number): string {
+  return `${value.toFixed(0)} ml`;
+}
+
+export function formatDeltaCalories(value: number): string {
+  const prefix = value > 0 ? "+" : value < 0 ? "-" : "";
+  return `${prefix}${Math.abs(value).toFixed(0)} kcal`;
+}
+
+export function formatHistoryDate(dateString: string): string {
+  try {
+    const d = new Date(dateString);
+    if (!Number.isFinite(d.getTime())) return dateString;
+    return d.toLocaleDateString("pt-BR", {
+      weekday: "short",
+      day: "2-digit",
+      month: "short"
+    }).replace(".", ""); // Ex: "seg, 01 de mar"
+  } catch {
+    return dateString;
+  }
+}

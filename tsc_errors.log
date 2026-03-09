@@ -1,0 +1,274 @@
+﻿src/components/nutrition/NutritionScreen.tsx(316,25): error TS2304: Cannot find name 'selectedFood'.
+src/components/nutrition/NutritionScreen.tsx(320,7): error TS2552: Cannot find name 'setMessage'. Did you mean 'postMessage'?
+src/components/nutrition/NutritionScreen.tsx(325,11): error TS2304: Cannot find name 'storageMode'.
+src/components/nutrition/NutritionScreen.tsx(328,17): error TS2304: Cannot find name 'selectedFood'.
+src/components/nutrition/NutritionScreen.tsx(337,14): error TS2304: Cannot find name 'goal'.
+src/components/nutrition/NutritionScreen.tsx(339,26): error TS2304: Cannot find name 'goal'.
+src/components/nutrition/NutritionScreen.tsx(342,34): error TS2552: Cannot find name 'loadBrowserDashboard'. Did you mean 'browserDashboard'?
+src/components/nutrition/NutritionScreen.tsx(343,32): error TS2304: Cannot find name 'loadBrowserHistory'.
+src/components/nutrition/NutritionScreen.tsx(344,31): error TS2304: Cannot find name 'hydrateDashboard'.
+src/components/nutrition/NutritionScreen.tsx(345,29): error TS2304: Cannot find name 'hydrateHistory'.
+src/components/nutrition/NutritionScreen.tsx(351,9): error TS2304: Cannot find name 'setHistoryPage'.
+src/components/nutrition/NutritionScreen.tsx(352,9): error TS2304: Cannot find name 'setMessage'.
+src/components/nutrition/NutritionScreen.tsx(352,36): error TS2304: Cannot find name 'selectedFood'.
+src/components/nutrition/NutritionScreen.tsx(353,9): error TS2304: Cannot find name 'resetSearchComposer'.
+src/components/nutrition/NutritionScreen.tsx(361,19): error TS2304: Cannot find name 'selectedFood'.
+src/components/nutrition/NutritionScreen.tsx(369,15): error TS2304: Cannot find name 'resolveRequestError'.
+src/components/nutrition/NutritionScreen.tsx(377,7): error TS2304: Cannot find name 'setHistoryPage'.
+src/components/nutrition/NutritionScreen.tsx(378,7): error TS2552: Cannot find name 'setMessage'. Did you mean 'postMessage'?
+src/components/nutrition/NutritionScreen.tsx(378,34): error TS2304: Cannot find name 'selectedFood'.
+src/components/nutrition/NutritionScreen.tsx(379,7): error TS2304: Cannot find name 'resetSearchComposer'.
+src/components/nutrition/NutritionScreen.tsx(380,26): error TS2304: Cannot find name 'loadDashboard'.
+src/components/nutrition/NutritionScreen.tsx(380,43): error TS2304: Cannot find name 'loadHistory'.
+src/components/nutrition/NutritionScreen.tsx(382,7): error TS2304: Cannot find name 'setMessage'.
+src/components/nutrition/NutritionScreen.tsx(382,19): error TS7006: Parameter 'current' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(390,11): error TS2304: Cannot find name 'storageMode'.
+src/components/nutrition/NutritionScreen.tsx(392,34): error TS2304: Cannot find name 'loadBrowserDashboard'.
+src/components/nutrition/NutritionScreen.tsx(393,32): error TS2304: Cannot find name 'loadBrowserHistory'.
+src/components/nutrition/NutritionScreen.tsx(393,51): error TS2304: Cannot find name 'historyPage'.
+src/components/nutrition/NutritionScreen.tsx(394,31): error TS2304: Cannot find name 'hydrateDashboard'.
+src/components/nutrition/NutritionScreen.tsx(395,29): error TS2304: Cannot find name 'hydrateHistory'.
+src/components/nutrition/NutritionScreen.tsx(401,15): error TS2304: Cannot find name 'resolveRequestError'.
+src/components/nutrition/NutritionScreen.tsx(404,26): error TS2304: Cannot find name 'loadDashboard'.
+src/components/nutrition/NutritionScreen.tsx(404,43): error TS2304: Cannot find name 'loadHistory'.
+src/components/nutrition/NutritionScreen.tsx(404,55): error TS2304: Cannot find name 'historyPage'.
+src/components/nutrition/NutritionScreen.tsx(406,7): error TS2304: Cannot find name 'setMessage'.
+src/components/nutrition/NutritionScreen.tsx(406,19): error TS7006: Parameter 'current' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(411,56): error TS2304: Cannot find name 'goalInputs'.
+src/components/nutrition/NutritionScreen.tsx(412,55): error TS2304: Cannot find name 'goalInputs'.
+src/components/nutrition/NutritionScreen.tsx(413,55): error TS2304: Cannot find name 'goalInputs'.
+src/components/nutrition/NutritionScreen.tsx(414,53): error TS2304: Cannot find name 'goalInputs'.
+src/components/nutrition/NutritionScreen.tsx(415,51): error TS2304: Cannot find name 'goalInputs'.
+src/components/nutrition/NutritionScreen.tsx(426,10): error TS2304: Cannot find name 'goal'.
+src/components/nutrition/NutritionScreen.tsx(427,34): error TS2304: Cannot find name 'goal'.
+src/components/nutrition/NutritionScreen.tsx(433,18): error TS2304: Cannot find name 'goalObjectiveDraft'.
+src/components/nutrition/NutritionScreen.tsx(442,7): error TS2304: Cannot find name 'setMessage'.
+src/components/nutrition/NutritionScreen.tsx(447,5): error TS2304: Cannot find name 'setMessage'.
+src/components/nutrition/NutritionScreen.tsx(449,11): error TS2304: Cannot find name 'storageMode'.
+src/components/nutrition/NutritionScreen.tsx(451,9): error TS2304: Cannot find name 'setGoalInputsDirty'.
+src/components/nutrition/NutritionScreen.tsx(452,34): error TS2304: Cannot find name 'loadBrowserDashboard'.
+src/components/nutrition/NutritionScreen.tsx(453,32): error TS2304: Cannot find name 'loadBrowserHistory'.
+src/components/nutrition/NutritionScreen.tsx(453,51): error TS2304: Cannot find name 'historyPage'.
+src/components/nutrition/NutritionScreen.tsx(454,31): error TS2304: Cannot find name 'hydrateDashboard'.
+src/components/nutrition/NutritionScreen.tsx(455,29): error TS2304: Cannot find name 'hydrateHistory'.
+src/components/nutrition/NutritionScreen.tsx(458,9): error TS2304: Cannot find name 'setMessage'.
+src/components/nutrition/NutritionScreen.tsx(474,15): error TS2304: Cannot find name 'resolveRequestError'.
+src/components/nutrition/NutritionScreen.tsx(485,7): error TS2304: Cannot find name 'setGoalInputsDirty'.
+src/components/nutrition/NutritionScreen.tsx(486,7): error TS2304: Cannot find name 'setGoal'.
+src/components/nutrition/NutritionScreen.tsx(487,7): error TS2304: Cannot find name 'setPlanCalories'.
+src/components/nutrition/NutritionScreen.tsx(488,7): error TS2304: Cannot find name 'setSummary'.
+src/components/nutrition/NutritionScreen.tsx(488,19): error TS7006: Parameter 'current' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(496,7): error TS2304: Cannot find name 'setMessage'.
+src/components/nutrition/NutritionScreen.tsx(497,26): error TS2304: Cannot find name 'loadDashboard'.
+src/components/nutrition/NutritionScreen.tsx(497,43): error TS2304: Cannot find name 'loadHistory'.
+src/components/nutrition/NutritionScreen.tsx(497,55): error TS2304: Cannot find name 'historyPage'.
+src/components/nutrition/NutritionScreen.tsx(499,7): error TS2304: Cannot find name 'setMessage'.
+src/components/nutrition/NutritionScreen.tsx(499,19): error TS7006: Parameter 'current' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(508,29): error TS2304: Cannot find name 'buildNextWaterIntake'.
+src/components/nutrition/NutritionScreen.tsx(508,50): error TS2304: Cannot find name 'summary'.
+src/components/nutrition/NutritionScreen.tsx(508,73): error TS2304: Cannot find name 'waterDraft'.
+src/components/nutrition/NutritionScreen.tsx(508,85): error TS2304: Cannot find name 'hydrationMode'.
+src/components/nutrition/NutritionScreen.tsx(510,7): error TS2304: Cannot find name 'setMessage'.
+src/components/nutrition/NutritionScreen.tsx(511,9): error TS2304: Cannot find name 'hydrationMode'.
+src/components/nutrition/NutritionScreen.tsx(518,5): error TS2304: Cannot find name 'setIsUpdatingWater'.
+src/components/nutrition/NutritionScreen.tsx(519,5): error TS2304: Cannot find name 'setMessage'.
+src/components/nutrition/NutritionScreen.tsx(521,11): error TS2304: Cannot find name 'storageMode'.
+src/components/nutrition/NutritionScreen.tsx(524,14): error TS2304: Cannot find name 'goal'.
+src/components/nutrition/NutritionScreen.tsx(526,26): error TS2304: Cannot find name 'goal'.
+src/components/nutrition/NutritionScreen.tsx(529,34): error TS2304: Cannot find name 'loadBrowserDashboard'.
+src/components/nutrition/NutritionScreen.tsx(530,32): error TS2304: Cannot find name 'loadBrowserHistory'.
+src/components/nutrition/NutritionScreen.tsx(530,51): error TS2304: Cannot find name 'historyPage'.
+src/components/nutrition/NutritionScreen.tsx(531,31): error TS2304: Cannot find name 'hydrateDashboard'.
+src/components/nutrition/NutritionScreen.tsx(532,29): error TS2304: Cannot find name 'hydrateHistory'.
+src/components/nutrition/NutritionScreen.tsx(533,9): error TS2304: Cannot find name 'setWaterDraft'.
+src/components/nutrition/NutritionScreen.tsx(533,23): error TS2304: Cannot find name 'hydrationMode'.
+src/components/nutrition/NutritionScreen.tsx(534,9): error TS2304: Cannot find name 'setMessage'.
+src/components/nutrition/NutritionScreen.tsx(534,20): error TS2304: Cannot find name 'hydrationMode'.
+src/components/nutrition/NutritionScreen.tsx(543,15): error TS2304: Cannot find name 'resolveRequestError'.
+src/components/nutrition/NutritionScreen.tsx(547,7): error TS2304: Cannot find name 'hydrateDashboard'.
+src/components/nutrition/NutritionScreen.tsx(548,7): error TS2304: Cannot find name 'setWaterDraft'.
+src/components/nutrition/NutritionScreen.tsx(548,21): error TS2304: Cannot find name 'hydrationMode'.
+src/components/nutrition/NutritionScreen.tsx(549,7): error TS2304: Cannot find name 'setMessage'.
+src/components/nutrition/NutritionScreen.tsx(549,18): error TS2304: Cannot find name 'hydrationMode'.
+src/components/nutrition/NutritionScreen.tsx(550,13): error TS2304: Cannot find name 'loadHistory'.
+src/components/nutrition/NutritionScreen.tsx(550,25): error TS2304: Cannot find name 'historyPage'.
+src/components/nutrition/NutritionScreen.tsx(552,7): error TS2304: Cannot find name 'setMessage'.
+src/components/nutrition/NutritionScreen.tsx(552,19): error TS7006: Parameter 'current' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(554,7): error TS2304: Cannot find name 'setIsUpdatingWater'.
+src/components/nutrition/NutritionScreen.tsx(564,11): error TS2304: Cannot find name 'storageMode'.
+src/components/nutrition/NutritionScreen.tsx(566,9): error TS2304: Cannot find name 'setMealPlan'.
+src/components/nutrition/NutritionScreen.tsx(567,9): error TS2304: Cannot find name 'setMealPlanDraft'.
+src/components/nutrition/NutritionScreen.tsx(569,9): error TS2304: Cannot find name 'setMessage'.
+src/components/nutrition/NutritionScreen.tsx(575,15): error TS2304: Cannot find name 'resolveRequestError'.
+src/components/nutrition/NutritionScreen.tsx(578,7): error TS2304: Cannot find name 'setMealPlan'.
+src/components/nutrition/NutritionScreen.tsx(579,7): error TS2304: Cannot find name 'setMealPlanDraft'.
+src/components/nutrition/NutritionScreen.tsx(581,7): error TS2304: Cannot find name 'setMessage'.
+src/components/nutrition/NutritionScreen.tsx(583,7): error TS2304: Cannot find name 'setMessage'.
+src/components/nutrition/NutritionScreen.tsx(583,19): error TS7006: Parameter 'current' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(590,5): error TS2304: Cannot find name 'setMealPlanDraft'.
+src/components/nutrition/NutritionScreen.tsx(590,23): error TS7006: Parameter 'currentPlan' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(601,48): error TS7006: Parameter 'meal' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(601,54): error TS7006: Parameter 'currentMealIndex' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(605,34): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(605,40): error TS7006: Parameter 'currentItemIndex' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(612,11): error TS2304: Cannot find name 'storageMode'.
+src/components/nutrition/NutritionScreen.tsx(621,22): error TS2304: Cannot find name 'mealPlanDraft'.
+src/components/nutrition/NutritionScreen.tsx(626,5): error TS2304: Cannot find name 'setMealPlanDraft'.
+src/components/nutrition/NutritionScreen.tsx(626,23): error TS7006: Parameter 'currentPlan' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(628,48): error TS7006: Parameter 'meal' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(628,54): error TS7006: Parameter 'currentMealIndex' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(630,53): error TS7006: Parameter '_' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(630,56): error TS7006: Parameter 'currentItemIndex' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(633,11): error TS2304: Cannot find name 'storageMode'.
+src/components/nutrition/NutritionScreen.tsx(642,10): error TS2304: Cannot find name 'mealPlanDraft'.
+src/components/nutrition/NutritionScreen.tsx(644,5): error TS2304: Cannot find name 'setMessage'.
+src/components/nutrition/NutritionScreen.tsx(649,15): error TS2304: Cannot find name 'mealPlanDraft'.
+src/components/nutrition/NutritionScreen.tsx(650,42): error TS2304: Cannot find name 'planCalories'.
+src/components/nutrition/NutritionScreen.tsx(650,59): error TS2304: Cannot find name 'goal'.
+src/components/nutrition/NutritionScreen.tsx(651,20): error TS2304: Cannot find name 'goalObjectiveDraft'.
+src/components/nutrition/NutritionScreen.tsx(653,35): error TS2304: Cannot find name 'mealPlanDraft'.
+src/components/nutrition/NutritionScreen.tsx(655,7): error TS2304: Cannot find name 'setMessage'.
+src/components/nutrition/NutritionScreen.tsx(657,7): error TS2304: Cannot find name 'setMessage'.
+src/components/nutrition/NutritionScreen.tsx(664,10): error TS2304: Cannot find name 'selectedFood'.
+src/components/nutrition/NutritionScreen.tsx(667,50): error TS2304: Cannot find name 'selectedFood'.
+src/components/nutrition/NutritionScreen.tsx(668,7): error TS2304: Cannot find name 'selectedFood'.
+src/components/nutrition/NutritionScreen.tsx(672,18): error TS2304: Cannot find name 'diaryItems'.
+src/components/nutrition/NutritionScreen.tsx(672,37): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(673,14): error TS2304: Cannot find name 'diaryItems'.
+src/components/nutrition/NutritionScreen.tsx(673,33): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(674,14): error TS2304: Cannot find name 'diaryItems'.
+src/components/nutrition/NutritionScreen.tsx(674,33): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(675,15): error TS2304: Cannot find name 'diaryItems'.
+src/components/nutrition/NutritionScreen.tsx(675,34): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(677,6): error TS2304: Cannot find name 'diaryItems'.
+src/components/nutrition/NutritionScreen.tsx(691,25): error TS2304: Cannot find name 'summary'.
+src/components/nutrition/NutritionScreen.tsx(691,64): error TS2304: Cannot find name 'summary'.
+src/components/nutrition/NutritionScreen.tsx(691,91): error TS2304: Cannot find name 'summary'.
+src/components/nutrition/NutritionScreen.tsx(692,22): error TS2304: Cannot find name 'summary'.
+src/components/nutrition/NutritionScreen.tsx(692,60): error TS2304: Cannot find name 'summary'.
+src/components/nutrition/NutritionScreen.tsx(692,84): error TS2304: Cannot find name 'summary'.
+src/components/nutrition/NutritionScreen.tsx(693,29): error TS2304: Cannot find name 'mealPlanDraft'.
+src/components/nutrition/NutritionScreen.tsx(693,46): error TS2304: Cannot find name 'mealPlan'.
+src/components/nutrition/NutritionScreen.tsx(695,50): error TS2304: Cannot find name 'planCalories'.
+src/components/nutrition/NutritionScreen.tsx(695,67): error TS2304: Cannot find name 'goal'.
+src/components/nutrition/NutritionScreen.tsx(698,5): error TS2304: Cannot find name 'storageMode'.
+src/components/nutrition/NutritionScreen.tsx(700,9): error TS2304: Cannot find name 'storageMode'.
+src/components/nutrition/NutritionScreen.tsx(703,53): error TS2304: Cannot find name 'lastSearchSource'.
+src/components/nutrition/NutritionScreen.tsx(704,23): error TS2304: Cannot find name 'selectedFood'.
+src/components/nutrition/NutritionScreen.tsx(704,40): error TS2304: Cannot find name 'resultsVisible'.
+src/components/nutrition/NutritionScreen.tsx(706,49): error TS2304: Cannot find name 'isSearching'.
+src/components/nutrition/NutritionScreen.tsx(741,61): error TS2304: Cannot find name 'handleBarcodeLookup'.
+src/components/nutrition/NutritionScreen.tsx(748,11): error TS2304: Cannot find name 'setMessage'.
+src/components/nutrition/NutritionScreen.tsx(749,11): error TS2304: Cannot find name 'setSelectedFood'.
+src/components/nutrition/NutritionScreen.tsx(771,142): error TS2304: Cannot find name 'summary'.
+src/components/nutrition/NutritionScreen.tsx(772,140): error TS2304: Cannot find name 'summary'.
+src/components/nutrition/NutritionScreen.tsx(773,139): error TS2304: Cannot find name 'summary'.
+src/components/nutrition/NutritionScreen.tsx(774,111): error TS2304: Cannot find name 'summary'.
+src/components/nutrition/NutritionScreen.tsx(774,142): error TS2304: Cannot find name 'summary'.
+src/components/nutrition/NutritionScreen.tsx(775,77): error TS2304: Cannot find name 'summary'.
+src/components/nutrition/NutritionScreen.tsx(775,92): error TS2304: Cannot find name 'goal'.
+src/components/nutrition/NutritionScreen.tsx(780,10): error TS2304: Cannot find name 'message'.
+src/components/nutrition/NutritionScreen.tsx(780,218): error TS2304: Cannot find name 'message'.
+src/components/nutrition/NutritionScreen.tsx(797,18): error TS2304: Cannot find name 'storageMode'.
+src/components/nutrition/NutritionScreen.tsx(799,21): error TS2304: Cannot find name 'storageMode'.
+src/components/nutrition/NutritionScreen.tsx(807,59): error TS2304: Cannot find name 'searchQuery'.
+src/components/nutrition/NutritionScreen.tsx(807,93): error TS2304: Cannot find name 'handleSearchQueryChange'.
+src/components/nutrition/NutritionScreen.tsx(807,220): error TS2304: Cannot find name 'handleSearch'.
+src/components/nutrition/NutritionScreen.tsx(808,49): error TS2304: Cannot find name 'handleSearch'.
+src/components/nutrition/NutritionScreen.tsx(808,99): error TS2304: Cannot find name 'isSearching'.
+src/components/nutrition/NutritionScreen.tsx(808,113): error TS2304: Cannot find name 'isSearching'.
+src/components/nutrition/NutritionScreen.tsx(814,59): error TS2304: Cannot find name 'barcodeQuery'.
+src/components/nutrition/NutritionScreen.tsx(814,94): error TS2304: Cannot find name 'handleBarcodeQueryChange'.
+src/components/nutrition/NutritionScreen.tsx(814,222): error TS2304: Cannot find name 'handleBarcodeLookup'.
+src/components/nutrition/NutritionScreen.tsx(814,242): error TS2304: Cannot find name 'barcodeQuery'.
+src/components/nutrition/NutritionScreen.tsx(815,49): error TS2304: Cannot find name 'handleBarcodeLookup'.
+src/components/nutrition/NutritionScreen.tsx(815,69): error TS2304: Cannot find name 'barcodeQuery'.
+src/components/nutrition/NutritionScreen.tsx(827,24): error TS2304: Cannot find name 'resultsVisible'.
+src/components/nutrition/NutritionScreen.tsx(827,42): error TS2304: Cannot find name 'searchResults'.
+src/components/nutrition/NutritionScreen.tsx(827,104): error TS2304: Cannot find name 'searchResults'.
+src/components/nutrition/NutritionScreen.tsx(829,24): error TS2304: Cannot find name 'searchResults'.
+src/components/nutrition/NutritionScreen.tsx(829,48): error TS2304: Cannot find name 'selectedFood'.
+src/components/nutrition/NutritionScreen.tsx(829,88): error TS2304: Cannot find name 'resetSearchComposer'.
+src/components/nutrition/NutritionScreen.tsx(829,111): error TS2304: Cannot find name 'setMessage'.
+src/components/nutrition/NutritionScreen.tsx(833,22): error TS2304: Cannot find name 'resultsVisible'.
+src/components/nutrition/NutritionScreen.tsx(833,40): error TS2304: Cannot find name 'searchResults'.
+src/components/nutrition/NutritionScreen.tsx(833,63): error TS2304: Cannot find name 'searchResults'.
+src/components/nutrition/NutritionScreen.tsx(833,82): error TS7006: Parameter 'food' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(835,67): error TS2304: Cannot find name 'applyFoodSelection'.
+src/components/nutrition/NutritionScreen.tsx(835,199): error TS2304: Cannot find name 'selectedFood'.
+src/components/nutrition/NutritionScreen.tsx(835,282): error TS2304: Cannot find name 'selectedFood'.
+src/components/nutrition/NutritionScreen.tsx(843,22): error TS2304: Cannot find name 'selectedFood'.
+src/components/nutrition/NutritionScreen.tsx(843,54): error TS2304: Cannot find name 'reopenSearchResults'.
+src/components/nutrition/NutritionScreen.tsx(846,20): error TS2304: Cannot find name 'selectedFood'.
+src/components/nutrition/NutritionScreen.tsx(849,206): error TS2304: Cannot find name 'selectedFood'.
+src/components/nutrition/NutritionScreen.tsx(849,300): error TS2304: Cannot find name 'selectedFood'.
+src/components/nutrition/NutritionScreen.tsx(849,324): error TS2304: Cannot find name 'selectedFood'.
+src/components/nutrition/NutritionScreen.tsx(849,354): error TS2304: Cannot find name 'selectedFood'.
+src/components/nutrition/NutritionScreen.tsx(849,440): error TS2304: Cannot find name 'selectedFood'.
+src/components/nutrition/NutritionScreen.tsx(849,496): error TS2304: Cannot find name 'selectedFood'.
+src/components/nutrition/NutritionScreen.tsx(849,533): error TS2304: Cannot find name 'selectedFood'.
+src/components/nutrition/NutritionScreen.tsx(874,49): error TS2304: Cannot find name 'diaryItems'.
+src/components/nutrition/NutritionScreen.tsx(899,123): error TS2304: Cannot find name 'summary'.
+src/components/nutrition/NutritionScreen.tsx(899,174): error TS2304: Cannot find name 'summary'.
+src/components/nutrition/NutritionScreen.tsx(905,50): error TS2304: Cannot find name 'hydrationMode'.
+src/components/nutrition/NutritionScreen.tsx(905,114): error TS2304: Cannot find name 'handleSelectHydrationMode'.
+src/components/nutrition/NutritionScreen.tsx(906,50): error TS2304: Cannot find name 'hydrationMode'.
+src/components/nutrition/NutritionScreen.tsx(906,118): error TS2304: Cannot find name 'handleSelectHydrationMode'.
+src/components/nutrition/NutritionScreen.tsx(908,26): error TS2304: Cannot find name 'hydrationMode'.
+src/components/nutrition/NutritionScreen.tsx(917,50): error TS2304: Cannot find name 'hydrationMode'.
+src/components/nutrition/NutritionScreen.tsx(923,28): error TS2304: Cannot find name 'hydrationMode'.
+src/components/nutrition/NutritionScreen.tsx(923,83): error TS2304: Cannot find name 'handleAdjustWater'.
+src/components/nutrition/NutritionScreen.tsx(924,28): error TS2304: Cannot find name 'hydrationMode'.
+src/components/nutrition/NutritionScreen.tsx(924,83): error TS2304: Cannot find name 'handleAdjustWater'.
+src/components/nutrition/NutritionScreen.tsx(927,43): error TS2304: Cannot find name 'hydrationMode'.
+src/components/nutrition/NutritionScreen.tsx(933,43): error TS2304: Cannot find name 'hydrationMode'.
+src/components/nutrition/NutritionScreen.tsx(936,40): error TS2304: Cannot find name 'waterDraft'.
+src/components/nutrition/NutritionScreen.tsx(937,54): error TS2304: Cannot find name 'setWaterDraft'.
+src/components/nutrition/NutritionScreen.tsx(939,46): error TS2304: Cannot find name 'hydrationMode'.
+src/components/nutrition/NutritionScreen.tsx(944,155): error TS2304: Cannot find name 'isUpdatingWater'.
+src/components/nutrition/NutritionScreen.tsx(945,32): error TS2304: Cannot find name 'isUpdatingWater'.
+src/components/nutrition/NutritionScreen.tsx(945,66): error TS2304: Cannot find name 'hydrationMode'.
+src/components/nutrition/NutritionScreen.tsx(960,150): error TS2304: Cannot find name 'summary'.
+src/components/nutrition/NutritionScreen.tsx(965,24): error TS2304: Cannot find name 'isLoading'.
+src/components/nutrition/NutritionScreen.tsx(966,25): error TS2304: Cannot find name 'isLoading'.
+src/components/nutrition/NutritionScreen.tsx(967,25): error TS2304: Cannot find name 'isLoading'.
+src/components/nutrition/NutritionScreen.tsx(969,49): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(985,24): error TS2304: Cannot find name 'isHistoryLoading'.
+src/components/nutrition/NutritionScreen.tsx(986,25): error TS2304: Cannot find name 'isHistoryLoading'.
+src/components/nutrition/NutritionScreen.tsx(986,45): error TS2304: Cannot find name 'historyEntries'.
+src/components/nutrition/NutritionScreen.tsx(987,25): error TS2304: Cannot find name 'isHistoryLoading'.
+src/components/nutrition/NutritionScreen.tsx(987,45): error TS2304: Cannot find name 'historyEntries'.
+src/components/nutrition/NutritionScreen.tsx(987,197): error TS2304: Cannot find name 'historyEntries'.
+src/components/nutrition/NutritionScreen.tsx(987,217): error TS7006: Parameter 'entry' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(988,49): error TS2304: Cannot find name 'historyPage'.
+src/components/nutrition/NutritionScreen.tsx(988,74): error TS2304: Cannot find name 'historyTotalPages'.
+src/components/nutrition/NutritionScreen.tsx(988,122): error TS2304: Cannot find name 'loadHistory'.
+src/components/nutrition/NutritionScreen.tsx(998,60): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<NutritionObjective, string>'.
+src/components/nutrition/NutritionScreen.tsx(998,77): error TS2304: Cannot find name 'goalObjectiveDraft'.
+src/components/nutrition/NutritionScreen.tsx(1001,103): error TS2304: Cannot find name 'goalInputs'.
+src/components/nutrition/NutritionScreen.tsx(1001,151): error TS2304: Cannot find name 'updateGoalInput'.
+src/components/nutrition/NutritionScreen.tsx(1002,104): error TS2304: Cannot find name 'goalInputs'.
+src/components/nutrition/NutritionScreen.tsx(1002,151): error TS2304: Cannot find name 'updateGoalInput'.
+src/components/nutrition/NutritionScreen.tsx(1003,103): error TS2304: Cannot find name 'goalInputs'.
+src/components/nutrition/NutritionScreen.tsx(1003,150): error TS2304: Cannot find name 'updateGoalInput'.
+src/components/nutrition/NutritionScreen.tsx(1004,100): error TS2304: Cannot find name 'goalInputs'.
+src/components/nutrition/NutritionScreen.tsx(1004,145): error TS2304: Cannot find name 'updateGoalInput'.
+src/components/nutrition/NutritionScreen.tsx(1005,102): error TS2304: Cannot find name 'goalInputs'.
+src/components/nutrition/NutritionScreen.tsx(1005,145): error TS2304: Cannot find name 'updateGoalInput'.
+src/components/nutrition/NutritionScreen.tsx(1006,84): error TS2304: Cannot find name 'goalObjectiveDraft'.
+src/components/nutrition/NutritionScreen.tsx(1006,127): error TS2304: Cannot find name 'setGoalInputsDirty'.
+src/components/nutrition/NutritionScreen.tsx(1006,153): error TS2304: Cannot find name 'setGoalObjectiveDraft'.
+src/components/nutrition/NutritionScreen.tsx(1009,67): error TS2304: Cannot find name 'goal'.
+src/components/nutrition/NutritionScreen.tsx(1010,70): error TS2304: Cannot find name 'goal'.
+src/components/nutrition/NutritionScreen.tsx(1011,67): error TS2304: Cannot find name 'summary'.
+src/components/nutrition/NutritionScreen.tsx(1012,68): error TS2304: Cannot find name 'summary'.
+src/components/nutrition/NutritionScreen.tsx(1013,65): error TS2304: Cannot find name 'summary'.
+src/components/nutrition/NutritionScreen.tsx(1014,67): error TS2304: Cannot find name 'summary'.
+src/components/nutrition/NutritionScreen.tsx(1026,109): error TS2304: Cannot find name 'planCalories'.
+src/components/nutrition/NutritionScreen.tsx(1026,144): error TS2304: Cannot find name 'setPlanCalories'.
+src/components/nutrition/NutritionScreen.tsx(1028,51): error TS2304: Cannot find name 'handleGenerateMealPlan'.
+src/components/nutrition/NutritionScreen.tsx(1029,46): error TS2304: Cannot find name 'setPlanCalories'.
+src/components/nutrition/NutritionScreen.tsx(1029,69): error TS2304: Cannot find name 'goal'.
+src/components/nutrition/NutritionScreen.tsx(1030,158): error TS2304: Cannot find name 'mealPlanDraft'.
+src/components/nutrition/NutritionScreen.tsx(1035,1064): error TS7006: Parameter 'meal' implicitly has an 'any' type.
+src/components/nutrition/NutritionScreen.tsx(1035,1070): error TS7006: Parameter 'index' implicitly has an 'any' type.

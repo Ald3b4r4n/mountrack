@@ -94,7 +94,7 @@ describe("getNutritionErrorMessage", () => {
     });
 
     await expect(getNutritionErrorMessage(response, "fallback")).resolves.toBe(
-      "A autenticacao da nutricao nao esta disponivel neste deploy. Confira as variaveis do Firebase na Vercel.",
+      "A autenticação da nutrição não está disponível neste deploy. Confira as variáveis do Firebase na Vercel.",
     );
   });
 
@@ -105,7 +105,7 @@ describe("getNutritionErrorMessage", () => {
     });
 
     await expect(getNutritionErrorMessage(response, "fallback")).resolves.toBe(
-      "Sua sessao da nutricao expirou ou nao foi validada. Entre novamente e tente de novo.",
+      "Sua sessão da nutrição expirou ou não foi validada. Entre novamente e tente de novo.",
     );
   });
 

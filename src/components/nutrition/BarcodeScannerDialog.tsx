@@ -43,6 +43,8 @@ export function BarcodeScannerDialog({
 
     let active = true;
     let hasDetected = false;
+    /** Flag que indica se o scanner.start() completou com sucesso */
+    let scannerStarted = false;
     setError(null);
 
     async function startScanner() {
@@ -77,6 +79,7 @@ export function BarcodeScannerDialog({
             hasDetected = true;
             onDetected(decodedText);
             void scanner.stop().catch(() => undefined).finally(() => {
+              scannerStarted = false;
               if (active) {
                 onClose();
               }
@@ -84,6 +87,9 @@ export function BarcodeScannerDialog({
           },
           () => undefined,
         );
+
+        // Só marca como iniciado DEPOIS do start() completar sem erro
+        scannerStarted = true;
       } catch (scannerError) {
         if (active) {
           setError(toScannerErrorMessage(scannerError));
@@ -96,8 +102,11 @@ export function BarcodeScannerDialog({
     return () => {
       active = false;
       const scanner = scannerRef.current;
-      if (scanner) {
+      if (scanner && scannerStarted) {
         void scanner.stop().catch(() => undefined);
+      }
+      // clear() pode ser chamado mesmo sem start — limpa o DOM
+      if (scanner) {
         try {
           scanner.clear();
         } catch {
@@ -173,16 +182,7 @@ export function BarcodeScannerDialog({
           onClose();
         }
       }}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(8, 14, 26, 0.82)",
-        backdropFilter: "blur(14px)",
-        zIndex: 50,
-        display: "grid",
-        placeItems: "center",
-        padding: "1rem",
-      }}
+      className="fixed inset-0 bg-[#080e1a]/80 backdrop-blur-md z-50 grid place-items-center p-4"
     >
       <div
         ref={dialogRef}
@@ -190,22 +190,20 @@ export function BarcodeScannerDialog({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="glass-panel"
+        className="glass-panel w-full max-w-lg p-5"
         tabIndex={-1}
-        style={{ width: "100%", maxWidth: "32rem", padding: "1.25rem" }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>
+        <div className="flex justify-between items-center gap-4 mb-4">
           <div>
-            <h3 id={titleId} style={{ fontSize: "1.1rem", fontWeight: 600 }}>Leitor de código de barras</h3>
-            <p id={descriptionId} style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
+            <h3 id={titleId} className="text-lg font-semibold">Leitor de código de barras</h3>
+            <p id={descriptionId} className="text-[var(--text-secondary)] text-sm">
               Aponte a camera para o EAN, GTIN ou QR do alimento.
             </p>
           </div>
           <button
             ref={closeButtonRef}
             onClick={onClose}
-            className="btn-outline"
-            style={{ minWidth: "auto", padding: "0.65rem 1rem" }}
+            className="btn-outline min-w-auto px-4 py-2.5"
           >
             Fechar
           </button>
@@ -213,21 +211,15 @@ export function BarcodeScannerDialog({
 
         <div
           id={containerId}
-          style={{
-            minHeight: "260px",
-            borderRadius: "var(--radius-lg)",
-            overflow: "hidden",
-            border: "1px solid var(--border-glass)",
-            background: "rgba(0,0,0,0.25)",
-          }}
+          className="min-h-[260px] rounded-[var(--radius-lg)] overflow-hidden border border-[var(--border-glass)] bg-black/25"
         />
 
-        <p style={{ marginTop: "0.75rem", color: "var(--text-secondary)", fontSize: "0.88rem" }}>
+        <p className="mt-3 text-[var(--text-secondary)] text-sm">
           Formatos ativos: EAN-13, EAN-8, UPC, CODE-128 e QR Code.
         </p>
 
         {error ? (
-          <p role="status" style={{ marginTop: "0.5rem", color: "#fca5a5", fontSize: "0.9rem" }}>{error}</p>
+          <p role="status" className="mt-2 text-red-300 text-sm">{error}</p>
         ) : null}
       </div>
     </div>

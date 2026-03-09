@@ -84,62 +84,58 @@ export function CustomFoodDialog({ open, onClose, onCreated }: CustomFoodDialogP
   return (
     <div
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      style={{
-        position: "fixed", inset: 0, background: "rgba(8, 14, 26, 0.82)", backdropFilter: "blur(14px)",
-        zIndex: 50, display: "grid", placeItems: "center", padding: "1rem"
-      }}
+      className="fixed inset-0 bg-[#080e1a]/80 backdrop-blur-sm z-50 grid place-items-center p-4"
     >
       <div 
         ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId}
-        className="glass-panel"
-        style={{ width: "100%", maxWidth: "32rem", padding: "1.25rem", maxHeight: "90vh", overflowY: "auto" }}
+        className="glass-panel w-full max-w-lg p-5 max-h-[90vh] overflow-y-auto"
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+        <div className="flex justify-between items-center mb-4">
           <div>
-            <h3 id={titleId} style={{ fontSize: "1.1rem", fontWeight: 600 }}>Cadastrar Alimento</h3>
-            <p id={descriptionId} style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
+            <h3 id={titleId} className="text-[1.1rem] font-semibold">Cadastrar Alimento</h3>
+            <p id={descriptionId} className="text-[var(--text-secondary)] text-[0.9rem]">
               Adicione um alimento customizado ao seu catálogo.
             </p>
           </div>
         </div>
 
-        {error && <div style={{ color: "#fca5a5", fontSize: "0.9rem", marginBottom: "1rem" }}>{error}</div>}
+        {error && <div className="text-red-400 text-[0.9rem] mb-4">{error}</div>}
 
-        <div style={{ display: "grid", gap: "0.85rem" }}>
-          <label style={{ display: "block" }}>
-            <span style={{ display: "block", fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "0.25rem" }}>Nome do alimento *</span>
-            <input className="input-field" value={name} onChange={e => setName(e.target.value)} placeholder="Ex.: Pão de queijo caseiro" style={{ width: "100%" }} />
+        <div className="grid gap-[0.85rem]">
+          <label className="block">
+            <span className="block text-[0.85rem] text-[var(--text-secondary)] mb-1">Nome do alimento *</span>
+            <input className="input-field w-full" value={name} onChange={e => setName(e.target.value)} placeholder="Ex.: Pão de queijo caseiro" />
           </label>
-          <label style={{ display: "block" }}>
-            <span style={{ display: "block", fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "0.25rem" }}>Marca (Opcional)</span>
-            <input className="input-field" value={brand} onChange={e => setBrand(e.target.value)} placeholder="Ex.: Padaria do João" style={{ width: "100%" }} />
+          <label className="block">
+            <span className="block text-[0.85rem] text-[var(--text-secondary)] mb-1">Marca (Opcional)</span>
+            <input className="input-field w-full" value={brand} onChange={e => setBrand(e.target.value)} placeholder="Ex.: Padaria do João" />
           </label>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem" }}>
-            <label style={{ display: "block" }}>
-              <span style={{ display: "block", fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "0.25rem" }}>Calorias (kcal)</span>
-              <input type="numeric" inputMode="decimal" className="input-field" value={calories} onChange={e => setCalories(e.target.value)} placeholder="0" style={{ width: "100%" }} />
+          <div className="grid grid-cols-2 gap-[0.85rem]">
+            <label className="block">
+              <span className="block text-[0.85rem] text-[var(--text-secondary)] mb-1">Calorias (kcal)</span>
+              <input type="numeric" inputMode="decimal" className="input-field w-full" value={calories} onChange={e => setCalories(e.target.value)} placeholder="0" />
             </label>
-            <label style={{ display: "block" }}>
-              <span style={{ display: "block", fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "0.25rem" }}>Porção base (g ou ml)</span>
-              <input type="numeric" inputMode="decimal" className="input-field" value={serving} onChange={e => setServing(e.target.value)} placeholder="100" style={{ width: "100%" }} />
+            <label className="block">
+              <span className="block text-[0.85rem] text-[var(--text-secondary)] mb-1">Porção base (g ou ml)</span>
+              <input type="numeric" inputMode="decimal" className="input-field w-full" value={serving} onChange={e => setServing(e.target.value)} placeholder="100" />
             </label>
-            <label style={{ display: "block" }}>
-              <span style={{ display: "block", fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "0.25rem" }}>Carboidratos (g)</span>
-              <input type="numeric" inputMode="decimal" className="input-field" value={carbs} onChange={e => setCarbs(e.target.value)} placeholder="0" style={{ width: "100%" }} />
+            <label className="block">
+              <span className="block text-[0.85rem] text-[var(--text-secondary)] mb-1">Carboidratos (g)</span>
+              <input type="numeric" inputMode="decimal" className="input-field w-full" value={carbs} onChange={e => setCarbs(e.target.value)} placeholder="0" />
             </label>
-            <label style={{ display: "block" }}>
-              <span style={{ display: "block", fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "0.25rem" }}>Proteínas (g)</span>
-              <input type="numeric" inputMode="decimal" className="input-field" value={protein} onChange={e => setProtein(e.target.value)} placeholder="0" style={{ width: "100%" }} />
+            <label className="block">
+              <span className="block text-[0.85rem] text-[var(--text-secondary)] mb-1">Proteínas (g)</span>
+              <input type="numeric" inputMode="decimal" className="input-field w-full" value={protein} onChange={e => setProtein(e.target.value)} placeholder="0" />
             </label>
-            <label style={{ display: "block" }}>
-              <span style={{ display: "block", fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "0.25rem" }}>Gorduras (g)</span>
-              <input type="numeric" inputMode="decimal" className="input-field" value={fat} onChange={e => setFat(e.target.value)} placeholder="0" style={{ width: "100%" }} />
+            <label className="block">
+              <span className="block text-[0.85rem] text-[var(--text-secondary)] mb-1">Gorduras (g)</span>
+              <input type="numeric" inputMode="decimal" className="input-field w-full" value={fat} onChange={e => setFat(e.target.value)} placeholder="0" />
             </label>
           </div>
         </div>
 
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "1.5rem" }}>
+        <div className="flex justify-end gap-2 mt-6">
           <button onClick={onClose} className="btn-outline" disabled={isSaving}>Cancelar</button>
           <button onClick={() => void handleSave()} className="btn-primary" disabled={isSaving}>
             {isSaving ? "Salvando..." : "Salvar alimento"}
