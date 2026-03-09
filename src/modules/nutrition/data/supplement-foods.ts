@@ -22,7 +22,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-creatina-growth",
     source: "internal",
-    name: "Creatina Monohidratada",
+    name: "Creatina Monohidratada Growth",
     displayName: "Creatina Monohidratada Growth",
     brand: "Growth",
     baseUnit: "g",
@@ -40,7 +40,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-barra-growth",
     source: "internal",
-    name: "Protein Bar",
+    name: "Protein Bar Growth",
     displayName: "Protein Bar Growth",
     brand: "Growth",
     baseUnit: "unit",
@@ -60,7 +60,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-creatina-integralmedica",
     source: "internal",
-    name: "Creatina Monohidratada",
+    name: "Creatina Integralmedica",
     displayName: "Creatina Integralmedica",
     brand: "Integralmedica",
     baseUnit: "g",
@@ -78,7 +78,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-nutri-whey-integralmedica",
     source: "internal",
-    name: "Nutri Whey Protein",
+    name: "Nutri Whey Integralmedica",
     displayName: "Nutri Whey Integralmedica",
     brand: "Nutri Whey",
     baseUnit: "g",
@@ -96,7 +96,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-fresh-whey-dux",
     source: "internal",
-    name: "Fresh Whey",
+    name: "Fresh Whey DUX",
     displayName: "Fresh Whey DUX",
     brand: "DUX",
     baseUnit: "g",
@@ -114,7 +114,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-creatina-max-titanium",
     source: "internal",
-    name: "Creatina",
+    name: "Creatina Max Titanium",
     displayName: "Creatina Max Titanium",
     brand: "Max Titanium",
     baseUnit: "g",
@@ -132,7 +132,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-whey-probiotica",
     source: "internal",
-    name: "100% Pure Whey",
+    name: "100% Pure Whey Probiotica",
     displayName: "100% Pure Whey Probiotica",
     brand: "Probiotica",
     baseUnit: "g",
@@ -150,7 +150,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-creatina-probiotica",
     source: "internal",
-    name: "Creatina Monohidratada",
+    name: "Creatina Probiotica",
     displayName: "Creatina Probiotica",
     brand: "Probiotica",
     baseUnit: "g",
@@ -168,7 +168,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-whey-vitafor",
     source: "internal",
-    name: "Whey Fort 3W",
+    name: "Whey Fort 3W Vitafor",
     displayName: "Whey Fort 3W Vitafor",
     brand: "Vitafor",
     baseUnit: "g",
@@ -186,7 +186,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-whey-essential",
     source: "internal",
-    name: "Whey Protein Isolado",
+    name: "Whey Protein Isolado Essential Nutrition",
     displayName: "Whey Protein Isolado Essential Nutrition",
     brand: "Essential Nutrition",
     baseUnit: "g",
@@ -204,7 +204,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-whey-nutrify",
     source: "internal",
-    name: "Whey Protein",
+    name: "Whey Protein Nutrify",
     displayName: "Whey Protein Nutrify",
     brand: "Nutrify",
     baseUnit: "g",
@@ -222,7 +222,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-whey-darklab",
     source: "internal",
-    name: "Whey Protein",
+    name: "Whey Protein Dark Lab",
     displayName: "Whey Protein Dark Lab",
     brand: "Dark Lab",
     baseUnit: "g",
@@ -240,7 +240,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-creatina-darklab",
     source: "internal",
-    name: "Creatina Monohidratada",
+    name: "Creatina Dark Lab",
     displayName: "Creatina Dark Lab",
     brand: "Dark Lab",
     baseUnit: "g",
@@ -258,7 +258,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-creatina-adaptogen",
     source: "internal",
-    name: "Creatina Monohidratada",
+    name: "Creatina Monohidratada Adaptogen Science",
     displayName: "Creatina Monohidratada Adaptogen Science",
     brand: "Adaptogen Science",
     baseUnit: "g",
@@ -276,7 +276,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-whey-true-source",
     source: "internal",
-    name: "True Whey",
+    name: "True Whey True Source",
     displayName: "True Whey True Source",
     brand: "True Source",
     baseUnit: "g",
@@ -294,7 +294,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-creatina-soldiers",
     source: "internal",
-    name: "Creatina Monohidratada",
+    name: "Creatina Soldiers Nutrition",
     displayName: "Creatina Soldiers Nutrition",
     brand: "Soldiers Nutrition",
     baseUnit: "g",
@@ -312,7 +312,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-pre-underlabz",
     source: "internal",
-    name: "Pre-treino",
+    name: "Pre-treino Under Labz",
     displayName: "Pre-treino Under Labz",
     brand: "Under Labz",
     baseUnit: "g",
@@ -330,7 +330,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-protein-mu",
     source: "internal",
-    name: "Whey pronto",
+    name: "Whey pronto +Mu",
     displayName: "Whey pronto +Mu",
     brand: "+Mu",
     baseUnit: "ml",
@@ -348,7 +348,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-barra-mu",
     source: "internal",
-    name: "Barra proteica",
+    name: "Barra Proteica +Mu",
     displayName: "Barra Proteica +Mu",
     brand: "+Mu",
     baseUnit: "unit",
@@ -368,7 +368,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-whey-black-skull",
     source: "internal",
-    name: "100% Whey",
+    name: "100% Whey Black Skull",
     displayName: "100% Whey Black Skull",
     brand: "Black Skull",
     baseUnit: "g",
@@ -386,7 +386,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-creatina-black-skull",
     source: "internal",
-    name: "Creatina Turbo",
+    name: "Creatina Turbo Black Skull",
     displayName: "Creatina Turbo Black Skull",
     brand: "Black Skull",
     baseUnit: "g",
@@ -404,7 +404,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-whey-on",
     source: "internal",
-    name: "Gold Standard 100% Whey",
+    name: "Gold Standard 100% Whey Optimum Nutrition",
     displayName: "Gold Standard 100% Whey Optimum Nutrition",
     brand: "Optimum Nutrition",
     baseUnit: "g",
@@ -422,7 +422,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-whey-dymatize",
     source: "internal",
-    name: "ISO100 Hydrolyzed",
+    name: "ISO100 Dymatize",
     displayName: "ISO100 Dymatize",
     brand: "Dymatize",
     baseUnit: "g",
@@ -440,7 +440,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-peanut-dr-peanut",
     source: "internal",
-    name: "Pasta de amendoim",
+    name: "Pasta de Amendoim Dr. Peanut",
     displayName: "Pasta de Amendoim Dr. Peanut",
     brand: "Dr. Peanut",
     baseUnit: "g",
@@ -459,7 +459,7 @@ export const SUPPLEMENT_FOODS: FoodItem[] = [
   {
     id: "food-whey-protin",
     source: "internal",
-    name: "Whey 3W",
+    name: "Whey 3W Protin",
     displayName: "Whey 3W Protin",
     brand: "Protin",
     baseUnit: "g",

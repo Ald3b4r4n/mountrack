@@ -73,7 +73,7 @@ describe("BarcodeScannerDialog", () => {
   it("renders an accessible dialog and moves initial focus to the close button", async () => {
     render(<BarcodeScannerDialog open onClose={jest.fn()} onDetected={jest.fn()} />);
 
-    const dialog = await screen.findByRole("dialog", { name: /Escanear codigo de barras/i });
+    const dialog = await screen.findByRole("dialog", { name: /Leitor de codigo de barras/i });
     const closeButton = screen.getByRole("button", { name: /Fechar/i });
 
     expect(dialog).toHaveAttribute("aria-modal", "true");
