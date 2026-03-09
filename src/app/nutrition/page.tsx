@@ -1,5 +1,10 @@
-﻿import { NutritionScreen } from "@/components/nutrition/NutritionScreen";
+import { Suspense } from "react";
+import { NutritionScreen } from "@/components/nutrition/NutritionScreen";
 
 export default function NutritionPage() {
-  return <NutritionScreen />;
+  return (
+    <Suspense fallback={null}>
+      <NutritionScreen />
+    </Suspense>
+  );
 }
