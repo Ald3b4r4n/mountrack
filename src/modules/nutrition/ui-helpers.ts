@@ -1,4 +1,4 @@
-import { FoodItem, NutritionUnit } from "@/modules/nutrition/domain/types";
+import { FoodItem, FoodSource, NutritionUnit } from "@/modules/nutrition/domain/types";
 
 export function getFoodLabel(food: FoodItem): string {
   return food.displayName ?? food.name;
@@ -13,6 +13,25 @@ export function getFoodDefaultUnit(food: FoodItem): NutritionUnit {
 export function getFoodDefaultQuantity(food: FoodItem): string {
   if (food.baseUnit === "unit") return "1";
   return food.servingGrams ? "1" : "100";
+}
+
+export function formatFoodSourceLabel(source: FoodSource, options?: { compact?: boolean }): string {
+  const compact = options?.compact ?? false;
+
+  switch (source) {
+    case "internal":
+      return compact ? "App" : "Catalogo do app";
+    case "tbca":
+      return compact ? "Brasil" : "Tabela brasileira";
+    case "custom":
+      return compact ? "Meu" : "Meu alimento";
+    case "openfoodfacts":
+      return compact ? "Aberto" : "Catalogo aberto";
+    case "usda":
+      return compact ? "USDA" : "Base USDA";
+    default:
+      return compact ? "Catalogo" : "Catalogo";
+  }
 }
 
 export function formatCalories(value: number): string {

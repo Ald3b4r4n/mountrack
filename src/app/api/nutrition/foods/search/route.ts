@@ -8,16 +8,19 @@ export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   try {
-    await requireNutritionUser(request);
+    const { user } = await requireNutritionUser(request);
     const url = new URL(request.url);
     const query = url.searchParams.get("q")?.trim() ?? "";
 
     if (query.length < 2) {
-      return NextResponse.json({ results: [], source: "none" }, { headers: getNutritionStorageHeaders() });
+      return NextResponse.json(
+        { results: [], source: "none", externalPending: false },
+        { headers: getNutritionStorageHeaders() },
+      );
     }
 
-    const { results, source } = await searchNutritionCatalog(query);
-    return NextResponse.json({ results, source }, { headers: getNutritionStorageHeaders() });
+    const { results, source, externalPending } = await searchNutritionCatalog(user.uid, query);
+    return NextResponse.json({ results, source, externalPending }, { headers: getNutritionStorageHeaders() });
   } catch (error) {
     return toNutritionRouteErrorResponse(error, {
       defaultMessage: "Search failed",

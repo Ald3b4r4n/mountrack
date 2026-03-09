@@ -13,7 +13,12 @@ import {
   PanelHeader,
   SegmentButton,
 } from "./CommonUI";
-import { formatCalories, formatGrams, getFoodLabel } from "@/modules/nutrition/ui-helpers";
+import {
+  formatCalories,
+  formatFoodSourceLabel,
+  formatGrams,
+  getFoodLabel,
+} from "@/modules/nutrition/ui-helpers";
 
 type SearchMode = "name" | "barcode" | "custom";
 
@@ -25,11 +30,13 @@ interface FoodSearchPanelProps {
   onSearchQueryChange: (val: string) => void;
   onSearch: () => void;
   isSearching: boolean;
+  isEnrichingExternal: boolean;
   barcodeQuery: string;
   onBarcodeQueryChange: (val: string) => void;
   onBarcodeLookup: (val: string) => void;
   onOpenScanner: () => void;
   searchSourceLabel: string | null;
+  searchFeedback: string | null;
   resultsVisible: boolean;
   searchResults: FoodItem[];
   resultState: { title: string; text: string };
@@ -77,7 +84,7 @@ function ComposerBody({
     return (
       <EmptyState
         title="Nenhum alimento selecionado"
-        text="Escolha um resultado para liberar o registro no diario."
+        text="Escolha um resultado para ajustar a porcao e registrar no diario."
         compact
       />
     );
@@ -91,7 +98,7 @@ function ComposerBody({
             <strong className="block">{getFoodLabel(selectedFood)}</strong>
             <span className="block text-[0.82rem] text-[var(--text-secondary)]">
               {selectedFood.brand ? `${selectedFood.brand} - ` : ""}
-              {selectedFood.source.toUpperCase()}
+              {formatFoodSourceLabel(selectedFood.source)}
             </span>
           </div>
           <span className="badge badge-success self-start">
@@ -181,11 +188,13 @@ export function FoodSearchPanel({
   onSearchQueryChange,
   onSearch,
   isSearching,
+  isEnrichingExternal,
   barcodeQuery,
   onBarcodeQueryChange,
   onBarcodeLookup,
   onOpenScanner,
   searchSourceLabel,
+  searchFeedback,
   resultsVisible,
   searchResults,
   resultState,
@@ -225,15 +234,21 @@ export function FoodSearchPanel({
 
   const storageSummary =
     storageMode === "database"
-      ? "Busca com catalogo persistido e reforco por fontes externas quando necessario."
+      ? "Busque no catalogo salvo e receba novas referencias sem travar a tela."
       : storageMode === "checking"
-        ? "Conectando ao banco de dados e APIs de alimentos..."
-        : "Servicos externos de alimentos ativados.";
+        ? "Preparando o catalogo e as referencias de apoio..."
+        : "Busque no catalogo disponivel nesta sessao.";
+  const searchActivitySummary = isSearching
+    ? "Buscando no catalogo do app..."
+    : isEnrichingExternal
+      ? "Novas referencias serao adicionadas em segundo plano."
+      : null;
 
   const hasVisibleResults = resultsVisible && searchResults.length > 0;
   const hasSearchSession =
     isSearching ||
     searchSourceLabel !== null ||
+    searchFeedback !== null ||
     searchResults.length > 0 ||
     selectedFood !== null;
   const resultEmptyState =
@@ -280,12 +295,27 @@ export function FoodSearchPanel({
                 <span className="badge badge-success self-start">{searchCatalogBadge}</span>
               </div>
 
-              <p className="mb-4 text-sm text-[var(--text-secondary)]">{storageSummary}</p>
+              <div className="mb-4 grid gap-1.5">
+                <p className="text-sm text-[var(--text-secondary)]">{storageSummary}</p>
+                {searchActivitySummary ? (
+                  <p className="text-[0.82rem] text-[var(--accent-primary)]">{searchActivitySummary}</p>
+                ) : null}
+              </div>
             </>
           ) : (
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-              <p className="max-w-[42rem] text-sm text-[var(--text-secondary)]">{storageSummary}</p>
-              <span className="badge badge-success self-start">{searchCatalogBadge}</span>
+              <div className="grid gap-1.5">
+                <p className="max-w-[42rem] text-sm text-[var(--text-secondary)]">{storageSummary}</p>
+                {searchActivitySummary ? (
+                  <p className="text-[0.82rem] text-[var(--accent-primary)]">{searchActivitySummary}</p>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap justify-end gap-2">
+                {isEnrichingExternal ? (
+                  <span className="badge badge-success self-start">Atualizacao em fila</span>
+                ) : null}
+                <span className="badge badge-success self-start">{searchCatalogBadge}</span>
+              </div>
             </div>
           )}
 
@@ -302,7 +332,7 @@ export function FoodSearchPanel({
             />
             <SegmentButton
               active={searchMode === "custom"}
-              label="Custom"
+              label="Manual"
               onClick={() => setSearchMode("custom")}
             />
           </div>
@@ -342,10 +372,14 @@ export function FoodSearchPanel({
 
           {searchMode === "barcode" ? (
             <Field label="Codigo de barras">
-              <div className={isMobileLayout ? "grid gap-2.5" : "flex flex-wrap gap-2.5"}>
-                <input
-                  className="input-field min-w-[12rem] flex-1"
-                  value={barcodeQuery}
+              <div className="grid gap-2.5">
+                <p className="text-[0.84rem] text-[var(--text-secondary)]">
+                  Digite o numero da embalagem ou use a camera para ler o codigo automaticamente.
+                </p>
+                <div className={isMobileLayout ? "grid gap-2.5" : "flex flex-wrap gap-2.5"}>
+                  <input
+                    className="input-field min-w-[12rem] flex-1"
+                    value={barcodeQuery}
                   onChange={(event) => onBarcodeQueryChange(event.target.value)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
@@ -353,19 +387,20 @@ export function FoodSearchPanel({
                       onBarcodeLookup(barcodeQuery);
                     }
                   }}
-                  placeholder="EAN / GTIN"
+                  placeholder="Ex.: 7891234567890"
                 />
-                <div className={`grid gap-2.5 ${isMobileLayout ? "grid-cols-2" : "grid-cols-[auto_auto]"}`}>
-                  <button onClick={() => onBarcodeLookup(barcodeQuery)} className="btn-primary">
-                    Consultar
-                  </button>
-                  <button
-                    onClick={onOpenScanner}
-                    className="btn-outline inline-flex items-center justify-center gap-2 border-dashed text-[var(--accent-primary)]"
-                  >
-                    <ScanLine size={16} />
-                    Escanear
-                  </button>
+                  <div className={`grid gap-2.5 ${isMobileLayout ? "grid-cols-2" : "grid-cols-[auto_auto]"}`}>
+                    <button onClick={() => onBarcodeLookup(barcodeQuery)} className="btn-primary">
+                      Buscar codigo
+                    </button>
+                    <button
+                      onClick={onOpenScanner}
+                      className="btn-outline inline-flex items-center justify-center gap-2 border-dashed text-[var(--accent-primary)]"
+                    >
+                      <ScanLine size={16} />
+                      Escanear
+                    </button>
+                  </div>
                 </div>
               </div>
             </Field>
@@ -374,14 +409,14 @@ export function FoodSearchPanel({
           {searchMode === "custom" ? (
             <div className="glass-panel static-panel grid gap-3 bg-[#041225]/72 p-4">
               <div>
-                <strong className="block">Cadastro manual</strong>
+                <strong className="block">Criar alimento manualmente</strong>
                 <p className="mt-1 text-[0.9rem] text-[var(--text-secondary)]">
-                  Use este fluxo quando o alimento nao existir no catalogo ou quando voce quiser salvar um item proprio.
+                  Salve um alimento seu para reencontrar depois na busca e usar no diario sem depender do catalogo.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2.5">
                 <button onClick={onCustomFoodOpen} className="btn-primary">
-                  Cadastrar alimento
+                  Criar alimento
                 </button>
                 <button
                   onClick={() => setSearchMode("name")}
@@ -443,6 +478,9 @@ export function FoodSearchPanel({
                 </div>
 
                 <div className="flex flex-wrap justify-end gap-2">
+                  {isEnrichingExternal ? (
+                    <span className="badge badge-success">Complementando</span>
+                  ) : null}
                   {searchSourceLabel ? (
                     <span className="badge badge-success">{searchSourceLabel}</span>
                   ) : null}
@@ -450,7 +488,7 @@ export function FoodSearchPanel({
                     <span className="badge badge-success">{searchResults.length} itens</span>
                   ) : null}
                   <button onClick={onCustomFoodOpen} className="btn-outline min-w-auto px-3 py-1.5">
-                    Cadastrar alimento
+                    Criar alimento
                   </button>
                   {searchResults.length || selectedFood ? (
                     <button
@@ -494,7 +532,7 @@ export function FoodSearchPanel({
                             </span>
                           </div>
                           <span className="whitespace-nowrap text-xs uppercase text-[var(--text-muted)]">
-                            {food.source}
+                            {formatFoodSourceLabel(food.source, { compact: true })}
                           </span>
                         </div>
                       </button>

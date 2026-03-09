@@ -1,111 +1,16 @@
+import brandsWatchlist from "../../../../data/nutrition/catalog/brands-watchlist.json";
+import type { CatalogBrandWatchlistEntry } from "@/modules/nutrition/catalog/public-catalog-types";
+
 export interface SupplementBrandProfile {
   brand: string;
   aliases: string[];
   preferredQueries: string[];
 }
 
-export const SUPPLEMENT_BRAND_PROFILES: SupplementBrandProfile[] = [
-  {
-    brand: "Integralmedica",
-    aliases: ["integralmedica", "integral medica", "integralmedica suplementos"],
-    preferredQueries: ["100% pure whey", "nutri whey", "creatina"],
-  },
-  {
-    brand: "Growth",
-    aliases: ["growth", "growth supplements"],
-    preferredQueries: ["whey protein", "creatina", "barra proteica"],
-  },
-  {
-    brand: "DUX",
-    aliases: ["dux", "dux nutrition lab"],
-    preferredQueries: ["whey protein", "fresh whey", "protein"],
-  },
-  {
-    brand: "Max Titanium",
-    aliases: ["max titanium"],
-    preferredQueries: ["100% whey protein", "creatina"],
-  },
-  {
-    brand: "Probiotica",
-    aliases: ["probiotica", "probiotica suplementos"],
-    preferredQueries: ["100% pure whey", "creatina"],
-  },
-  {
-    brand: "Vitafor",
-    aliases: ["vitafor"],
-    preferredQueries: ["isofort", "whey fort 3w", "creatina"],
-  },
-  {
-    brand: "Essential Nutrition",
-    aliases: ["essential nutrition", "essential"],
-    preferredQueries: ["whey protein", "clean whey", "proteina"],
-  },
-  {
-    brand: "Nutrify",
-    aliases: ["nutrify"],
-    preferredQueries: ["whey protein", "vegan protein", "proteina"],
-  },
-  {
-    brand: "Dark Lab",
-    aliases: ["dark lab", "darklab", "darkness", "dark lab suplementos"],
-    preferredQueries: ["whey protein", "creatina", "pre treino"],
-  },
-  {
-    brand: "Adaptogen Science",
-    aliases: ["adaptogen science", "adaptogen"],
-    preferredQueries: ["creatina", "whey protein"],
-  },
-  {
-    brand: "True Source",
-    aliases: ["true source", "true whey"],
-    preferredQueries: ["true whey", "whey isolado"],
-  },
-  {
-    brand: "Soldiers Nutrition",
-    aliases: ["soldiers nutrition", "soldiers"],
-    preferredQueries: ["creatina", "whey protein"],
-  },
-  {
-    brand: "Under Labz",
-    aliases: ["under labz", "underlabz"],
-    preferredQueries: ["pre treino", "creatina"],
-  },
-  {
-    brand: "+Mu",
-    aliases: ["+mu", "+mu.", "mu"],
-    preferredQueries: ["whey pronto", "protein", "snack"],
-  },
-  {
-    brand: "Black Skull",
-    aliases: ["black skull"],
-    preferredQueries: ["100% whey", "creatina"],
-  },
-  {
-    brand: "Nutri Whey",
-    aliases: ["nutri whey"],
-    preferredQueries: ["integralmedica", "hipercalorico", "protein"],
-  },
-  {
-    brand: "Optimum Nutrition",
-    aliases: ["optimum nutrition", "on", "gold standard"],
-    preferredQueries: ["gold standard 100% whey", "whey protein"],
-  },
-  {
-    brand: "Dymatize",
-    aliases: ["dymatize", "dymatize nutrition", "iso100"],
-    preferredQueries: ["iso100", "whey isolate"],
-  },
-  {
-    brand: "Dr. Peanut",
-    aliases: ["dr peanut", "dr. peanut"],
-    preferredQueries: ["pasta de amendoim", "peanut butter"],
-  },
-  {
-    brand: "Protin",
-    aliases: ["protin"],
-    preferredQueries: ["whey 3w", "whey isolate"],
-  },
-];
+const DEFAULT_SUPPLEMENT_QUERIES = ["whey protein", "creatina", "barra proteica"];
+const PEANUT_SPREAD_QUERIES = ["pasta de amendoim", "peanut butter", "creme proteico"];
+const BAR_QUERIES = ["barra proteica", "protein bar", "snack proteico"];
+const SNACK_SHAKE_QUERIES = ["shake proteico", "whey pronto", "snack proteico"];
 
 export function normalizeSupplementSearchText(value: string): string {
   return value
@@ -121,6 +26,74 @@ function tokenizeSupplementSearchText(value: string): string[] {
     .split(/\s+/)
     .filter(Boolean);
 }
+
+function uniqueValues(values: string[]): string[] {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function buildDerivedAliases(entry: CatalogBrandWatchlistEntry): string[] {
+  const normalizedBrand = normalizeSupplementSearchText(entry.brand);
+  const compactBrand = normalizedBrand.replace(/\s+/g, "");
+
+  return uniqueValues([
+    entry.brand,
+    ...(entry.aliases ?? []),
+    normalizedBrand,
+    compactBrand,
+  ]);
+}
+
+function buildPreferredQueries(entry: CatalogBrandWatchlistEntry): string[] {
+  if (entry.preferredQueries?.length) {
+    return uniqueValues(entry.preferredQueries);
+  }
+
+  const normalizedBrand = normalizeSupplementSearchText(entry.brand);
+  const normalizedNotes = normalizeSupplementSearchText(entry.notes ?? "");
+
+  if (
+    normalizedNotes.includes("pasta de amendoim") ||
+    normalizedNotes.includes("pastas") ||
+    normalizedBrand.includes("peanut") ||
+    normalizedBrand.includes("nuts")
+  ) {
+    return PEANUT_SPREAD_QUERIES;
+  }
+
+  if (normalizedNotes.includes("barra")) {
+    return BAR_QUERIES;
+  }
+
+  if (
+    normalizedNotes.includes("snacks e shakes") ||
+    normalizedNotes.includes("snacks") ||
+    normalizedNotes.includes("shakes")
+  ) {
+    return SNACK_SHAKE_QUERIES;
+  }
+
+  if (normalizedBrand.includes("caffeine")) {
+    return ["cafeina", "pre treino", "energy drink"];
+  }
+
+  if (normalizedBrand.includes("brain power")) {
+    return ["nootropico", "cafeina", "brain booster"];
+  }
+
+  if (normalizedBrand.includes("darkness")) {
+    return ["pre treino", "creatina", "whey protein"];
+  }
+
+  return DEFAULT_SUPPLEMENT_QUERIES;
+}
+
+export const SUPPLEMENT_BRAND_PROFILES: SupplementBrandProfile[] = (brandsWatchlist as CatalogBrandWatchlistEntry[]).map(
+  (entry) => ({
+    brand: entry.brand,
+    aliases: buildDerivedAliases(entry),
+    preferredQueries: buildPreferredQueries(entry),
+  }),
+);
 
 function getProfileAliases(profile: SupplementBrandProfile): string[] {
   return Array.from(
@@ -146,11 +119,29 @@ export function matchesSupplementBrandText(value: string, profile: SupplementBra
 export function findSupplementBrandProfile(query: string): SupplementBrandProfile | null {
   const normalizedQuery = normalizeSupplementSearchText(query);
   if (!normalizedQuery) return null;
+  const queryTokens = tokenizeSupplementSearchText(normalizedQuery);
 
   const rankedProfiles = SUPPLEMENT_BRAND_PROFILES
     .map((profile) => {
       const matchingAlias = getProfileAliases(profile)
-        .filter((alias) => hasNormalizedAlias(normalizedQuery, alias) || hasNormalizedAlias(alias, normalizedQuery))
+        .filter((alias) => {
+          const aliasTokens = tokenizeSupplementSearchText(alias);
+
+          if (queryTokens.length === 1) {
+            if (aliasTokens.length === 1) {
+              const lengthDelta = Math.abs(aliasTokens[0].length - queryTokens[0].length);
+              return (
+                aliasTokens[0] === queryTokens[0] ||
+                ((aliasTokens[0].startsWith(queryTokens[0]) || queryTokens[0].startsWith(aliasTokens[0])) &&
+                  lengthDelta <= 2)
+              );
+            }
+
+            return alias === normalizedQuery;
+          }
+
+          return hasNormalizedAlias(normalizedQuery, alias) || hasNormalizedAlias(alias, normalizedQuery);
+        })
         .sort((left, right) => right.length - left.length)[0];
 
       return {

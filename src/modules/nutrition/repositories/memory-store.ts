@@ -7,6 +7,7 @@ import type {
   NutritionGoal,
 } from "@/modules/nutrition/domain/types";
 import { getDefaultMealDefinitions } from "@/modules/nutrition/meal-helpers";
+import type { MissingFoodLookupRecord } from "@/modules/nutrition/repositories/missing-food-lookup";
 
 export interface DiaryRecord {
   id: string;
@@ -21,6 +22,8 @@ export interface DiaryRecord {
 
 interface NutritionMemoryStore {
   cachedFoods: Map<string, FoodItem>;
+  userCustomFoods: Map<string, FoodItem>;
+  missingFoodLookups: Map<string, MissingFoodLookupRecord>;
   goals: Map<string, NutritionGoal>;
   diaries: Map<string, DiaryRecord>;
   mealPlans: Map<string, MealPlan>;
@@ -34,11 +37,21 @@ export function getNutritionMemoryStore(): NutritionMemoryStore {
   if (!globalStore.__nutritionStore__) {
     globalStore.__nutritionStore__ = {
       cachedFoods: new Map<string, FoodItem>(),
+      userCustomFoods: new Map<string, FoodItem>(),
+      missingFoodLookups: new Map<string, MissingFoodLookupRecord>(),
       goals: new Map<string, NutritionGoal>(),
       diaries: new Map<string, DiaryRecord>(),
       mealPlans: new Map<string, MealPlan>(),
     };
   }
+
+  // Hot reload can preserve an older global object that predates new maps.
+  globalStore.__nutritionStore__.cachedFoods ??= new Map<string, FoodItem>();
+  globalStore.__nutritionStore__.userCustomFoods ??= new Map<string, FoodItem>();
+  globalStore.__nutritionStore__.missingFoodLookups ??= new Map<string, MissingFoodLookupRecord>();
+  globalStore.__nutritionStore__.goals ??= new Map<string, NutritionGoal>();
+  globalStore.__nutritionStore__.diaries ??= new Map<string, DiaryRecord>();
+  globalStore.__nutritionStore__.mealPlans ??= new Map<string, MealPlan>();
 
   return globalStore.__nutritionStore__;
 }
@@ -49,6 +62,10 @@ export function diaryKey(userId: string, date: string): string {
 
 export function mealPlanKey(userId: string): string {
   return `meal-plan:${userId}`;
+}
+
+export function customFoodKey(userId: string, foodId: string): string {
+  return `custom-food:${userId}:${foodId}`;
 }
 
 export function cloneDiarySummary(

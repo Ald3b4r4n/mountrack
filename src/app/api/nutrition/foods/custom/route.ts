@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireNutritionUser } from "@/modules/nutrition/auth/require-user";
 import { toNutritionRouteErrorResponse } from "@/modules/nutrition/http/route-error";
-import { upsertFoods, getNutritionStorageHeaders } from "@/modules/nutrition/repositories/nutrition-store";
+import { getNutritionStorageHeaders, saveUserCustomFood } from "@/modules/nutrition/repositories/nutrition-store";
 import type { FoodItem } from "@/modules/nutrition/domain/types";
 
 export const runtime = "nodejs";
@@ -15,36 +15,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const {
-      name,
-      brand,
-      barcode,
-      caloriesPer100,
-      proteinPer100,
-      fatPer100,
-      servingGrams,
-    } = body;
-
     const customFood: FoodItem = {
       id: `custom_${crypto.randomUUID()}`,
       source: "custom",
-      sourceId: user.uid, // Vincular alimento customizado ao usuario
-      name: name,
-      displayName: name,
-      brand: brand || undefined,
-      barcode: barcode || undefined,
-      caloriesPer100: caloriesPer100,
-      proteinPer100: proteinPer100,
-      fatPer100: fatPer100,
-      confidenceScore: 3, // Custom food has high confidence by default
+      name: body.name,
+      displayName: body.name,
+      brand: body.brand || undefined,
+      barcode: body.barcode || undefined,
+      caloriesPer100: body.caloriesPer100,
+      proteinPer100: body.proteinPer100,
+      carbsPer100: body.carbsPer100,
+      fatPer100: body.fatPer100,
+      fiberPer100: body.fiberPer100,
+      sodiumPer100: body.sodiumPer100,
+      confidenceScore: 3,
       mealCategories: [],
-      baseUnit: "g", // os alimentos customizados vao usar gramas como base padrão
-      servingGrams: servingGrams || undefined,
+      baseUnit: "g",
+      servingGrams: body.servingGrams || undefined,
     };
 
-    await upsertFoods([customFood]);
+    const item = await saveUserCustomFood(user.uid, customFood);
 
-    return NextResponse.json({ item: customFood }, { headers: getNutritionStorageHeaders() });
+    return NextResponse.json({ item }, { headers: getNutritionStorageHeaders() });
   } catch (error) {
     return toNutritionRouteErrorResponse(error, {
       defaultMessage: "Failed to save custom food",

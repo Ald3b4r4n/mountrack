@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "test": "jest --runInBand",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "nutrition:enrich": "node scripts/trigger-nutrition-enrichment.mjs",
+    "nutrition:catalog:build": "node scripts/nutrition/catalog/build-public-catalog.mjs",
+    "nutrition:catalog:refresh-missing": "node scripts/nutrition/catalog/build-public-catalog.mjs --only-missing --fetch-timeout-ms 1800 --retry-attempts 1 --concurrency 1"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

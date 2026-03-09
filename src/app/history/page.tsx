@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { collection, deleteDoc, doc, getDocs, orderBy, query, updateDoc } from 'firebase/firestore';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import PaginationControls from '@/components/PaginationControls';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 
@@ -16,6 +17,8 @@ interface LogData {
   notes?: string;
 }
 
+const HISTORY_PAGE_SIZE = 8;
+
 /**
  * Página de histórico com edição inline e exclusão dos registros.
  */
@@ -26,6 +29,7 @@ export default function History() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<LogData>>({});
   const [saving, setSaving] = useState(false);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     async function fetchLogs() {
@@ -51,6 +55,20 @@ export default function History() {
 
     void fetchLogs();
   }, [user]);
+
+  const totalPages = Math.max(1, Math.ceil(logs.length / HISTORY_PAGE_SIZE));
+  const paginatedLogs = logs.slice((page - 1) * HISTORY_PAGE_SIZE, page * HISTORY_PAGE_SIZE);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
+  useEffect(() => {
+    if (page === 1) return;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [page]);
 
   const startEdit = (log: LogData) => {
     setEditingId(log.id);
@@ -136,7 +154,7 @@ export default function History() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {logs.map((log, index) => (
+            {paginatedLogs.map((log, index) => (
               <div key={log.id} className="glass-panel anim-enter" style={{ padding: '1.5rem', animationDelay: `${Math.min(index * 0.05, 0.4)}s` }}>
                 {editingId === log.id ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -265,6 +283,14 @@ export default function History() {
                 )}
               </div>
             ))}
+            <PaginationControls
+              page={page}
+              pageSize={HISTORY_PAGE_SIZE}
+              totalItems={logs.length}
+              totalPages={totalPages}
+              itemLabel="registros"
+              onPageChange={setPage}
+            />
           </div>
         )}
       </main>

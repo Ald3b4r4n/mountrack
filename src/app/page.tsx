@@ -1,295 +1,270 @@
-﻿'use client';
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { collection, doc, getDoc, getDocs, orderBy, query } from 'firebase/firestore';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Logo from '@/components/Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import {
+  DEFAULT_DOSES_PER_AMPOULE,
+  buildGoogleCalendarLink,
+  calculateDoseCountdown,
+  calculateJourneyDoseStats,
+  formatChartDateLabel,
+  generateAreaFillPath,
+  generateSmoothSvgPath,
+  getChartDateLabelIndices,
+} from '@/modules/dashboard/utils';
+import { loadAmpouleSettings, saveAmpouleSettings } from '@/modules/dashboard/ampoule-settings';
+import type { DashboardLogSummary } from '@/modules/dashboard/utils';
 
-/**
- * Interface dos pontos no gráfico de linha SVG
- */
 interface ChartPoint {
   weight: number;
   date: string;
   type?: string;
 }
 
-/**
- * Dashboard Principal — Exibe métricas de saúde, gráfico de linha SVG
- * e card de volumetria da dose atual.
- */
 export default function Home() {
   const { user, signOut } = useAuth();
-  
   const [daysSince, setDaysSince] = useState<number | null>(null);
   const [daysUntil, setDaysUntil] = useState<number | null>(null);
   const [currentWeight, setCurrentWeight] = useState<number | null>(null);
   const [targetWeight, setTargetWeight] = useState<number | null>(null);
-  const [progressPercent, setProgressPercent] = useState<number>(0);
+  const [progressPercent, setProgressPercent] = useState(0);
   const [predictedDate, setPredictedDate] = useState<string | null>(null);
   const [symptomAlert, setSymptomAlert] = useState<string | null>(null);
-  const [streak, setStreak] = useState<number>(0);
-  const [totalLoss, setTotalLoss] = useState<number>(0);
-  const [currentDose, setCurrentDose] = useState<number | null>(null);
-  const [weeklyChange, setWeeklyChange] = useState<number | null>(null);
+  const [streak, setStreak] = useState(0);
+  const [totalLoss, setTotalLoss] = useState(0);
+  const [currentDoseState, setCurrentDose] = useState<number | null>(null);
+  const [weeklyChangeState, setWeeklyChange] = useState<number | null>(null);
   const [chartPoints, setChartPoints] = useState<ChartPoint[]>([]);
+  const [journeyDays, setJourneyDays] = useState<number | null>(null);
+  const [ampoulesUsed, setAmpoulesUsed] = useState(0);
+  const [dosesUsedFromCurrentAmpoule, setDosesUsedFromCurrentAmpoule] = useState(0);
+  const [lastDoseDate, setLastDoseDate] = useState<string | null>(null);
+  const [nextDoseTarget, setNextDoseTarget] = useState<Date | null>(null);
+  const [countdown, setCountdown] = useState<{ d: number; h: number; m: number; s: number } | null>(null);
+  const [logSummaries, setLogSummaries] = useState<DashboardLogSummary[]>([]);
+  const [dosesPerAmpoule, setDosesPerAmpoule] = useState(DEFAULT_DOSES_PER_AMPOULE);
+  const [previousDoseApplications, setPreviousDoseApplications] = useState(0);
+  const [ampouleSettingsSaving, setAmpouleSettingsSaving] = useState(false);
+  const [ampouleSettingsSaved, setAmpouleSettingsSaved] = useState(false);
+  const [showAmpouleSettings] = useState(false);
   const [loading, setLoading] = useState(true);
+  const currentDose = currentDoseState as number;
+  const weeklyChange = weeklyChangeState as number;
 
   useEffect(() => {
     async function fetchData() {
       if (!user) return;
       try {
-        // Buscar metas do usuário
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         const userData = userDoc.data();
-        let target = 0;
-        
-        if (userData?.targetWeight) {
-          setTargetWeight(userData.targetWeight);
-          target = userData.targetWeight;
-        }
+        const target = typeof userData?.targetWeight === 'number' ? userData.targetWeight : 0;
+        const ampouleSettings = await loadAmpouleSettings(user.uid, userData);
+        setTargetWeight(target || null);
+        setDosesPerAmpoule(ampouleSettings.dosesPerAmpoule);
+        setPreviousDoseApplications(ampouleSettings.previousDoseApplications);
 
-        // Buscar os últimos 20 logs para o gráfico de linha (podem haver notas sem peso no meio)
         const logsRef = collection(db, 'users', user.uid, 'logs');
-        const qChart = query(logsRef, orderBy('date', 'desc'), limit(25));
-        const chartSnap = await getDocs(qChart);
-        
+        const snapshot = await getDocs(query(logsRef, orderBy('date', 'desc')));
+        const allLogs: DashboardLogSummary[] = [];
         const points: ChartPoint[] = [];
         let latestDoseLog: { weight: number; date: string; dose?: number; notes?: string } | null = null;
-        let prevWeightLog: { weight: number } | null = null;
-        
-        chartSnap.forEach((d) => {
-          const data = d.data();
-          
-          // Adiciona os pontos pro gráfico APENAS se tiverem peso (ignora notas puras do diário)
+
+        snapshot.forEach((documentSnapshot) => {
+          const data = documentSnapshot.data();
+          allLogs.push({ date: data.date, type: data.type, dose: data.dose });
           if (data.weight !== undefined && data.type !== 'note') {
             points.push({ weight: data.weight, date: data.date, type: data.type || 'dose' });
           }
-          
-          // Pegar o log mais recente com dose (para a volumetria)
           if (!latestDoseLog && (data.dose || data.type === 'dose')) {
             latestDoseLog = { weight: data.weight, date: data.date, dose: data.dose, notes: data.notes };
           }
         });
+        setLogSummaries(allLogs);
 
-        // V4: Cálculo do Streak de Semanas Consistentes
-        // Identificar logs apenas de dose, ordenados do mais recente para o mais antigo (points antes de inverter já está DESC)
-        const doseLogsDESC = [...points].filter(p => p.type === 'dose');
+        const doseLogs = allLogs.filter((log) => Boolean(log.dose) || log.type === 'dose');
         let currentStreak = 0;
-        if (doseLogsDESC.length > 0) {
+        if (doseLogs.length > 0) {
           currentStreak = 1;
-          for (let i = 0; i < doseLogsDESC.length - 1; i++) {
-            const dNew = new Date(doseLogsDESC[i].date).getTime();
-            const dOld = new Date(doseLogsDESC[i+1].date).getTime();
-            const diffD = (dNew - dOld) / (1000 * 60 * 60 * 24);
-            // Tolerância: entre 5 e 10 dias é considerado "consistente" com a janela semanal
-            if (diffD >= 5 && diffD <= 10) {
-              currentStreak++;
-            } else {
-              break; // quebrou o streak
-            }
+          for (let index = 0; index < doseLogs.length - 1; index += 1) {
+            const currentDate = new Date(doseLogs[index].date).getTime();
+            const previousDate = new Date(doseLogs[index + 1].date).getTime();
+            const diffDays = (currentDate - previousDate) / (1000 * 60 * 60 * 24);
+            if (diffDays >= 5 && diffDays <= 10) currentStreak += 1;
+            else break;
           }
         }
         setStreak(currentStreak);
 
-        // V4: Cálculo da Perda Total (para Conquistas)
         if (points.length >= 2) {
-          // Último registro (que é o mais antigo na array DESC 'points' original)
-          const firstWeight = points[points.length - 1].weight;
-          const currentW = points[0].weight; // mais recente
-          setTotalLoss(Number((firstWeight - currentW).toFixed(1)));
-          
-          // Restaurando código para lógica de weeklyChange (diferença semanal)
-          prevWeightLog = { weight: points[1].weight };
+          setTotalLoss(Number((points[points.length - 1].weight - points[0].weight).toFixed(1)));
+          setWeeklyChange(Number((points[1].weight - points[0].weight).toFixed(1)));
+        } else {
+          setTotalLoss(0);
+          setWeeklyChange(null);
         }
-        
-        // Inverte para ordem cronológica (ASC) para o gráfico (Top 10 max depois de filtrar)
+
         setChartPoints(points.slice(0, 10).reverse());
 
-        // Dados do registro mais recente com peso (qualquer tipo que não seja note puro)
         if (points.length > 0) {
           const latest = points[0];
           setCurrentWeight(latest.weight);
-          
-          // Calcular diferença com o registro anterior
-          if (prevWeightLog) {
-            const diff = prevWeightLog.weight - latest.weight;
-            setWeeklyChange(Number(diff.toFixed(1)));
-          }
-          
-          // Calcular progresso da meta
           if (target > 0 && latest.weight > target) {
-            const calc = Math.max(0, Math.min(100, (target / latest.weight) * 100));
-            setProgressPercent(Number(calc.toFixed(1)));
-          } else if (latest.weight <= target && target > 0) {
+            setProgressPercent(Number(Math.max(0, Math.min(100, (target / latest.weight) * 100)).toFixed(1)));
+          } else if (target > 0 && latest.weight <= target) {
             setProgressPercent(100);
+          } else {
+            setProgressPercent(0);
           }
+        } else {
+          setCurrentWeight(null);
+          setProgressPercent(0);
         }
 
-        // ==========================================
-        // V4: IA Custo Zero (Regressão Linear Mínimos Quadrados)
-        // Predição de Peso p/ achar data da Meta
-        // ==========================================
         if (target > 0 && points.length >= 3) {
           const n = points.length;
           let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-          
-          points.forEach(p => {
-            // Converte a data do registro para 'dias' absolutos para simplificar a matemática
-            const x = new Date(p.date).getTime() / (1000 * 60 * 60 * 24);
-            const y = p.weight;
-            sumX += x;
-            sumY += y;
-            sumXY += x * y;
-            sumXX += x * x;
+          points.forEach((point) => {
+            const x = new Date(point.date).getTime() / (1000 * 60 * 60 * 24);
+            sumX += x; sumY += point.weight; sumXY += x * point.weight; sumXX += x * x;
           });
-
           const meanX = sumX / n;
           const meanY = sumY / n;
-          // Coeficiente angular (slope) = variação de peso por dia
-          const denominator = (sumXX - n * meanX * meanX);
+          const denominator = sumXX - n * meanX * meanX;
           const slope = denominator === 0 ? 0 : (sumXY - n * meanX * meanY) / denominator;
-
-          // Só gera predição se houver uma tendência clara de PERDA de peso (slope negativo)
-          // e o peso atual ainda for maior que a meta.
-          const latestW = points[0].weight;
-          if (slope < -0.01 && latestW > target) {
-            // Equação da reta: Y = slope * X + b => b = meanY - slope * meanX
-            // Queremos descobrir o X (dias absolutos) onde Y será = target (meta)
-            // X = (Y - b) / slope
+          if (slope < -0.01 && points[0].weight > target) {
             const b = meanY - slope * meanX;
             const targetX = (target - b) / slope;
-            
-            // Limitando predição bizarra (> 5 anos pra frente)
-            const daysFromNow = targetX - (new Date().getTime() / (1000 * 60 * 60 * 24));
-            if (daysFromNow > 0 && daysFromNow < 1825) { 
-               // Add 12 hours to avoid timezone shift to previous day
-               const predictedMs = targetX * (1000 * 60 * 60 * 24) + (12 * 60 * 60 * 1000);
-               const dt = new Date(predictedMs);
-               // Formata ex: "novembro de 2026"
-               setPredictedDate(dt.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }));
-            }
-          }
-        }
-        
-        // Dados da última dose aplicada (para volumetria + dias)
+            const daysFromNow = targetX - new Date().getTime() / (1000 * 60 * 60 * 24);
+            if (daysFromNow > 0 && daysFromNow < 1825) {
+              const predicted = new Date(targetX * (1000 * 60 * 60 * 24) + 12 * 60 * 60 * 1000);
+              setPredictedDate(predicted.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }));
+            } else setPredictedDate(null);
+          } else setPredictedDate(null);
+        } else setPredictedDate(null);
+
         const doseLog = latestDoseLog as { weight: number; date: string; dose?: number; notes?: string } | null;
+
         if (doseLog) {
           setCurrentDose(doseLog.dose || null);
-          // Tratar timezone para calcular dias EXATOS no calendário local (zero horas)
-          const [y, m, d] = doseLog.date.split('T')[0].split('-');
-          const logDateLocal = new Date(Number(y), Number(m) - 1, Number(d));
+          const [year, month, day] = doseLog.date.split('T')[0].split('-');
+          const logDateLocal = new Date(Number(year), Number(month) - 1, Number(day));
           const todayLocal = new Date();
           todayLocal.setHours(0, 0, 0, 0);
-
-          const diffTime = todayLocal.getTime() - logDateLocal.getTime();
-          const diffDays = Math.max(0, Math.round(diffTime / (1000 * 60 * 60 * 24)));
-
+          const diffDays = Math.max(0, Math.round((todayLocal.getTime() - logDateLocal.getTime()) / (1000 * 60 * 60 * 24)));
           setDaysSince(diffDays);
           setDaysUntil(Math.max(0, 7 - diffDays));
-
-          // V4: Insight de Sintomas
+          setLastDoseDate(logDateLocal.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }));
+          const nextDose = new Date(logDateLocal);
+          nextDose.setDate(nextDose.getDate() + 7);
+          nextDose.setHours(8, 0, 0, 0);
+          setNextDoseTarget(nextDose);
           if (doseLog.notes) {
             const notesLower = doseLog.notes.toLowerCase();
             const triggerWords = ['enjoo', 'náusea', 'nausea', 'dor ', 'fadiga', 'cansaço', 'cansaco', 'refluxo', 'azia', 'vômit', 'vomit'];
-            const found = triggerWords.filter(w => notesLower.includes(w));
-            if (found.length > 0) {
-              setSymptomAlert(`Notei sintomas recentes (${found.join(', ')}). Lembre-se de manter a hidratação alta e refeições leves!`);
-            }
-          }
+            const found = triggerWords.filter((word) => notesLower.includes(word));
+            setSymptomAlert(found.length > 0 ? `Notei sintomas recentes (${found.join(', ')}). Lembre-se de manter a hidratação alta e refeições leves!` : null);
+          } else setSymptomAlert(null);
+        } else {
+          setCurrentDose(null); setDaysSince(null); setDaysUntil(null); setLastDoseDate(null); setNextDoseTarget(null); setCountdown(null); setSymptomAlert(null);
         }
       } catch (error) {
-        console.error("Erro ao puxar os dados", error);
+        console.error('Erro ao puxar os dados', error);
       } finally {
         setLoading(false);
       }
     }
-    
-    fetchData();
+
+    void fetchData();
   }, [user]);
 
-  const progressBarWidth = daysSince !== null ? Math.min(100, (daysSince / 7) * 100) : 0;
-  const isDoseOverdue = progressBarWidth >= 100;
+  useEffect(() => {
+    if (!nextDoseTarget) return;
+    const target = nextDoseTarget;
+    function tick() { setCountdown(calculateDoseCountdown(target)); }
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [nextDoseTarget]);
 
-  /**
-   * Gera o SVG path "d" para uma curva suave (catmull-rom → bezier)
-   * usando os pontos de peso do gráfico
-   */
-  const generateSmoothPath = (pts: ChartPoint[], width: number, height: number, padding: number) => {
-    if (pts.length < 2) return '';
-    
-    const maxW = Math.max(...pts.map(p => p.weight));
-    const minW = Math.min(...pts.map(p => p.weight));
-    const range = maxW - minW || 1;
-    
-    // Converte os pesos para coordenadas X,Y no SVG
-    const coords = pts.map((p, i) => ({
-      x: padding + (i / (pts.length - 1)) * (width - padding * 2),
-      y: padding + (1 - (p.weight - minW) / range) * (height - padding * 2)
-    }));
+  useEffect(() => {
+    const stats = calculateJourneyDoseStats(
+      logSummaries,
+      new Date(),
+      dosesPerAmpoule,
+      previousDoseApplications,
+    );
 
-    // Gera curvas bezier suaves entre os pontos
-    let d = `M ${coords[0].x},${coords[0].y}`;
-    for (let i = 0; i < coords.length - 1; i++) {
-      const cp1x = coords[i].x + (coords[i + 1].x - coords[i].x) / 3;
-      const cp1y = coords[i].y;
-      const cp2x = coords[i + 1].x - (coords[i + 1].x - coords[i].x) / 3;
-      const cp2y = coords[i + 1].y;
-      d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${coords[i + 1].x},${coords[i + 1].y}`;
+    setJourneyDays(stats.journeyDays);
+    setAmpoulesUsed(stats.ampoulesUsed);
+    setDosesUsedFromCurrentAmpoule(stats.dosesUsedFromCurrentAmpoule);
+  }, [dosesPerAmpoule, logSummaries, previousDoseApplications]);
+
+  const handleAmpouleSettingsSave = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!user) return;
+
+    const normalizedDosesPerAmpoule = Math.max(
+      1,
+      Math.round(dosesPerAmpoule || DEFAULT_DOSES_PER_AMPOULE),
+    );
+    const normalizedPreviousDoseApplications = Math.max(
+      0,
+      Math.round(previousDoseApplications || 0),
+    );
+
+    setAmpouleSettingsSaving(true);
+    try {
+      const savedSettings = await saveAmpouleSettings(user.uid, {
+        dosesPerAmpoule: normalizedDosesPerAmpoule,
+        previousDoseApplications: normalizedPreviousDoseApplications,
+      });
+
+      setDosesPerAmpoule(savedSettings.dosesPerAmpoule);
+      setPreviousDoseApplications(savedSettings.previousDoseApplications);
+      setAmpouleSettingsSaved(true);
+      window.setTimeout(() => setAmpouleSettingsSaved(false), 1800);
+    } catch (error) {
+      console.error('Erro ao salvar configuração de ampola', error);
+      alert('Não foi possível salvar a configuração da ampola.');
+    } finally {
+      setAmpouleSettingsSaving(false);
     }
-    return d;
-  };
-
-  /**
-   * Gera o path de preenchimento (area fill) abaixo da curva
-   */
-  const generateFillPath = (pts: ChartPoint[], width: number, height: number, padding: number) => {
-    const line = generateSmoothPath(pts, width, height, padding);
-    if (!line) return '';
-    return `${line} L ${width - padding},${height - padding} L ${padding},${height - padding} Z`;
   };
 
   const SVG_W = 600;
   const SVG_H = 260;
   const SVG_PAD = 40;
+  const progressBarWidth = daysSince !== null ? Math.min(100, (daysSince / 7) * 100) : 0;
+  const isDoseOverdue = progressBarWidth >= 100;
+  const overdueDays = daysSince !== null ? Math.max(0, daysSince - 7) : 0;
+  const doseUsagePercent = currentDose !== null ? ((currentDose - 2.5) / (15 - 2.5)) * 100 : 0;
+  const currentAmpouleProgress =
+    dosesPerAmpoule > 0 ? (dosesUsedFromCurrentAmpoule / dosesPerAmpoule) * 100 : 0;
+  const chartDateLabelIndices = getChartDateLabelIndices(chartPoints.length);
+  const chartMaxWeight = chartPoints.length > 0 ? Math.max(...chartPoints.map((point) => point.weight)) : 0;
+  const chartMinWeight = chartPoints.length > 0 ? Math.min(...chartPoints.map((point) => point.weight)) : 0;
+  const chartWeightRange = chartMaxWeight - chartMinWeight || 1;
+  const nextDoseCalendarLink = daysUntil !== null ? buildGoogleCalendarLink({ daysUntil, isDoseOverdue, title: '🩸 Aplicação Mounjaro', details: 'Lembrete de dose semanal! Registre no MounTrack.' }) : '#';
+  const loggedDoseApplications = logSummaries.filter((log) => Boolean(log.dose) || log.type === 'dose').length;
+  const totalDoseApplications = loggedDoseApplications + previousDoseApplications;
+  const nextDoseDateLabel = nextDoseTarget
+    ? nextDoseTarget.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+    : 'Sem data';
 
-  /**
-   * V4: Gera o Link para o Google Calendar
-   */
-  const getGoogleCalendarLink = () => {
-    if (daysSince === null || daysUntil === null) return '#';
-    
-    // Calcular a data da próxima dose (Sempre D+7 da última)
-    const nextDate = new Date();
-    // Ajusta a data de hoje para a data futura baseada no daysUntil (se atrasado, fica hoje mesmo)
-    nextDate.setDate(nextDate.getDate() + (isDoseOverdue ? 0 : daysUntil));
-    
-    // Deixar a hora agendada fixada para as 08:00 AM local
-    nextDate.setHours(8, 0, 0, 0);
-    const end = new Date(nextDate.getTime() + 15 * 60000); // 15 mins
-    
-    // Calendar format: YYYYMMDDTHHmmssZ
-    const toGCalDate = (d: Date) => d.toISOString().replace(/-|:|\.\d\d\d/g, "");
-    
-    const title = encodeURIComponent("🩸 Aplicação Mounjaro");
-    const details = encodeURIComponent(`Lembrete de dose semanal! Registre no MounTrack.`);
-    
-    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&dates=${toGCalDate(nextDate)}/${toGCalDate(end)}`;
-  };
-  
   return (
     <ProtectedRoute>
       <main className="container" style={{ position: 'relative' }}>
-        {/* ===== DECORAÇÃO HERO DE FUNDO ===== */}
         <div style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', opacity: 0.15, pointerEvents: 'none', zIndex: 0, mixBlendMode: 'screen', overflow: 'hidden' }}>
           <Image src="/images/hero-bg.png" alt="" fill style={{ objectFit: 'cover', objectPosition: 'top right' }} priority sizes="100vw" />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 30%, var(--bg-primary) 100%)' }}></div>
         </div>
 
-        {/* ===== HEADER ===== */}
         <header className="anim-enter" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', position: 'relative', zIndex: 1 }}>
           <div>
             <Logo size="lg" />
@@ -301,82 +276,67 @@ export default function Home() {
           </div>
         </header>
 
-        {/* ===== NAVEGAÇÃO ===== */}
         <nav className="anim-enter anim-delay-1" style={{ marginBottom: '2.5rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <Link href="/analytics" className="nav-pill">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            Relatórios
-          </Link>
-          <Link href="/goals" className="nav-pill">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            Metas
-          </Link>
-          <Link href="/history" className="nav-pill">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-            Histórico
-          </Link>
-          <Link href="/journal" className="nav-pill">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
-            Diário
-          </Link>
-          <Link href="/expenses" className="nav-pill">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-            Gastos
-          </Link>
-          <Link href="/nutrition" className="nav-pill">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12h16"></path><path d="M12 4v16"></path><path d="M7 7c2-2 4-2 5 0"></path><path d="M17 7c-2-2-4-2-5 0"></path></svg>
-            Nutrição
-          </Link>
+          <Link href="/analytics" className="nav-pill">Relatórios</Link>
+          <Link href="/goals" className="nav-pill">Metas</Link>
+          <Link href="/history" className="nav-pill">Histórico</Link>
+          <Link href="/journal" className="nav-pill">Diário</Link>
+          <Link href="/expenses" className="nav-pill">Gastos</Link>
+          <Link href="/nutrition" className="nav-pill">Nutrição</Link>
+          <Link href="/ampoules" className="nav-pill">Ampolas</Link>
         </nav>
 
-        {/* ===== CONTEÚDO PRINCIPAL ===== */}
         {loading ? (
-          <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-            {[1,2,3,4].map(i => <div key={i} className="skeleton-pulse" style={{ height: '180px' }}></div>)}
+          <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
+            {[1, 2, 3, 4, 5, 6].map((item) => <div key={item} className="skeleton-pulse" style={{ height: '180px' }}></div>)}
           </section>
         ) : (
           <>
-            {/* V4: ALERTA DE SINTOMAS */}
             {symptomAlert && (
               <div className="anim-enter" style={{ marginBottom: '1.5rem', background: 'rgba(234, 179, 8, 0.1)', border: '1px solid rgba(234, 179, 8, 0.3)', padding: '1rem', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <span style={{ fontSize: '1.5rem' }}>💡</span>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.4 }}>
-                  <strong style={{ color: '#EAB308' }}>Insight MounTrack:</strong> <br/>
+                  <strong style={{ color: '#EAB308' }}>Insight MounTrack:</strong><br />
                   {symptomAlert}
                 </p>
               </div>
             )}
 
-            {/* V4: PAINEL DE CONQUISTAS GAMIFICADO */}
             {(streak >= 2 || totalLoss >= 2) && (
               <section className="anim-enter" style={{ marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                 {streak >= 2 && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(6, 182, 212, 0.1)', border: '1px solid rgba(6, 182, 212, 0.25)', padding: '0.5rem 1rem', borderRadius: '2rem' }}>
-                    <span style={{ fontSize: '1.2rem', filter: 'drop-shadow(0 0 4px rgba(6,182,212,0.5))' }}>🔥</span>
+                    <span style={{ fontSize: '1.2rem' }}>🔥</span>
                     <div>
                       <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--accent-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Consistência</span>
-                      <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>{streak} Semanas seguidas</span>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>{streak} semanas seguidas</span>
                     </div>
                   </div>
                 )}
                 {totalLoss >= 2 && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(52, 211, 153, 0.1)', border: '1px solid rgba(52, 211, 153, 0.25)', padding: '0.5rem 1rem', borderRadius: '2rem' }}>
-                    <span style={{ fontSize: '1.2rem', filter: 'drop-shadow(0 0 4px rgba(52,211,153,0.5))' }}>💎</span>
+                    <span style={{ fontSize: '1.2rem' }}>💎</span>
                     <div>
-                      <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--accent-primary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Marco Atingido</span>
-                      <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>-{totalLoss} kg perdidos!</span>
+                      <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--accent-primary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Marco atingido</span>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>-{totalLoss} kg perdidos</span>
                     </div>
                   </div>
                 )}
               </section>
             )}
 
-            {/* ===== GRÁFICO DE LINHA SVG ===== */}
             {chartPoints.length >= 2 && (
               <div className="glass-panel anim-enter anim-delay-1" style={{ padding: '1.5rem 1.5rem 1rem', marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <p className="stat-label" style={{ marginBottom: 0 }}>Evolução do Peso</p>
-                  <Link href="/analytics" style={{ color: 'var(--accent-primary)', fontSize: '0.8rem', textDecoration: 'none', fontWeight: 500 }}>Ver tudo →</Link>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', gap: '1rem', flexWrap: 'wrap' }}>
+                  <div>
+                    <p className="stat-label" style={{ marginBottom: 0 }}>Evolução do Peso</p>
+                    <p style={{ marginTop: '0.35rem', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                      Datas mapeadas diretamente na linha de progresso
+                    </p>
+                  </div>
+                  <Link href="/analytics" style={{ color: 'var(--accent-primary)', fontSize: '0.8rem', textDecoration: 'none', fontWeight: 500 }}>
+                    Ver tudo →
+                  </Link>
                 </div>
                 <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ width: '100%', height: 'auto', overflow: 'visible' }}>
                   <defs>
@@ -389,25 +349,47 @@ export default function Home() {
                       <stop offset="100%" stopColor="var(--accent-primary)" stopOpacity="0" />
                     </linearGradient>
                   </defs>
-                  {/* Área preenchida abaixo da curva */}
-                  <path d={generateFillPath(chartPoints, SVG_W, SVG_H, SVG_PAD)} fill="url(#fillGrad)" />
-                  {/* Linha da curva suave */}
-                  <path d={generateSmoothPath(chartPoints, SVG_W, SVG_H, SVG_PAD)} fill="none" stroke="url(#lineGrad)" strokeWidth="4" strokeLinecap="round" />
-                  {/* Pontos nos vértices */}
-                  {chartPoints.map((p, i) => {
-                    const maxW = Math.max(...chartPoints.map(pp => pp.weight));
-                    const minW = Math.min(...chartPoints.map(pp => pp.weight));
-                    const range = maxW - minW || 1;
-                    const cx = SVG_PAD + (i / (chartPoints.length - 1)) * (SVG_W - SVG_PAD * 2);
-                    const cy = SVG_PAD + (1 - (p.weight - minW) / range) * (SVG_H - SVG_PAD * 2);
-                    const isLast = i === chartPoints.length - 1;
+
+                  <line x1={SVG_PAD} x2={SVG_W - SVG_PAD} y1={SVG_H - SVG_PAD + 10} y2={SVG_H - SVG_PAD + 10} stroke="rgba(148, 163, 184, 0.16)" strokeWidth="1" />
+                  <path d={generateAreaFillPath(chartPoints, SVG_W, SVG_H, SVG_PAD)} fill="url(#fillGrad)" />
+                  <path d={generateSmoothSvgPath(chartPoints, SVG_W, SVG_H, SVG_PAD)} fill="none" stroke="url(#lineGrad)" strokeWidth="4" strokeLinecap="round" />
+
+                  {chartPoints.map((point, index) => {
+                    const cx = SVG_PAD + (index / (chartPoints.length - 1)) * (SVG_W - SVG_PAD * 2);
+                    const cy = SVG_PAD + (1 - (point.weight - chartMinWeight) / chartWeightRange) * (SVG_H - SVG_PAD * 2);
+                    const isLast = index === chartPoints.length - 1;
+                    const showDateLabel = chartDateLabelIndices.includes(index);
+
                     return (
-                      <g key={i}>
+                      <g key={`${point.date}-${point.weight}`}>
                         {isLast && <circle cx={cx} cy={cy} r="14" fill="var(--accent-primary)" opacity="0.2" />}
                         <circle cx={cx} cy={cy} r={isLast ? 6 : 4} fill={isLast ? 'var(--accent-primary)' : 'var(--bg-tertiary)'} stroke="var(--accent-primary)" strokeWidth="2" />
-                        {/* Label de peso no primeiro e último ponto */}
-                        {(i === 0 || isLast) && (
-                          <text x={cx} y={cy - 14} textAnchor="middle" fill="var(--text-primary)" fontSize="16" fontFamily="Outfit" fontWeight="600">{p.weight}</text>
+                        {(index === 0 || isLast) && (
+                          <text x={cx} y={cy - 14} textAnchor="middle" fill="var(--text-primary)" fontSize="16" fontFamily="Outfit" fontWeight="600">
+                            {point.weight}
+                          </text>
+                        )}
+                        {showDateLabel && (
+                          <>
+                            <line
+                              x1={cx}
+                              x2={cx}
+                              y1={SVG_H - SVG_PAD + 10}
+                              y2={SVG_H - SVG_PAD + 16 + ((index % 2) * 8)}
+                              stroke="rgba(52, 211, 153, 0.35)"
+                              strokeWidth="1.5"
+                            />
+                            <text
+                              x={cx}
+                              y={SVG_H - 8 + ((index % 2) * 8)}
+                              textAnchor="middle"
+                              fill="var(--text-muted)"
+                              fontSize="10"
+                              fontFamily="IBM Plex Mono, monospace"
+                            >
+                              {formatChartDateLabel(point.date)}
+                            </text>
+                          </>
                         )}
                       </g>
                     );
@@ -416,71 +398,364 @@ export default function Home() {
               </div>
             )}
 
-            {/* ===== ROW DE CARDS ===== */}
-            <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-              
-              {/* Card: Dias desde a última dose */}
-              <article className="glass-panel anim-enter anim-delay-2" style={{ padding: '1.75rem' }}>
-                <p className="stat-label">Próxima Dose</p>
-                <div className="stat-number" style={{ color: isDoseOverdue ? 'var(--accent-danger)' : 'var(--text-primary)' }}>
-                  {daysSince !== null ? daysSince : '—'}
-                  <span className="stat-unit">dias atrás</span>
+            {false && (
+              <section
+                id="ampoule-controls"
+                className="dashboard-grid dashboard-grid--settings"
+                style={showAmpouleSettings ? { marginBottom: '2rem' } : { display: 'none', marginBottom: 0 }}
+              >
+              <article className="glass-panel dashboard-card dashboard-card--hero anim-enter anim-delay-2">
+                <div className="dashboard-card-shell">
+                  <div className="dashboard-hero-top">
+                    <div>
+                      <p className="stat-label" style={{ marginBottom: '0.85rem' }}>Próxima Dose</p>
+                      {daysUntil !== null ? (
+                        <div className="stat-number" style={{ color: isDoseOverdue ? 'var(--accent-danger)' : 'var(--accent-primary)' }}>
+                          {isDoseOverdue ? overdueDays : daysUntil}
+                          <span className="stat-unit">
+                            {isDoseOverdue ? `dia${overdueDays !== 1 ? 's' : ''} de atraso` : `dia${daysUntil !== 1 ? 's' : ''} restante${daysUntil !== 1 ? 's' : ''}`}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="stat-number">—<span className="stat-unit">sem registro</span></div>
+                      )}
+
+                      <p className="dashboard-card-copy">
+                        {daysUntil === null
+                          ? 'Registre a primeira aplicação para destravar o ciclo semanal.'
+                          : isDoseOverdue
+                            ? 'O ciclo passou da janela esperada e merece um novo registro.'
+                            : 'Contagem semanal rodando em tempo real para a próxima aplicação.'}
+                      </p>
+
+                      {countdown && !isDoseOverdue && (
+                        <div className="dashboard-countdown">
+                          {String(countdown!.d).padStart(2, '0')}d {String(countdown!.h).padStart(2, '0')}:{String(countdown!.m).padStart(2, '0')}:{String(countdown!.s).padStart(2, '0')}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="dashboard-hero-meta">
+                      <div className="dashboard-mini-panel">
+                        <span>Última dose</span>
+                        <strong>{lastDoseDate ?? 'Sem registro'}</strong>
+                      </div>
+                      <div className="dashboard-mini-panel">
+                        <span>Próxima janela</span>
+                        <strong>{daysUntil !== null ? nextDoseDateLabel : 'A definir'}</strong>
+                      </div>
+                      <div className="dashboard-mini-panel">
+                        <span>Status</span>
+                        <strong>
+                          {daysUntil === null
+                            ? 'Sem ciclo'
+                            : isDoseOverdue
+                              ? `Atrasada ${overdueDays}d`
+                              : 'Janela ativa'}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="progress-track" style={{ marginTop: '1rem' }}>
+                    <div className={`progress-fill ${isDoseOverdue ? 'danger' : ''}`} style={{ width: `${progressBarWidth}%` }}></div>
+                  </div>
+
+                  <div className="dashboard-hero-actions">
+                    {daysUntil !== null ? (
+                      <a
+                        href={nextDoseCalendarLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="dashboard-compact-cta"
+                      >
+                        Adicionar na agenda
+                      </a>
+                    ) : (
+                      <Link href="/log" className="dashboard-compact-cta">
+                        Registrar dose
+                      </Link>
+                    )}
+                    <Link href="/history" className="dashboard-text-link">
+                      Abrir histórico
+                    </Link>
+                  </div>
                 </div>
-                <div className="progress-track">
-                  <div className={`progress-fill ${isDoseOverdue ? 'danger' : ''}`} style={{ width: `${progressBarWidth}%` }}></div>
-                </div>
-                <p style={{ fontSize: '0.75rem', color: isDoseOverdue ? 'var(--accent-danger)' : 'var(--text-muted)', marginTop: '0.5rem', textAlign: 'right', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  {daysUntil !== null && !isDoseOverdue && (
-                    <a href={getGoogleCalendarLink()} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                      Agendar
-                    </a>
-                  )}
-                  <span>
-                    {daysUntil !== null
-                      ? (isDoseOverdue ? '⚠ Dose atrasada!' : `Em ${daysUntil} dia${daysUntil !== 1 ? 's' : ''}`)
-                      : 'Registre uma dose'}
-                  </span>
-                </p>
               </article>
 
-              {/* Card: Dose Atual (Volumetria) */}
+              <article className="glass-panel dashboard-card anim-enter anim-delay-2">
+                <div className="dashboard-card-shell">
+                  <p className="stat-label">Dose em Uso</p>
+                  <div className="stat-number" style={{ color: 'var(--accent-primary)' }}>
+                    {currentDose !== null ? currentDose.toFixed(1) : '—'}
+                    <span className="stat-unit">mg</span>
+                  </div>
+                  {currentDose !== null ? (
+                    <>
+                      <div className="progress-track" style={{ marginTop: '1rem' }}>
+                        <div className="progress-fill" style={{ width: `${doseUsagePercent}%` }}></div>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.35rem' }}>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>2.5 mg</span>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>15 mg</span>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="dashboard-card-copy">Ainda sem dose registrada nesta jornada.</p>
+                  )}
+                </div>
+              </article>
+
+              <article className="glass-panel dashboard-card anim-enter anim-delay-2">
+                <div className="dashboard-card-shell">
+                  <p className="stat-label">Peso Atual</p>
+                  <div className="stat-number">
+                    {currentWeight !== null ? currentWeight : '—'}
+                    <span className="stat-unit">kg</span>
+                  </div>
+                  {weeklyChange !== null && weeklyChange > 0 && <span className="badge badge-success" style={{ marginTop: '0.75rem' }}>▼ {weeklyChange} kg</span>}
+                  {weeklyChange !== null && weeklyChange <= 0 && <span className="badge badge-warning" style={{ marginTop: '0.75rem' }}>▲ {Math.abs(weeklyChange)} kg</span>}
+                  {weeklyChange === null && <p className="dashboard-card-copy">Mais registros liberam leitura semanal comparável.</p>}
+                </div>
+              </article>
+
+              <article className="glass-panel dashboard-card anim-enter anim-delay-3">
+                <div className="dashboard-card-shell">
+                  <p className="stat-label">Dias de Jornada</p>
+                  <div className="stat-number">
+                    {journeyDays !== null ? journeyDays : '—'}
+                    <span className="stat-unit">dias</span>
+                  </div>
+                  <p className="dashboard-card-copy">Desde o primeiro registro válido da sua jornada.</p>
+                </div>
+              </article>
+
+              <article className="glass-panel dashboard-card anim-enter anim-delay-3">
+                <div className="dashboard-card-shell">
+                  <p className="stat-label">Ampolas Usadas</p>
+                  <div className="stat-number">
+                    {ampoulesUsed}
+                    <span className="stat-unit">ampolas</span>
+                  </div>
+                  <p className="dashboard-card-copy">{dosesPerAmpoule} doses por ampola na configuração atual.</p>
+                </div>
+              </article>
+
+              <article className="glass-panel dashboard-card anim-enter anim-delay-3">
+                <div className="dashboard-card-shell">
+                  <p className="stat-label">Ampola Atual</p>
+                  <div className="stat-number" style={{ color: 'var(--accent-secondary)' }}>
+                    {dosesUsedFromCurrentAmpoule}
+                    <span className="stat-unit">de {dosesPerAmpoule}</span>
+                  </div>
+                  <div className="progress-track" style={{ marginTop: '1rem' }}>
+                    <div className="progress-fill" style={{ width: `${currentAmpouleProgress}%` }}></div>
+                  </div>
+                  <p className="dashboard-card-copy">Doses já contabilizadas na ampola corrente.</p>
+                </div>
+              </article>
+
+              <article className="glass-panel dashboard-card anim-enter anim-delay-3" style={{ position: 'relative', overflow: 'hidden' }}>
+                {progressPercent >= 100 && <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 50%, rgba(52, 211, 153, 0.08), transparent 70%)', zIndex: 0 }}></div>}
+                <div className="dashboard-card-shell" style={{ position: 'relative', zIndex: 1 }}>
+                  <p className="stat-label">Meta</p>
+                  <div className="stat-number" style={{ color: progressPercent >= 100 ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
+                    {targetWeight ? `${progressPercent}` : '—'}
+                    <span className="stat-unit">{targetWeight ? '%' : ''}</span>
+                  </div>
+                  <p style={{ color: 'var(--text-muted)', marginTop: '0.25rem', fontSize: '0.8rem' }}>
+                    {targetWeight ? `Alvo: ${targetWeight} kg` : <Link href="/goals" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>Definir meta →</Link>}
+                  </p>
+                  <div style={{ marginTop: 'auto', paddingTop: '1rem' }}>
+                    {predictedDate && progressPercent < 100 && (
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', background: 'rgba(6, 182, 212, 0.08)', border: '1px solid rgba(6, 182, 212, 0.2)', padding: '0.75rem', borderRadius: 'var(--radius-md)' }}>
+                        <span style={{ fontSize: '1rem' }}>✨</span>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                          <strong style={{ color: 'var(--accent-secondary)' }}>Previsão:</strong><br />
+                          No seu ritmo atual, você atingirá a meta em <b>{predictedDate}</b>.
+                        </div>
+                      </div>
+                    )}
+                    {progressPercent >= 100 && (
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', background: 'rgba(52, 211, 153, 0.08)', border: '1px solid rgba(52, 211, 153, 0.2)', padding: '0.75rem', borderRadius: 'var(--radius-md)' }}>
+                        <span style={{ fontSize: '1rem' }}>🏆</span>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                          <strong style={{ color: 'var(--accent-primary)' }}>Parabéns!</strong><br />
+                          Você já atingiu sua meta de peso inicial.
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </article>
+
+              <article className="glass-panel static-panel dashboard-card dashboard-card--control anim-enter anim-delay-4">
+                <div className="dashboard-card-shell">
+                  <div className="dashboard-control-header">
+                    <div>
+                      <p className="stat-label" style={{ marginBottom: '0.75rem' }}>Controle da Ampola</p>
+                      <p className="dashboard-card-copy" style={{ marginTop: 0 }}>
+                        Ajuste quantas doses cabem em cada ampola e, se necessário, quantas aplicações vieram de antes do app.
+                      </p>
+                    </div>
+                    {ampouleSettingsSaved && <span className="badge badge-success">Salvo</span>}
+                  </div>
+
+                  <form className="dashboard-control-form" onSubmit={handleAmpouleSettingsSave}>
+                    <label className="dashboard-field">
+                      <span className="dashboard-field-label">Doses por ampola</span>
+                      <input
+                        type="number"
+                        min={1}
+                        value={dosesPerAmpoule}
+                        onChange={(event) => setDosesPerAmpoule(Number(event.target.value))}
+                        className="input-field"
+                      />
+                    </label>
+
+                    <label className="dashboard-field">
+                      <span className="dashboard-field-label">Doses anteriores ao app</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={previousDoseApplications}
+                        onChange={(event) => setPreviousDoseApplications(Number(event.target.value))}
+                        className="input-field"
+                      />
+                    </label>
+
+                    <button type="submit" className="btn-outline dashboard-save-button" disabled={ampouleSettingsSaving}>
+                      {ampouleSettingsSaving ? 'Salvando...' : ampouleSettingsSaved ? 'Cálculo salvo' : 'Salvar cálculo'}
+                    </button>
+                  </form>
+
+                  <div className="dashboard-control-summary">
+                    <div className="dashboard-mini-panel">
+                      <span>Registros no app</span>
+                      <strong>{loggedDoseApplications}</strong>
+                    </div>
+                    <div className="dashboard-mini-panel">
+                      <span>Doses anteriores</span>
+                      <strong>{previousDoseApplications}</strong>
+                    </div>
+                    <div className="dashboard-mini-panel">
+                      <span>Total usado</span>
+                      <strong>{totalDoseApplications}</strong>
+                    </div>
+                  </div>
+                </div>
+              </article>
+              </section>
+            )}
+
+            <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+              <article className="glass-panel anim-enter anim-delay-2" style={{ padding: '1.75rem' }}>
+                <p className="stat-label">Próxima Dose</p>
+                {daysUntil !== null ? (
+                  <div className="stat-number" style={{ color: isDoseOverdue ? 'var(--accent-danger)' : 'var(--accent-primary)' }}>
+                    {isDoseOverdue ? overdueDays : daysUntil}
+                    <span className="stat-unit">
+                      {isDoseOverdue ? `dia${overdueDays !== 1 ? 's' : ''} de atraso` : `dia${daysUntil !== 1 ? 's' : ''} restante${daysUntil !== 1 ? 's' : ''}`}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="stat-number">—<span className="stat-unit">sem registro</span></div>
+                )}
+
+                {countdown && !isDoseOverdue && (
+                  <div style={{ marginTop: '0.5rem', textAlign: 'center', fontFamily: '"IBM Plex Mono", monospace', fontSize: '1.2rem', fontWeight: 700, color: 'var(--accent-secondary)', letterSpacing: '0.06em' }}>
+                    {String(countdown.d).padStart(2, '0')}d {String(countdown.h).padStart(2, '0')}:{String(countdown.m).padStart(2, '0')}:{String(countdown.s).padStart(2, '0')}
+                  </div>
+                )}
+
+                <div className="progress-track" style={{ marginTop: '0.9rem' }}>
+                  <div className={`progress-fill ${isDoseOverdue ? 'danger' : ''}`} style={{ width: `${progressBarWidth}%` }}></div>
+                </div>
+
+                <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    {lastDoseDate ? `Última: ${lastDoseDate}` : 'Registre a primeira dose'}
+                  </span>
+                  {daysUntil !== null && (
+                    <span style={{ fontSize: '0.72rem', color: isDoseOverdue ? 'var(--accent-danger)' : 'var(--text-muted)' }}>
+                      {isDoseOverdue ? 'Dose pendente agora' : 'Janela semanal ativa'}
+                    </span>
+                  )}
+                </div>
+
+                {daysUntil !== null ? (
+                  <a href={nextDoseCalendarLink} target="_blank" rel="noopener noreferrer" className="btn-primary" style={{ marginTop: '1rem', display: 'inline-flex', width: 'fit-content', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', padding: '0.6rem 1rem', fontSize: '0.82rem' }}>
+                    Agendar próxima dose
+                  </a>
+                ) : (
+                  <Link href="/log" className="btn-primary" style={{ marginTop: '1rem', display: 'inline-flex', width: 'fit-content', justifyContent: 'center', textDecoration: 'none', padding: '0.6rem 1rem', fontSize: '0.82rem' }}>
+                    Registrar dose
+                  </Link>
+                )}
+              </article>
+
               <article className="glass-panel anim-enter anim-delay-2" style={{ padding: '1.75rem' }}>
                 <p className="stat-label">Dose em Uso</p>
                 <div className="stat-number" style={{ color: 'var(--accent-primary)' }}>
                   {currentDose !== null ? currentDose.toFixed(1) : '—'}
                   <span className="stat-unit">mg</span>
                 </div>
-                {/* Barra visual de volumetria — escala de 2.5 a 15mg */}
-                {currentDose !== null && (
+                {currentDose !== null ? (
                   <>
                     <div className="progress-track" style={{ marginTop: '1rem' }}>
-                      <div className="progress-fill" style={{ width: `${((currentDose - 2.5) / (15 - 2.5)) * 100}%` }}></div>
+                      <div className="progress-fill" style={{ width: `${doseUsagePercent}%` }}></div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.35rem' }}>
                       <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>2.5 mg</span>
                       <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>15 mg</span>
                     </div>
                   </>
+                ) : (
+                  <p style={{ marginTop: '0.75rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>Ainda sem dose registrada.</p>
                 )}
               </article>
 
-              {/* Card: Peso Atual */}
-              <article className="glass-panel anim-enter anim-delay-3" style={{ padding: '1.75rem' }}>
+              <article className="glass-panel anim-enter anim-delay-3 ampoules-used-card" style={{ padding: '1.75rem' }}>
+                <p className="stat-label">Dias de Jornada</p>
+                <div className="stat-number">
+                  {journeyDays !== null ? journeyDays : '—'}
+                  <span className="stat-unit">dias</span>
+                </div>
+                <p style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>Desde o primeiro registro da sua jornada.</p>
+              </article>
+
+              <article className="glass-panel anim-enter anim-delay-3 ampoules-used-card" style={{ padding: '1.75rem' }}>
+                <p className="stat-label">Ampolas Usadas</p>
+                <div className="stat-number">
+                  {ampoulesUsed}
+                  <span className="stat-unit">ampolas</span>
+                </div>
+                <p style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>Ajustado pela sua configuracao atual de ampola.</p>
+                <p style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>Ajustado pela sua configuraÃ§Ã£o atual de ampola.</p>
+              </article>
+
+              <article className="glass-panel anim-enter anim-delay-4" style={{ padding: '1.75rem' }}>
+                <p className="stat-label">Ampola Atual</p>
+                <div className="stat-number" style={{ color: 'var(--accent-secondary)' }}>
+                  {dosesUsedFromCurrentAmpoule}
+                  <span className="stat-unit">de {dosesPerAmpoule} doses</span>
+                </div>
+                <div className="progress-track" style={{ marginTop: '1rem' }}>
+                  <div className="progress-fill" style={{ width: `${currentAmpouleProgress}%` }}></div>
+                </div>
+                <p style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>Doses já usadas da ampola atual.</p>
+              </article>
+
+              <article className="glass-panel anim-enter anim-delay-4" style={{ padding: '1.75rem' }}>
                 <p className="stat-label">Peso Atual</p>
                 <div className="stat-number">
                   {currentWeight !== null ? currentWeight : '—'}
                   <span className="stat-unit">kg</span>
                 </div>
-                {weeklyChange !== null && weeklyChange > 0 && (
-                  <span className="badge badge-success" style={{ marginTop: '0.75rem' }}>▼ {weeklyChange} kg</span>
-                )}
-                {weeklyChange !== null && weeklyChange <= 0 && (
-                  <span className="badge badge-warning" style={{ marginTop: '0.75rem' }}>▲ {Math.abs(weeklyChange)} kg</span>
-                )}
+                {weeklyChange !== null && weeklyChange > 0 && <span className="badge badge-success" style={{ marginTop: '0.75rem' }}>▼ {weeklyChange} kg</span>}
+                {weeklyChange !== null && weeklyChange <= 0 && <span className="badge badge-warning" style={{ marginTop: '0.75rem' }}>▲ {Math.abs(weeklyChange)} kg</span>}
               </article>
 
-              {/* Card: Progresso da Meta */}
               <article className="glass-panel anim-enter anim-delay-4" style={{ padding: '1.75rem', position: 'relative', overflow: 'hidden' }}>
                 {progressPercent >= 100 && <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 50%, rgba(52, 211, 153, 0.08), transparent 70%)', zIndex: 0 }}></div>}
                 <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -490,16 +765,11 @@ export default function Home() {
                     <span className="stat-unit">{targetWeight ? '%' : ''}</span>
                   </div>
                   <p style={{ color: 'var(--text-muted)', marginTop: '0.25rem', fontSize: '0.8rem' }}>
-                    {targetWeight
-                      ? `Alvo: ${targetWeight} kg`
-                      : <Link href="/goals" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>Definir meta →</Link>
-                    }
+                    {targetWeight ? `Alvo: ${targetWeight} kg` : <Link href="/goals" style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>Definir meta →</Link>}
                   </p>
-                  
-                  {/* V4 - Insight Determinístico */}
                   <div style={{ marginTop: 'auto', paddingTop: '1rem' }}>
                     {predictedDate && progressPercent < 100 && (
-                      <div className="anim-enter anim-delay-5" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', background: 'rgba(6, 182, 212, 0.08)', border: '1px solid rgba(6, 182, 212, 0.2)', padding: '0.75rem', borderRadius: 'var(--radius-md)' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', background: 'rgba(6, 182, 212, 0.08)', border: '1px solid rgba(6, 182, 212, 0.2)', padding: '0.75rem', borderRadius: 'var(--radius-md)' }}>
                         <span style={{ fontSize: '1rem' }}>✨</span>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
                           <strong style={{ color: 'var(--accent-secondary)' }}>Previsão IA:</strong><br />
@@ -508,7 +778,7 @@ export default function Home() {
                       </div>
                     )}
                     {progressPercent >= 100 && (
-                      <div className="anim-enter anim-delay-5" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', background: 'rgba(52, 211, 153, 0.08)', border: '1px solid rgba(52, 211, 153, 0.2)', padding: '0.75rem', borderRadius: 'var(--radius-md)' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', background: 'rgba(52, 211, 153, 0.08)', border: '1px solid rgba(52, 211, 153, 0.2)', padding: '0.75rem', borderRadius: 'var(--radius-md)' }}>
                         <span style={{ fontSize: '1rem' }}>🏆</span>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
                           <strong style={{ color: 'var(--accent-primary)' }}>Parabéns!</strong><br />
@@ -522,11 +792,220 @@ export default function Home() {
             </section>
           </>
         )}
+
+        <style>{`
+          .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            gap: 1.25rem;
+            align-items: stretch;
+          }
+
+          .dashboard-grid--settings .dashboard-card:not(.dashboard-card--control) {
+            display: none !important;
+          }
+
+          .ampoules-used-card > p:last-of-type {
+            display: none;
+          }
+
+          .dashboard-card {
+            grid-column: span 3;
+            padding: 1.5rem;
+            min-height: 220px;
+          }
+
+          .dashboard-card--hero {
+            grid-column: span 6;
+            min-height: 300px;
+            padding: 1.75rem;
+          }
+
+          .dashboard-card--control {
+            grid-column: span 12;
+          }
+
+          .dashboard-card-shell {
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+            height: 100%;
+          }
+
+          .dashboard-card-copy {
+            margin-top: 0.2rem;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            line-height: 1.6;
+          }
+
+          .dashboard-hero-top {
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(220px, 0.65fr);
+            gap: 1rem;
+            align-items: start;
+          }
+
+          .dashboard-hero-meta,
+          .dashboard-control-summary {
+            display: grid;
+            gap: 0.75rem;
+          }
+
+          .dashboard-mini-panel {
+            padding: 0.8rem 0.9rem;
+            border-radius: var(--radius-md);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(8, 14, 26, 0.55);
+          }
+
+          .dashboard-mini-panel span {
+            display: block;
+            margin-bottom: 0.35rem;
+            color: var(--text-muted);
+            font-size: 0.68rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+          }
+
+          .dashboard-mini-panel strong {
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.98rem;
+            font-weight: 600;
+          }
+
+          .dashboard-countdown {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.45rem 0.75rem;
+            border-radius: 999px;
+            border: 1px solid rgba(6, 182, 212, 0.22);
+            background: rgba(6, 182, 212, 0.08);
+            color: var(--accent-secondary);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            width: fit-content;
+          }
+
+          .dashboard-hero-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-top: auto;
+          }
+
+          .dashboard-compact-cta {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 40px;
+            padding: 0.55rem 0.95rem;
+            border-radius: 999px;
+            background: rgba(52, 211, 153, 0.12);
+            border: 1px solid rgba(52, 211, 153, 0.24);
+            color: var(--accent-primary);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: transform var(--duration-fast) ease, background-color var(--duration-fast) ease, border-color var(--duration-fast) ease;
+          }
+
+          .dashboard-compact-cta:hover {
+            transform: translateY(-1px);
+            background: rgba(52, 211, 153, 0.18);
+            border-color: rgba(52, 211, 153, 0.34);
+          }
+
+          .dashboard-text-link {
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            font-weight: 500;
+            text-decoration: none;
+          }
+
+          .dashboard-text-link:hover {
+            color: var(--text-primary);
+          }
+
+          .dashboard-control-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+          }
+
+          .dashboard-control-form {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.9rem;
+            align-items: end;
+          }
+
+          .dashboard-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+          }
+
+          .dashboard-field-label {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+          }
+
+          .dashboard-save-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 48px;
+          }
+
+          .dashboard-control-summary {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+
+          @media (max-width: 1080px) {
+            .dashboard-card {
+              grid-column: span 6;
+            }
+
+            .dashboard-card--hero,
+            .dashboard-card--control {
+              grid-column: span 12;
+            }
+
+            .dashboard-control-form {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+          }
+
+          @media (max-width: 860px) {
+            .dashboard-grid {
+              grid-template-columns: 1fr;
+            }
+
+            .dashboard-card,
+            .dashboard-card--hero,
+            .dashboard-card--control {
+              grid-column: span 1;
+            }
+
+            .dashboard-hero-top,
+            .dashboard-control-form,
+            .dashboard-control-summary {
+              grid-template-columns: 1fr;
+            }
+          }
+        `}</style>
       </main>
     </ProtectedRoute>
   );
 }
-
-
-
-

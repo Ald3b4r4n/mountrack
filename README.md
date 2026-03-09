@@ -67,6 +67,37 @@ NEXT_PUBLIC_FIREBASE_APP_ID=1:00000000:web:0000000
 ```
 *(Adicione linha por linha clicando em "Add")*.
 
+### 3.1 Variáveis do enriquecimento de nutrição
+Se você for usar a persistência nova da busca de alimentos em produção, adicione também:
+
+```env
+CRON_SECRET=gere-um-token-longo-e-aleatorio
+NUTRITION_INGEST_TOKEN=gere-um-token-longo-e-aleatorio
+```
+
+- `CRON_SECRET`: protege o cron da Vercel que aquece o catálogo em background.
+- `NUTRITION_INGEST_TOKEN`: permite disparo manual da mesma rota interna quando necessário.
+
+O projeto já inclui um `vercel.json` com um cron diário para `GET /api/nutrition/foods/enrichment?limit=5`.
+
+### 3.2 Disparo manual do enriquecimento
+Para rodar o aquecimento manualmente, o projeto agora inclui:
+
+```bash
+npm run nutrition:enrich -- --limit 5
+```
+
+Por padrão ele usa:
+
+- `NUTRITION_BASE_URL=http://localhost:3000`
+- `NUTRITION_INGEST_TOKEN` ou `CRON_SECRET`
+
+Exemplo para um deploy remoto:
+
+```bash
+npm run nutrition:enrich -- --base-url https://seu-app.vercel.app --limit 10
+```
+
 ### 4. Lançamento
 Com as 6 Variáveis chave preenchidas em abas de produção da Vercel, clique no botão gigante **Deploy**.
 Aguarde por cerca de um minuto enquanto a nuvem otimiza as imagens, compila o React e joga ao ar numa URL animada e global. Prontinho!

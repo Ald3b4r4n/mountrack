@@ -22,7 +22,7 @@ const OPEN_FOOD_FACTS_FIELDS = [
   "nutriments",
 ].join(",");
 
-const OPEN_FOOD_FACTS_TIMEOUT_MS = 4500;
+const OPEN_FOOD_FACTS_TIMEOUT_MS = 2200;
 
 async function fetchWithTimeout(url: string): Promise<Response | null> {
   const controller = new AbortController();

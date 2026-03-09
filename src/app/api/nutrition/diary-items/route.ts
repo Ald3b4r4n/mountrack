@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireNutritionUser } from "@/modules/nutrition/auth/require-user";
 import { toNutritionRouteErrorResponse } from "@/modules/nutrition/http/route-error";
 import { diaryItemSchema } from "@/modules/nutrition/validators";
-import { listFoods, getGoal, getNutritionStorageHeaders, saveDiaryItem } from "@/modules/nutrition/repositories/nutrition-store";
+import { findAccessibleFoodById, getGoal, getNutritionStorageHeaders, saveDiaryItem } from "@/modules/nutrition/repositories/nutrition-store";
 import { createDiaryItemSnapshot } from "@/modules/nutrition/services/daily-calories.service";
 
 export const runtime = "nodejs";
@@ -11,9 +11,8 @@ export async function POST(request: Request) {
   try {
     const { user, defaultGoal } = await requireNutritionUser(request);
     const payload = diaryItemSchema.parse(await request.json());
-    const foods = await listFoods();
     const goal = await getGoal(user.uid, defaultGoal);
-    const food = foods.find((item) => item.id === payload.foodId);
+    const food = await findAccessibleFoodById(user.uid, payload.foodId);
 
     if (!food) {
       return NextResponse.json({ error: "Food not found" }, { status: 404 });

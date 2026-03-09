@@ -8,9 +8,9 @@ export const runtime = "nodejs";
 
 export async function GET(request: Request, context: { params: Promise<{ code: string }> }) {
   try {
-    await requireNutritionUser(request);
+    const { user } = await requireNutritionUser(request);
     const { code } = await context.params;
-    const { item, source } = await lookupNutritionBarcode(code);
+    const { item, source } = await lookupNutritionBarcode(user.uid, code);
 
     if (!item) {
       return NextResponse.json({ item: null, source }, { status: 404, headers: getNutritionStorageHeaders() });

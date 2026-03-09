@@ -44,7 +44,7 @@ import type {
 } from "@/modules/nutrition/domain/types";
 import { useHydration, buildNextWaterIntake } from "@/modules/nutrition/hooks/useHydration";
 import { useNutritionDashboard } from "@/modules/nutrition/hooks/useNutritionDashboard";
-import { useNutritionSearch } from "@/modules/nutrition/hooks/useNutritionSearch";
+import { useNutritionSearch, type NutritionSearchSource } from "@/modules/nutrition/hooks/useNutritionSearch";
 import {
   buildMealDefinitions,
   createCustomMealDefinition,
@@ -72,14 +72,6 @@ const DEFAULT_GOAL: NutritionGoal = {
 };
 
 type DiaryViewKey = "today" | "history";
-type NutritionSearchSource =
-  | "catalog"
-  | "external"
-  | "fallback"
-  | "none"
-  | "openfoodfacts"
-  | null;
-
 const previewAuthUser = {
   uid: "preview-demo-user",
   getIdToken: async () => "",
@@ -157,15 +149,17 @@ function scaleMealPlanItem(item: MealPlanItem, ratio: number, quantity: number):
 function formatSearchSourceLabel(source: NutritionSearchSource): string | null {
   switch (source) {
     case "catalog":
-      return "Catalogo local";
+      return "Catalogo do app";
+    case "custom":
+      return "Meus alimentos";
     case "external":
-      return "Fonte externa";
+      return "Novas referencias";
     case "fallback":
-      return "Fallback interno";
+      return "Sugestoes do app";
     case "openfoodfacts":
-      return "Open Food Facts";
+      return "Catalogo aberto";
     case "none":
-      return "Sem match";
+      return "Sem resultado";
     default:
       return null;
   }
@@ -221,7 +215,7 @@ export function NutritionScreen() {
   const { setSummary, setMealPlan, setGoal, setDiaryMealDefinitions, setHistoryPage } = dSetters;
   const { resolveRequestError, loadDashboard, loadBrowserDashboard, hydrateDashboard, loadHistory, loadBrowserHistory, hydrateHistory } = dActions;
 
-  const { isSearching, searchResults, resultsVisible, searchQuery, barcodeQuery, selectedFood, lastSearchSource } = sState;
+  const { isSearching, isEnrichingExternal, searchResults, resultsVisible, searchQuery, barcodeQuery, selectedFood, lastSearchSource, message: searchMessage } = sState;
   const { setSelectedFood } = sSetters;
   const { handleSearchQueryChange, handleBarcodeQueryChange, handleSearch, handleBarcodeLookup, resetSearchComposer, applyFoodSelection, reopenSearchResults } = sActions;
 
@@ -1016,15 +1010,31 @@ export function NutritionScreen() {
   const planDelta = displayedMealPlan ? roundValue(displayedMealPlan.totalCalories - requestedPlanCalories) : 0;
   const searchCatalogBadge =
     storageMode === "database"
-      ? "Catalogo persistente"
+      ? "Catalogo sincronizado"
       : storageMode === "checking"
-        ? "Verificando base de dados"
-        : "Base de dados inativa";
+        ? "Preparando catalogo"
+        : "Catalogo da sessao";
   const searchSourceLabel = formatSearchSourceLabel(lastSearchSource);
   const resultState =
     selectedFood && !resultsVisible
-      ? { title: "Resultados recolhidos", text: "Selecao pronta. Limpe ou faca outra busca para trocar o alimento." }
-      : { title: "Nenhum alimento listado", text: isSearching ? "Consultando fontes de alimentos..." : "Faca uma busca para ver resultados aqui." };
+      ? {
+          title: "Selecao pronta",
+          text:
+            searchMessage ??
+            "O alimento ja esta separado para registro. Use o compositor ou troque a selecao quando quiser.",
+        }
+      : {
+          title:
+            lastSearchSource === "none"
+              ? "Nada encontrado"
+              : isSearching
+                ? "Procurando no catalogo"
+                : "Busque um alimento",
+          text:
+            isSearching || isEnrichingExternal
+              ? "Estou procurando no catalogo e preparando novas referencias quando fizer sentido."
+              : searchMessage ?? "Digite um nome, use um codigo de barras ou crie um alimento manual para comecar.",
+        };
   const planningTabs = (
     <div className="flex flex-wrap gap-[0.55rem]">
       {PLANNING_TABS.map((tab) => (
@@ -1098,11 +1108,13 @@ export function NutritionScreen() {
       onSearchQueryChange={handleSearchQueryChange}
       onSearch={() => void handleSearch()}
       isSearching={isSearching}
+      isEnrichingExternal={isEnrichingExternal}
       barcodeQuery={barcodeQuery}
       onBarcodeQueryChange={handleBarcodeQueryChange}
       onBarcodeLookup={(value) => void handleBarcodeLookup(value)}
       onOpenScanner={() => setScannerOpen(true)}
       searchSourceLabel={searchSourceLabel}
+      searchFeedback={searchMessage}
       resultsVisible={resultsVisible}
       searchResults={searchResults}
       resultState={resultState}

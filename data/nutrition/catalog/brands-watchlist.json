@@ -1,0 +1,128 @@
+[
+  { "brand": "Integralmedica", "aliases": ["integral medica", "integralmédica"] },
+  { "brand": "Max Titanium" },
+  { "brand": "Growth Supplements", "aliases": ["growth"] },
+  { "brand": "Probiotica", "aliases": ["probiótica"] },
+  { "brand": "Darkness", "preferredQueries": ["pre treino", "creatina", "whey protein"] },
+  { "brand": "Essential Nutrition", "aliases": ["essential"] },
+  { "brand": "Dux Nutrition", "aliases": ["dux", "dux nutrition lab"] },
+  { "brand": "Vitafor" },
+  { "brand": "Pura Vida", "aliases": ["puravida"] },
+  { "brand": "Atlhetica Nutrition", "aliases": ["atlhetica", "athletica nutrition"] },
+  { "brand": "New Millen" },
+  { "brand": "Body Action", "aliases": ["bodyaction"] },
+  { "brand": "Nutrata" },
+  { "brand": "Black Skull" },
+  { "brand": "FTW", "aliases": ["fitoway"] },
+  { "brand": "Equaliv" },
+  { "brand": "Nutrify" },
+  { "brand": "Sanavita" },
+  { "brand": "Dark Lab", "aliases": ["darklab"] },
+  { "brand": "Soldier Nutrition", "aliases": ["soldiers nutrition", "soldiers"] },
+  { "brand": "NewNutrition", "aliases": ["new nutrition"] },
+  { "brand": "Iridium Labs" },
+  { "brand": "Leader Nutrition" },
+  { "brand": "Adaptogen Science", "aliases": ["adaptogen"] },
+  { "brand": "Under Labz", "aliases": ["underlabz"] },
+  { "brand": "Profit Labs" },
+  { "brand": "Synthesize" },
+  { "brand": "Shark Pro" },
+  { "brand": "Espartanos" },
+  { "brand": "Bodybuilders" },
+  { "brand": "Brutal Force" },
+  { "brand": "4Plus" },
+  { "brand": "Bionutri" },
+  { "brand": "Farma Forma" },
+  { "brand": "Power Supplements" },
+  { "brand": "Biovera" },
+  { "brand": "MidWay", "aliases": ["mid way"] },
+  { "brand": "DNA Design Nutrition", "aliases": ["dna nutrition"] },
+  { "brand": "Health Time" },
+  { "brand": "Bio Power" },
+  { "brand": "Strong Nutri" },
+  { "brand": "Vortex Nutrition" },
+  { "brand": "Top Way" },
+  { "brand": "Fisionutri" },
+  { "brand": "Nutri Sport" },
+  { "brand": "Gourmet Whey", "preferredQueries": ["whey protein", "barra proteica", "creme proteico"] },
+  { "brand": "X-Pharma", "aliases": ["x pharma"] },
+  { "brand": "Neonutri" },
+  {
+    "brand": "Dr. Peanut",
+    "aliases": ["dr peanut"],
+    "notes": "Especialista em Pasta de Amendoim",
+    "preferredQueries": ["pasta de amendoim", "peanut butter", "creme proteico"]
+  },
+  {
+    "brand": "Best Whey",
+    "notes": "Marca do Grupo ADS",
+    "preferredQueries": ["whey protein", "whey concentrado", "creatina"]
+  },
+  {
+    "brand": "Brain Power",
+    "preferredQueries": ["nootropico", "cafeina", "brain booster"]
+  },
+  {
+    "brand": "Bold Snacks",
+    "notes": "Especialista em Barras de Proteina",
+    "preferredQueries": ["barra proteica", "protein bar", "snack proteico"]
+  },
+  {
+    "brand": "Power One",
+    "notes": "Especialista em Pasta de Amendoim",
+    "preferredQueries": ["pasta de amendoim", "peanut butter", "creme proteico"]
+  },
+  {
+    "brand": "Banana Brasil",
+    "notes": "Especialista em Barras de Cereais e Proteina",
+    "preferredQueries": ["barra proteica", "barra de cereal", "snack proteico"]
+  },
+  {
+    "brand": "La Ganexa",
+    "notes": "Especialista em Pasta de Amendoim",
+    "preferredQueries": ["pasta de amendoim", "peanut butter", "creme proteico"]
+  },
+  {
+    "brand": "Naked Nuts",
+    "notes": "Especialista em Pastas de Castanhas e Amendoim",
+    "preferredQueries": ["pasta de castanha", "pasta de amendoim", "nut butter"]
+  },
+  {
+    "brand": "Vita Power",
+    "notes": "Especialista em Pasta de Amendoim",
+    "preferredQueries": ["pasta de amendoim", "peanut butter", "creme proteico"]
+  },
+  {
+    "brand": "Nutry",
+    "notes": "Especialista em Barras de Cereais",
+    "preferredQueries": ["barra de cereal", "barra proteica", "snack"]
+  },
+  {
+    "brand": "+MU",
+    "aliases": ["mais mu", "muke", "mukebar", "+mu.", "mu"],
+    "notes": "Especialista em Snacks e Shakes",
+    "preferredQueries": ["shake proteico", "whey pronto", "snack proteico"]
+  },
+  {
+    "brand": "NatureBarr",
+    "aliases": ["nature barr"],
+    "notes": "Especialista em Barras de Proteina",
+    "preferredQueries": ["barra proteica", "protein bar", "snack proteico"]
+  },
+  {
+    "brand": "Santa Helena",
+    "notes": "Fabricante da linha de pastas fitness",
+    "preferredQueries": ["pasta de amendoim", "creme proteico", "snack"]
+  },
+  {
+    "brand": "Hart's Natural",
+    "aliases": ["harts natural"],
+    "notes": "Especialista em Barras Naturais e Veganas",
+    "preferredQueries": ["barra natural", "barra vegana", "protein bar"]
+  },
+  {
+    "brand": "Bio2",
+    "notes": "Especialista em Barras e Alimentos Organicos e Naturais",
+    "preferredQueries": ["barra proteica", "barra natural", "snack organico"]
+  }
+]

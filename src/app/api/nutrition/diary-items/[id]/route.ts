@@ -1,6 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { requireNutritionUser } from "@/modules/nutrition/auth/require-user";
-import { listFoods, replaceDiaryItem, removeDiaryItem } from "@/modules/nutrition/repositories/nutrition-store";
+import { findAccessibleFoodById, replaceDiaryItem, removeDiaryItem } from "@/modules/nutrition/repositories/nutrition-store";
 import { toNutritionRouteErrorResponse } from "@/modules/nutrition/http/route-error";
 import { createDiaryItemSnapshot } from "@/modules/nutrition/services/daily-calories.service";
 import { updateDiaryItemSchema } from "@/modules/nutrition/validators";
@@ -12,8 +12,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const { user } = await requireNutritionUser(request);
     const { id } = await context.params;
     const payload = updateDiaryItemSchema.parse({ id, ...(await request.json()) });
-    const foods = await listFoods();
-    const food = foods.find((item) => item.id === payload.foodId);
+    const food = await findAccessibleFoodById(user.uid, payload.foodId);
 
     if (!food) {
       return NextResponse.json({ error: "Food not found" }, { status: 404 });

@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/nutrition/foods/enrichment?limit=5",
+      "schedule": "13 5 * * *"
+    }
+  ]
+}

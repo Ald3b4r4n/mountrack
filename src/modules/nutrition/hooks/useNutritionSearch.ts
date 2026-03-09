@@ -1,10 +1,23 @@
 import type { User } from "firebase/auth";
-import { useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { authorizedNutritionFetch, getNutritionErrorMessage } from "@/modules/nutrition/client";
 import { resolveUiStorageMode, type NutritionUiStorageMode } from "./useNutritionDashboard";
 import type { FoodItem } from "@/modules/nutrition/domain/types";
 
-export type NutritionSearchSource = "catalog" | "external" | "fallback" | "none" | "openfoodfacts" | null;
+export type NutritionSearchSource =
+  | "catalog"
+  | "custom"
+  | "external"
+  | "fallback"
+  | "none"
+  | "openfoodfacts"
+  | null;
+
+type NutritionSearchPayload = {
+  results?: FoodItem[];
+  source?: NutritionSearchSource;
+  externalPending?: boolean;
+};
 
 type NutritionSearchUser = User | { uid: string; getIdToken?: () => Promise<string>; devBypass?: boolean } | null;
 
@@ -16,8 +29,15 @@ export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowse
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
   const [resultsVisible, setResultsVisible] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [isEnrichingExternal, setIsEnrichingExternal] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [storageMode, setStorageMode] = useState<NutritionUiStorageMode>("checking");
+  const searchRequestIdRef = useRef(0);
+  const selectedFoodRef = useRef<FoodItem | null>(null);
+
+  useEffect(() => {
+    selectedFoodRef.current = selectedFood;
+  }, [selectedFood]);
 
   const resolveRequestError = useCallback(async (response: Response, fallbackMessage: string) => {
     const nextMessage = await getNutritionErrorMessage(response, fallbackMessage);
@@ -38,6 +58,7 @@ export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowse
   function resetSearchComposer(clearInputs = false) {
     clearSearchResults();
     clearSelectedFood();
+    setIsEnrichingExternal(false);
     if (clearInputs) {
       setSearchQuery("");
       setBarcodeQuery("");
@@ -45,6 +66,8 @@ export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowse
   }
 
   function handleSearchQueryChange(value: string) {
+    searchRequestIdRef.current += 1;
+    setIsEnrichingExternal(false);
     setSearchQuery(value);
     if (searchResults.length || selectedFood) {
       clearSearchResults();
@@ -54,12 +77,35 @@ export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowse
   }
 
   function handleBarcodeQueryChange(value: string) {
+    searchRequestIdRef.current += 1;
+    setIsEnrichingExternal(false);
     setBarcodeQuery(value);
     if (searchResults.length || selectedFood) {
       clearSearchResults();
       clearSelectedFood();
     }
     setMessage(null);
+  }
+
+  async function requestSearch(query: string): Promise<Response> {
+    return authorizedNutritionFetch(
+      activeUser as Exclude<NutritionSearchUser, null>,
+      `/api/nutrition/foods/search?q=${encodeURIComponent(query)}`,
+    );
+  }
+
+  function applySearchPayload(payload: NutritionSearchPayload) {
+    const results = payload.results ?? [];
+    const nextSource = payload.source ?? (results.length ? "catalog" : "none");
+
+    setSearchResults(results);
+    setLastSearchSource(nextSource);
+
+    if (!selectedFoodRef.current) {
+      setResultsVisible(results.length > 0);
+    }
+
+    return { results, nextSource };
   }
 
   async function handleSearch() {
@@ -71,44 +117,58 @@ export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowse
       return;
     }
 
+    const requestId = searchRequestIdRef.current + 1;
+    searchRequestIdRef.current = requestId;
     setIsSearching(true);
+    setIsEnrichingExternal(false);
     setMessage(null);
     resetSearchComposer();
 
     try {
-      const response = await authorizedNutritionFetch(activeUser, `/api/nutrition/foods/search?q=${encodeURIComponent(query)}`);
-      if (!response.ok) {
-        await resolveRequestError(response, "Nao foi possivel buscar alimentos agora.");
+      const response = await requestSearch(query);
+      if (searchRequestIdRef.current !== requestId) {
         return;
       }
-      // Re-export resolveUiStorageMode logic in Dashboard to use here or just assume base validation
-      setStorageMode(resolveUiStorageMode(response, canUseBrowserPersistence));
-      const payload = (await response.json()) as { results?: FoodItem[]; source?: NutritionSearchSource };
-      const results = payload.results ?? [];
-      const nextSource = payload.source ?? (results.length ? "catalog" : "none");
 
-      setSearchResults(results);
-      setLastSearchSource(nextSource);
-      setResultsVisible(results.length > 0);
+      if (!response.ok) {
+        await resolveRequestError(response, "Nao consegui buscar alimentos agora. Tente novamente em instantes.");
+        return;
+      }
+
+      setStorageMode(resolveUiStorageMode(response, canUseBrowserPersistence));
+      const payload = (await response.json()) as NutritionSearchPayload;
+      const { results } = applySearchPayload(payload);
 
       if (results.length === 1) {
         setSelectedFood(results[0]);
-        setMessage(`${results[0].displayName ?? results[0].name} pronto para lancamento.`);
+        setMessage(`${results[0].displayName ?? results[0].name} pronto para registro.`);
+      } else if (payload.externalPending) {
+        setIsEnrichingExternal(true);
+        if (!results.length) {
+          setMessage("Ainda nao achei esse item no catalogo. Vou complementar as referencias em segundo plano.");
+        } else {
+          setMessage("Resultados prontos. Se faltar algo, novas referencias entram em segundo plano.");
+        }
       } else if (!results.length) {
-        setMessage("Nenhum alimento encontrado para essa busca.");
+        setMessage("Nao encontrei esse alimento por enquanto.");
       }
     } catch {
-      setMessage((current) => current ?? "Nao foi possivel buscar alimentos agora.");
+      setMessage((current) => current ?? "Nao consegui buscar alimentos agora. Tente novamente em instantes.");
     } finally {
-      setIsSearching(false);
+      if (searchRequestIdRef.current === requestId) {
+        setIsSearching(false);
+      }
     }
   }
 
   async function handleBarcodeLookup(code: string) {
     if (!activeUser || !code.trim()) return;
 
+    const requestId = searchRequestIdRef.current + 1;
+    searchRequestIdRef.current = requestId;
     setBarcodeQuery(code);
     setIsSearching(true);
+    setIsEnrichingExternal(false);
     setMessage(null);
     resetSearchComposer();
 
@@ -118,7 +178,7 @@ export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowse
         `/api/nutrition/foods/barcode/${encodeURIComponent(code)}`,
       );
       if (!response.ok) {
-        await resolveRequestError(response, "Nao foi possivel consultar esse codigo de barras.");
+        await resolveRequestError(response, "Nao consegui consultar esse codigo de barras agora.");
         return;
       }
       setStorageMode(resolveUiStorageMode(response, canUseBrowserPersistence));
@@ -129,22 +189,24 @@ export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowse
         setSearchResults([foundItem]);
         setLastSearchSource(payload.source ?? "openfoodfacts");
         setSelectedFood(foundItem);
-        setMessage(`Produto encontrado: ${foundItem.displayName ?? foundItem.name}`);
+        setMessage(`${foundItem.displayName ?? foundItem.name} encontrado pelo codigo de barras.`);
       } else {
         setLastSearchSource(payload.source ?? "none");
-        setMessage("Nenhum item encontrado para esse codigo de barras.");
+        setMessage("Nao encontrei esse codigo de barras no catalogo.");
       }
     } catch {
-      setMessage((current) => current ?? "Nao foi possivel consultar esse codigo de barras.");
+      setMessage((current) => current ?? "Nao consegui consultar esse codigo de barras agora.");
     } finally {
-      setIsSearching(false);
+      if (searchRequestIdRef.current === requestId) {
+        setIsSearching(false);
+      }
     }
   }
 
   function applyFoodSelection(food: FoodItem) {
     setSelectedFood(food);
     setResultsVisible(false);
-    setMessage(`${food.displayName ?? food.name} pronto para lancamento.`);
+    setMessage(`${food.displayName ?? food.name} pronto para registro.`);
   }
 
   function reopenSearchResults() {
@@ -160,6 +222,7 @@ export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowse
       selectedFood,
       resultsVisible,
       isSearching,
+      isEnrichingExternal,
       message,
       storageMode,
     },

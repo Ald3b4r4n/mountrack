@@ -13,14 +13,14 @@ function toScannerErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error ?? "");
 
   if (/notallowed|permission/i.test(message)) {
-    return "Permissao da camera negada. Libere o acesso ou use a busca manual por codigo de barras.";
+    return "Permissao da camera negada. Libere o acesso ou digite o codigo manualmente.";
   }
 
   if (/notfound|device|camera/i.test(message)) {
     return "Nenhuma camera compativel foi encontrada neste dispositivo.";
   }
 
-  return "Nao foi possivel acessar a camera. Use a busca manual por codigo de barras.";
+  return "Nao foi possivel acessar a camera. Digite o codigo manualmente.";
 }
 
 export function BarcodeScannerDialog({
@@ -194,11 +194,21 @@ export function BarcodeScannerDialog({
         tabIndex={-1}
         style={{ width: "100%", maxWidth: "32rem", padding: "1.25rem" }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "1rem",
+            marginBottom: "1rem",
+          }}
+        >
           <div>
-            <h3 id={titleId} style={{ fontSize: "1.1rem", fontWeight: 600 }}>Leitor de código de barras</h3>
+            <h3 id={titleId} style={{ fontSize: "1.1rem", fontWeight: 600 }}>
+              Leitor de codigo de barras
+            </h3>
             <p id={descriptionId} style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-              Aponte a camera para o EAN, GTIN ou QR do alimento.
+              Aponte a camera para o EAN, GTIN ou QR da embalagem.
             </p>
           </div>
           <button
@@ -223,11 +233,13 @@ export function BarcodeScannerDialog({
         />
 
         <p style={{ marginTop: "0.75rem", color: "var(--text-secondary)", fontSize: "0.88rem" }}>
-          Formatos ativos: EAN-13, EAN-8, UPC, CODE-128 e QR Code.
+          Formatos aceitos: EAN-13, EAN-8, UPC, CODE-128 e QR Code.
         </p>
 
         {error ? (
-          <p role="status" style={{ marginTop: "0.5rem", color: "#fca5a5", fontSize: "0.9rem" }}>{error}</p>
+          <p role="status" style={{ marginTop: "0.5rem", color: "#fca5a5", fontSize: "0.9rem" }}>
+            {error}
+          </p>
         ) : null}
       </div>
     </div>

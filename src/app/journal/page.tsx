@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import PaginationControls from '@/components/PaginationControls';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 
@@ -16,6 +17,8 @@ interface LogData {
   notes?: string;
 }
 
+const JOURNAL_PAGE_SIZE = 6;
+
 /**
  * Página do diário com os registros que possuem anotações em formato de timeline.
  */
@@ -23,6 +26,7 @@ export default function Journal() {
   const { user } = useAuth();
   const [logs, setLogs] = useState<LogData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     async function fetchLogs() {
@@ -51,6 +55,20 @@ export default function Journal() {
 
     void fetchLogs();
   }, [user]);
+
+  const totalPages = Math.max(1, Math.ceil(logs.length / JOURNAL_PAGE_SIZE));
+  const paginatedLogs = logs.slice((page - 1) * JOURNAL_PAGE_SIZE, page * JOURNAL_PAGE_SIZE);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
+  useEffect(() => {
+    if (page === 1) return;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [page]);
 
   return (
     <ProtectedRoute>
@@ -87,7 +105,7 @@ export default function Journal() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'relative' }}>
             <div style={{ position: 'absolute', top: '1rem', bottom: '1rem', left: '1.5rem', width: '2px', background: 'var(--border-glass)', zIndex: 0, opacity: 0.5, display: 'none' }}></div>
 
-            {logs.map((log, index) => (
+            {paginatedLogs.map((log, index) => (
               <article
                 key={log.id}
                 className="glass-panel anim-enter"
@@ -141,6 +159,14 @@ export default function Journal() {
                 </div>
               </article>
             ))}
+            <PaginationControls
+              page={page}
+              pageSize={JOURNAL_PAGE_SIZE}
+              totalItems={logs.length}
+              totalPages={totalPages}
+              itemLabel="relatos"
+              onPageChange={setPage}
+            />
           </div>
         )}
       </main>

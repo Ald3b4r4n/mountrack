@@ -1,8 +1,13 @@
 import { Pool } from "pg";
+import brandsWatchlist from "../../../../data/nutrition/catalog/brands-watchlist.json";
+import { listPublicCatalogFoods } from "@/modules/nutrition/catalog/load-public-catalog";
+import type { CatalogBrandWatchlistEntry } from "@/modules/nutrition/catalog/public-catalog-types";
 import { INTERNAL_FOODS } from "@/modules/nutrition/data/internal-foods";
+import { SUPPLEMENT_FOODS } from "@/modules/nutrition/data/supplement-foods";
 import { TACO_FOODS } from "@/modules/nutrition/data/taco-foods";
 import type {
   DiaryItemSnapshot,
+  FoodBaseUnit,
   FoodItem,
   MealDefinition,
   MealPlan,
@@ -10,11 +15,20 @@ import type {
 } from "@/modules/nutrition/domain/types";
 import { getDefaultMealDefinitions, getMealLabel } from "@/modules/nutrition/meal-helpers";
 import {
+  customFoodKey,
   diaryKey,
   getNutritionMemoryStore,
   mealPlanKey,
   type DiaryRecord,
 } from "@/modules/nutrition/repositories/memory-store";
+import {
+  buildMissingFoodLookupId,
+  MISSING_FOOD_LOOKUP_MAX_ATTEMPTS,
+  MISSING_FOOD_LOOKUP_PROCESSING_TIMEOUT_MS,
+  type MissingFoodLookupInput,
+  type MissingFoodLookupRecord,
+  type MissingFoodLookupStatus,
+} from "@/modules/nutrition/repositories/missing-food-lookup";
 
 const BRAND_WATCHLIST = [
   "Growth Supplements",
@@ -40,6 +54,10 @@ const BRAND_WATCHLIST = [
   "Darkness",
   "Bodyaction",
 ];
+
+const RUNTIME_BRAND_WATCHLIST = ((brandsWatchlist as CatalogBrandWatchlistEntry[]).map((entry) => entry.brand).length
+  ? (brandsWatchlist as CatalogBrandWatchlistEntry[]).map((entry) => entry.brand)
+  : BRAND_WATCHLIST);
 
 const globalPgState = globalThis as typeof globalThis & {
   __nutritionPool__?: Pool;
@@ -102,6 +120,10 @@ create table if not exists nutrition_missing_food_queue (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+alter table nutrition_missing_food_queue add column if not exists attempts integer not null default 0;
+alter table nutrition_missing_food_queue add column if not exists processing_started_at timestamptz;
+alter table nutrition_missing_food_queue add column if not exists processed_at timestamptz;
+alter table nutrition_missing_food_queue add column if not exists last_error text;
 create index if not exists nutrition_missing_food_queue_status_idx on nutrition_missing_food_queue (status, created_at desc);
 
 create table if not exists nutrition_goals (
@@ -140,6 +162,32 @@ create table if not exists nutrition_meal_plans (
   payload jsonb not null,
   updated_at timestamptz not null default now()
 );
+
+create table if not exists nutrition_user_foods_custom (
+  id text primary key,
+  user_id text not null,
+  name text not null,
+  normalized_name text not null,
+  brand text,
+  barcode text,
+  base_unit text not null default 'g',
+  serving_description text,
+  serving_grams numeric,
+  unit_grams numeric,
+  calories_per100 numeric not null default 0,
+  protein_per100 numeric not null default 0,
+  carbs_per100 numeric not null default 0,
+  fat_per100 numeric not null default 0,
+  fiber_per100 numeric not null default 0,
+  sodium_per100 numeric not null default 0,
+  confidence_score numeric not null default 3,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists nutrition_user_foods_custom_user_name_idx
+  on nutrition_user_foods_custom (user_id, normalized_name);
+create index if not exists nutrition_user_foods_custom_user_barcode_idx
+  on nutrition_user_foods_custom (user_id, barcode);
 `;
 
 interface ListFoodsOptions {
@@ -151,12 +199,56 @@ interface ListDiaryHistoryOptions {
   offset?: number;
 }
 
+interface CustomFoodRow {
+  id: string;
+  user_id: string;
+  name: string;
+  brand: string | null;
+  barcode: string | null;
+  base_unit: string;
+  serving_description: string | null;
+  serving_grams: string | null;
+  unit_grams: string | null;
+  calories_per100: string;
+  protein_per100: string;
+  carbs_per100: string;
+  fat_per100: string;
+  fiber_per100: string;
+  sodium_per100: string;
+  confidence_score: string;
+}
+
+interface LegacyCustomFoodRow {
+  id: string;
+  source_id: string;
+  name: string;
+  display_name: string | null;
+  brand: string | null;
+  barcode: string | null;
+  payload: FoodItem | null;
+}
+
 interface DiaryListResult {
   diaries: DiaryRecord[];
   total: number;
 }
 
+interface MissingFoodQueueRow {
+  id: string;
+  query: string | null;
+  barcode: string | null;
+  reason: string;
+  status: MissingFoodLookupStatus;
+  attempts: number;
+  created_at: string;
+  updated_at: string;
+  processing_started_at: string | null;
+  processed_at: string | null;
+  last_error: string | null;
+}
+
 export type NutritionStorageResponse = "database" | "memory";
+type QueryExecutor = Pick<Pool, "query">;
 
 function getDatabaseUrl(): string {
   return (
@@ -182,6 +274,215 @@ export function getNutritionStorageHeaders(): HeadersInit {
   return {
     "x-nutrition-storage": getNutritionStorageResponse(),
   };
+}
+
+function normalizeFoodLookupValue(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[^\w\s]/g, " ")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function numberOrUndefined(value: string | null): number | undefined {
+  if (value == null || value === "") {
+    return undefined;
+  }
+
+  return Number(value);
+}
+
+function mapMissingFoodQueueRow(row: MissingFoodQueueRow): MissingFoodLookupRecord {
+  return {
+    id: row.id,
+    query: row.query ?? undefined,
+    barcode: row.barcode ?? undefined,
+    reason: row.reason,
+    status: row.status,
+    attempts: Number(row.attempts ?? 0),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    processingStartedAt: row.processing_started_at,
+    processedAt: row.processed_at,
+    lastError: row.last_error,
+  };
+}
+
+function mapCustomFoodRow(row: CustomFoodRow): FoodItem {
+  return {
+    id: row.id,
+    source: "custom",
+    name: row.name,
+    displayName: row.name,
+    brand: row.brand ?? undefined,
+    barcode: row.barcode ?? undefined,
+    baseUnit: (row.base_unit || "g") as FoodBaseUnit,
+    servingDescription: row.serving_description ?? undefined,
+    servingGrams: numberOrUndefined(row.serving_grams),
+    unitGrams: numberOrUndefined(row.unit_grams),
+    caloriesPer100: Number(row.calories_per100),
+    proteinPer100: Number(row.protein_per100),
+    carbsPer100: Number(row.carbs_per100),
+    fatPer100: Number(row.fat_per100),
+    fiberPer100: Number(row.fiber_per100),
+    sodiumPer100: Number(row.sodium_per100),
+    confidenceScore: Number(row.confidence_score),
+    mealCategories: [],
+  };
+}
+
+function sanitizeCustomFood(food: FoodItem): FoodItem {
+  return {
+    ...food,
+    source: "custom",
+    displayName: food.displayName ?? food.name,
+    baseUnit: food.baseUnit ?? "g",
+    confidenceScore: food.confidenceScore ?? 3,
+    mealCategories: food.mealCategories ?? [],
+  };
+}
+
+function buildPersistedCustomFoodValues(userId: string, food: FoodItem): Array<string | number | null> {
+  const customFood = sanitizeCustomFood(food);
+  const displayName = customFood.displayName ?? customFood.name;
+
+  return [
+    customFood.id,
+    userId,
+    displayName,
+    normalizeFoodLookupValue(displayName),
+    customFood.brand ?? null,
+    customFood.barcode ?? null,
+    customFood.baseUnit,
+    customFood.servingDescription ?? null,
+    customFood.servingGrams ?? null,
+    customFood.unitGrams ?? null,
+    customFood.caloriesPer100 ?? 0,
+    customFood.proteinPer100 ?? 0,
+    customFood.carbsPer100 ?? 0,
+    customFood.fatPer100 ?? 0,
+    customFood.fiberPer100 ?? 0,
+    customFood.sodiumPer100 ?? 0,
+    customFood.confidenceScore,
+  ];
+}
+
+async function persistCustomFood(
+  executor: QueryExecutor,
+  userId: string,
+  food: FoodItem,
+  preserveExisting = false,
+): Promise<FoodItem> {
+  const customFood = sanitizeCustomFood(food);
+  await executor.query(
+    `
+    insert into nutrition_user_foods_custom (
+      id,
+      user_id,
+      name,
+      normalized_name,
+      brand,
+      barcode,
+      base_unit,
+      serving_description,
+      serving_grams,
+      unit_grams,
+      calories_per100,
+      protein_per100,
+      carbs_per100,
+      fat_per100,
+      fiber_per100,
+      sodium_per100,
+      confidence_score
+    )
+    values (
+      $1, $2, $3, $4, $5, $6, $7, $8,
+      $9, $10, $11, $12, $13, $14, $15, $16, $17
+    )
+    on conflict (id) do ${
+      preserveExisting
+        ? "nothing"
+        : `update set
+      name = excluded.name,
+      normalized_name = excluded.normalized_name,
+      brand = excluded.brand,
+      barcode = excluded.barcode,
+      base_unit = excluded.base_unit,
+      serving_description = excluded.serving_description,
+      serving_grams = excluded.serving_grams,
+      unit_grams = excluded.unit_grams,
+      calories_per100 = excluded.calories_per100,
+      protein_per100 = excluded.protein_per100,
+      carbs_per100 = excluded.carbs_per100,
+      fat_per100 = excluded.fat_per100,
+      fiber_per100 = excluded.fiber_per100,
+      sodium_per100 = excluded.sodium_per100,
+      confidence_score = excluded.confidence_score,
+      updated_at = now()`
+    }
+    `,
+    buildPersistedCustomFoodValues(userId, customFood),
+  );
+
+  return customFood;
+}
+
+function mapLegacyCustomFoodRow(row: LegacyCustomFoodRow): { userId: string; food: FoodItem } {
+  const payload = row.payload ? sanitizeCustomFood(row.payload) : null;
+  const fallbackName = row.display_name ?? row.name ?? payload?.displayName ?? payload?.name ?? row.id;
+
+  return {
+    userId: row.source_id,
+    food: sanitizeCustomFood({
+      ...(payload ?? {
+        id: row.id,
+        source: "custom",
+        name: fallbackName,
+        displayName: fallbackName,
+        baseUnit: "g",
+        confidenceScore: 3,
+        mealCategories: [],
+      }),
+      id: row.id,
+      source: "custom",
+      sourceId: row.source_id,
+      name: row.name ?? payload?.name ?? fallbackName,
+      displayName: fallbackName,
+      brand: row.brand ?? payload?.brand,
+      barcode: row.barcode ?? payload?.barcode,
+    }),
+  };
+}
+
+function migrateLegacyCustomFoodsInMemory(): void {
+  const store = getNutritionMemoryStore();
+  for (const [key, food] of Array.from(store.cachedFoods.entries())) {
+    if (food.source !== "custom" || !food.sourceId) {
+      continue;
+    }
+
+    store.userCustomFoods.set(customFoodKey(food.sourceId, food.id), sanitizeCustomFood(food));
+    store.cachedFoods.delete(key);
+  }
+}
+
+function dedupeFoodsById(foods: FoodItem[]): FoodItem[] {
+  const seen = new Set<string>();
+  return foods.filter((food) => {
+    if (seen.has(food.id)) {
+      return false;
+    }
+    seen.add(food.id);
+    return true;
+  });
+}
+
+async function listRuntimeCatalogFoods(includeInternal: boolean): Promise<FoodItem[]> {
+  const publicCatalogFoods = await listPublicCatalogFoods();
+  const curatedFoods = includeInternal ? [...INTERNAL_FOODS, ...SUPPLEMENT_FOODS, ...TACO_FOODS] : [];
+  return dedupeFoodsById([...publicCatalogFoods, ...curatedFoods]);
 }
 
 function cloneMealDefinitions(mealDefinitions: MealDefinition[] | undefined): MealDefinition[] {
@@ -249,7 +550,7 @@ async function seedBrandWatchlist(): Promise<void> {
   const client = await getPool().connect();
   try {
     await client.query("begin");
-    for (const brand of BRAND_WATCHLIST) {
+    for (const brand of RUNTIME_BRAND_WATCHLIST) {
       await client.query(
         `
         insert into nutrition_brand_watchlist (brand)
@@ -268,36 +569,77 @@ async function seedBrandWatchlist(): Promise<void> {
   }
 }
 
+async function backfillLegacyCustomFoods(): Promise<void> {
+  if (!hasDatabaseUrl()) return;
+
+  const legacyRows = await getPool().query<LegacyCustomFoodRow>(
+    `
+    select
+      id,
+      source_id,
+      name,
+      display_name,
+      brand,
+      barcode,
+      payload
+    from nutrition_foods
+    where source = 'custom' and source_id is not null
+    `,
+  );
+
+  if (!legacyRows.rows.length) {
+    return;
+  }
+
+  const client = await getPool().connect();
+  try {
+    await client.query("begin");
+    for (const row of legacyRows.rows) {
+      const { userId, food } = mapLegacyCustomFoodRow(row);
+      await persistCustomFood(client, userId, food, true);
+    }
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function ensureSchema(): Promise<void> {
   if (!hasDatabaseUrl()) return;
   if (!globalPgState.__nutritionSchemaPromise__) {
     globalPgState.__nutritionSchemaPromise__ = getPool()
       .query(SCHEMA_SQL)
       .then(() => seedBrandWatchlist())
+      .then(() => backfillLegacyCustomFoods())
       .then(() => undefined);
   }
   await globalPgState.__nutritionSchemaPromise__;
 }
 
 export async function listFoods({ includeInternal = true }: ListFoodsOptions = {}): Promise<FoodItem[]> {
+  const runtimeCatalogFoods = await listRuntimeCatalogFoods(includeInternal);
+
   if (!hasDatabaseUrl()) {
+    migrateLegacyCustomFoodsInMemory();
     const store = getNutritionMemoryStore();
-    const cachedFoods = Array.from(store.cachedFoods.values());
-    return includeInternal ? [...cachedFoods, ...INTERNAL_FOODS, ...TACO_FOODS] : cachedFoods;
+    const cachedFoods = Array.from(store.cachedFoods.values()).filter((food) => food.source !== "custom");
+    return dedupeFoodsById([...cachedFoods, ...runtimeCatalogFoods]);
   }
 
   await ensureSchema();
-  const result = await getPool().query<{ payload: FoodItem }>("select payload from nutrition_foods");
-  const storedFoods = result.rows.map((row: { payload: FoodItem }) => row.payload);
-  return includeInternal ? [...storedFoods, ...INTERNAL_FOODS, ...TACO_FOODS] : storedFoods;
+  return runtimeCatalogFoods;
 }
 
 export async function upsertFoods(foods: FoodItem[]): Promise<void> {
-  if (!foods.length) return;
+  const publicFoods = foods.filter((food) => food.source !== "custom");
+  if (!publicFoods.length) return;
 
   if (!hasDatabaseUrl()) {
     const store = getNutritionMemoryStore();
-    for (const food of foods) {
+    for (const food of publicFoods) {
       store.cachedFoods.set(food.id, food);
     }
     return;
@@ -307,7 +649,7 @@ export async function upsertFoods(foods: FoodItem[]): Promise<void> {
   const client = await getPool().connect();
   try {
     await client.query("begin");
-    for (const food of foods) {
+    for (const food of publicFoods) {
       const sourceId = food.sourceId ?? food.id;
       await client.query(
         `
@@ -380,19 +722,315 @@ export async function upsertFoods(foods: FoodItem[]): Promise<void> {
   }
 }
 
-export async function queueMissingFoodLookup({ query, barcode, reason }: { query?: string; barcode?: string; reason: string }): Promise<void> {
+export async function listUserCustomFoods(userId: string): Promise<FoodItem[]> {
   if (!hasDatabaseUrl()) {
+    migrateLegacyCustomFoodsInMemory();
+    const store = getNutritionMemoryStore();
+    return Array.from(store.userCustomFoods.entries())
+      .filter(([key]) => key.startsWith(`custom-food:${userId}:`))
+      .map(([, food]) => sanitizeCustomFood(food));
+  }
+
+  await ensureSchema();
+  const result = await getPool().query<CustomFoodRow>(
+    `
+    select
+      id,
+      user_id,
+      name,
+      brand,
+      barcode,
+      base_unit,
+      serving_description,
+      serving_grams::text,
+      unit_grams::text,
+      calories_per100::text,
+      protein_per100::text,
+      carbs_per100::text,
+      fat_per100::text,
+      fiber_per100::text,
+      sodium_per100::text,
+      confidence_score::text
+    from nutrition_user_foods_custom
+    where user_id = $1
+    order by updated_at desc, name asc
+    `,
+    [userId],
+  );
+
+  return result.rows.map((row) => mapCustomFoodRow(row));
+}
+
+export async function listAccessibleFoods(
+  userId: string,
+  { includeInternal = true }: ListFoodsOptions = {},
+): Promise<FoodItem[]> {
+  const [publicFoods, customFoods] = await Promise.all([
+    listFoods({ includeInternal }),
+    listUserCustomFoods(userId),
+  ]);
+
+  return dedupeFoodsById([...customFoods, ...publicFoods]);
+}
+
+export async function findAccessibleFoodById(
+  userId: string,
+  foodId: string,
+  { includeInternal = true }: ListFoodsOptions = {},
+): Promise<FoodItem | null> {
+  const foods = await listAccessibleFoods(userId, { includeInternal });
+  return foods.find((food) => food.id === foodId) ?? null;
+}
+
+export async function saveUserCustomFood(userId: string, food: FoodItem): Promise<FoodItem> {
+  const customFood = sanitizeCustomFood(food);
+
+  if (!hasDatabaseUrl()) {
+    migrateLegacyCustomFoodsInMemory();
+    const store = getNutritionMemoryStore();
+    store.userCustomFoods.set(customFoodKey(userId, customFood.id), customFood);
+    store.cachedFoods.delete(customFood.id);
+    return customFood;
+  }
+
+  await ensureSchema();
+  return persistCustomFood(getPool(), userId, customFood);
+}
+
+export async function queueMissingFoodLookup({
+  query,
+  barcode,
+  reason,
+}: MissingFoodLookupInput): Promise<MissingFoodLookupRecord> {
+  const id = buildMissingFoodLookupId({ query, barcode });
+  const now = new Date().toISOString();
+
+  if (!hasDatabaseUrl()) {
+    const store = getNutritionMemoryStore();
+    const existingLookup = store.missingFoodLookups.get(id);
+    const nextLookup: MissingFoodLookupRecord = {
+      id,
+      query: query ?? existingLookup?.query,
+      barcode: barcode ?? existingLookup?.barcode,
+      reason,
+      status: "pending",
+      attempts: existingLookup?.attempts ?? 0,
+      createdAt: existingLookup?.createdAt ?? now,
+      updatedAt: now,
+      processingStartedAt: null,
+      processedAt: null,
+      lastError: null,
+    };
+
+    store.missingFoodLookups.set(id, nextLookup);
+    return nextLookup;
+  }
+
+  await ensureSchema();
+  const result = await getPool().query<MissingFoodQueueRow>(
+    `
+    insert into nutrition_missing_food_queue (
+      id,
+      query,
+      barcode,
+      reason,
+      status,
+      processed_at,
+      last_error
+    )
+    values ($1, $2, $3, $4, 'pending', null, null)
+    on conflict (id) do update set
+      query = coalesce(excluded.query, nutrition_missing_food_queue.query),
+      barcode = coalesce(excluded.barcode, nutrition_missing_food_queue.barcode),
+      reason = excluded.reason,
+      status = 'pending',
+      processed_at = null,
+      last_error = null,
+      updated_at = now()
+    returning
+      id,
+      query,
+      barcode,
+      reason,
+      status,
+      attempts,
+      created_at::text,
+      updated_at::text,
+      processing_started_at::text,
+      processed_at::text,
+      last_error
+    `,
+    [id, query ?? null, barcode ?? null, reason],
+  );
+
+  return mapMissingFoodQueueRow(result.rows[0]);
+}
+
+export async function claimMissingFoodLookups(limit = 5): Promise<MissingFoodLookupRecord[]> {
+  const normalizedLimit = Math.max(1, Math.min(25, Math.trunc(limit || 1)));
+
+  if (!hasDatabaseUrl()) {
+    const store = getNutritionMemoryStore();
+    const now = new Date().toISOString();
+    const staleThreshold = Date.now() - MISSING_FOOD_LOOKUP_PROCESSING_TIMEOUT_MS;
+    const pendingLookups = Array.from(store.missingFoodLookups.values())
+      .filter((lookup) => {
+        if (lookup.attempts >= MISSING_FOOD_LOOKUP_MAX_ATTEMPTS) {
+          return false;
+        }
+
+        if (lookup.status === "pending") {
+          return true;
+        }
+
+        if (lookup.status !== "processing" || !lookup.processingStartedAt) {
+          return false;
+        }
+
+        return Date.parse(lookup.processingStartedAt) <= staleThreshold;
+      })
+      .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
+      .slice(0, normalizedLimit)
+      .map((lookup) => ({
+        ...lookup,
+        status: "processing" as const,
+        attempts: lookup.attempts + 1,
+        updatedAt: now,
+        processingStartedAt: now,
+        lastError: null,
+      }));
+
+    for (const lookup of pendingLookups) {
+      store.missingFoodLookups.set(lookup.id, lookup);
+    }
+
+    return pendingLookups;
+  }
+
+  await ensureSchema();
+  const result = await getPool().query<MissingFoodQueueRow>(
+    `
+    with next_lookups as (
+      select id
+      from nutrition_missing_food_queue
+      where
+        attempts < $2
+        and (
+          status = 'pending'
+          or (
+            status = 'processing'
+            and processing_started_at is not null
+            and processing_started_at < now() - ($3 * interval '1 millisecond')
+          )
+        )
+      order by created_at asc
+      limit $1
+      for update skip locked
+    )
+    update nutrition_missing_food_queue as queue
+    set
+      status = 'processing',
+      attempts = queue.attempts + 1,
+      processing_started_at = now(),
+      processed_at = null,
+      updated_at = now(),
+      last_error = null
+    from next_lookups
+    where queue.id = next_lookups.id
+    returning
+      queue.id,
+      queue.query,
+      queue.barcode,
+      queue.reason,
+      queue.status,
+      queue.attempts,
+      queue.created_at::text,
+      queue.updated_at::text,
+      queue.processing_started_at::text,
+      queue.processed_at::text,
+      queue.last_error
+    `,
+    [normalizedLimit, MISSING_FOOD_LOOKUP_MAX_ATTEMPTS, MISSING_FOOD_LOOKUP_PROCESSING_TIMEOUT_MS],
+  );
+
+  return result.rows.map((row) => mapMissingFoodQueueRow(row));
+}
+
+export async function completeMissingFoodLookup(
+  id: string,
+  status: Extract<MissingFoodLookupStatus, "completed" | "failed" | "no_match">,
+  lastError?: string | null,
+): Promise<void> {
+  const now = new Date().toISOString();
+
+  if (!hasDatabaseUrl()) {
+    const store = getNutritionMemoryStore();
+    const existingLookup = store.missingFoodLookups.get(id);
+    if (!existingLookup) {
+      return;
+    }
+
+    store.missingFoodLookups.set(id, {
+      ...existingLookup,
+      status,
+      updatedAt: now,
+      processingStartedAt: existingLookup.processingStartedAt ?? now,
+      processedAt: now,
+      lastError: lastError ?? null,
+    });
     return;
   }
 
   await ensureSchema();
   await getPool().query(
     `
-    insert into nutrition_missing_food_queue (id, query, barcode, reason)
-    values ($1, $2, $3, $4)
-    on conflict (id) do update set updated_at = now(), reason = excluded.reason, status = 'pending'
+    update nutrition_missing_food_queue
+    set
+      status = $2,
+      processing_started_at = null,
+      updated_at = now(),
+      processed_at = now(),
+      last_error = $3
+    where id = $1
     `,
-    [crypto.randomUUID(), query ?? null, barcode ?? null, reason],
+    [id, status, lastError ?? null],
+  );
+}
+
+export async function retryMissingFoodLookup(id: string, lastError?: string | null): Promise<void> {
+  const now = new Date().toISOString();
+
+  if (!hasDatabaseUrl()) {
+    const store = getNutritionMemoryStore();
+    const existingLookup = store.missingFoodLookups.get(id);
+    if (!existingLookup) {
+      return;
+    }
+
+    store.missingFoodLookups.set(id, {
+      ...existingLookup,
+      status: "pending",
+      updatedAt: now,
+      processingStartedAt: null,
+      processedAt: null,
+      lastError: lastError ?? null,
+    });
+    return;
+  }
+
+  await ensureSchema();
+  await getPool().query(
+    `
+    update nutrition_missing_food_queue
+    set
+      status = 'pending',
+      updated_at = now(),
+      processing_started_at = null,
+      processed_at = null,
+      last_error = $2
+    where id = $1
+    `,
+    [id, lastError ?? null],
   );
 }
 

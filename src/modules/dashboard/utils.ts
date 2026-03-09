@@ -1,6 +1,12 @@
-﻿export interface WeightChartPoint {
+export interface WeightChartPoint {
   weight: number;
   date: string;
+}
+
+export interface DashboardLogSummary {
+  date: string;
+  type?: string;
+  dose?: number;
 }
 
 export interface CalendarLinkInput {
@@ -9,6 +15,127 @@ export interface CalendarLinkInput {
   title: string;
   details: string;
   now?: Date;
+}
+
+export interface DoseCountdownParts {
+  d: number;
+  h: number;
+  m: number;
+  s: number;
+}
+
+export interface JourneyDoseStats {
+  ampoulesUsed: number;
+  dosesUsedFromCurrentAmpoule: number;
+  journeyDays: number | null;
+  totalDoseApplications: number;
+}
+
+export const DEFAULT_DOSES_PER_AMPOULE = 4;
+
+export function parseLogDate(date: string): Date {
+  const [dateOnly] = date.split("T");
+  const [year, month, day] = dateOnly.split("-").map(Number);
+
+  return new Date(year, (month || 1) - 1, day || 1, 12, 0, 0, 0);
+}
+
+export function formatChartDateLabel(date: string): string {
+  return parseLogDate(date).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
+
+export function getChartDateLabelIndices(pointCount: number): number[] {
+  if (pointCount <= 0) return [];
+
+  if (pointCount <= 10) {
+    return Array.from({ length: pointCount }, (_, index) => index);
+  }
+
+  const indices = new Set<number>([0, pointCount - 1, Math.floor((pointCount - 1) / 2)]);
+  const step = 2;
+
+  for (let index = 0; index < pointCount; index += step) {
+    indices.add(index);
+  }
+
+  return Array.from(indices).sort((left, right) => left - right);
+}
+
+export function calculateDoseCountdown(
+  targetDate: Date,
+  now = new Date(),
+): DoseCountdownParts {
+  const difference = targetDate.getTime() - now.getTime();
+
+  if (difference <= 0) {
+    return { d: 0, h: 0, m: 0, s: 0 };
+  }
+
+  return {
+    d: Math.floor(difference / (1000 * 60 * 60 * 24)),
+    h: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+    m: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
+    s: Math.floor((difference % (1000 * 60)) / 1000),
+  };
+}
+
+export function calculateJourneyDoseStats(
+  logs: DashboardLogSummary[],
+  now = new Date(),
+  dosesPerAmpoule = DEFAULT_DOSES_PER_AMPOULE,
+  previousDoseApplications = 0,
+): JourneyDoseStats {
+  const safeDosesPerAmpoule = Math.max(
+    1,
+    Math.floor(Number.isFinite(dosesPerAmpoule) ? dosesPerAmpoule : DEFAULT_DOSES_PER_AMPOULE),
+  );
+  const safePreviousDoseApplications = Math.max(
+    0,
+    Math.floor(Number.isFinite(previousDoseApplications) ? previousDoseApplications : 0),
+  );
+
+  if (logs.length === 0 && safePreviousDoseApplications === 0) {
+    return {
+      ampoulesUsed: 0,
+      dosesUsedFromCurrentAmpoule: 0,
+      journeyDays: null,
+      totalDoseApplications: 0,
+    };
+  }
+
+  const oldestLog = [...logs].sort(
+    (left, right) => parseLogDate(left.date).getTime() - parseLogDate(right.date).getTime(),
+  )[0];
+
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+
+  const oldestDate = oldestLog ? parseLogDate(oldestLog.date) : null;
+  oldestDate?.setHours(0, 0, 0, 0);
+
+  const differenceInDays =
+    oldestDate !== null
+      ? Math.max(0, Math.round((today.getTime() - oldestDate.getTime()) / (1000 * 60 * 60 * 24)))
+      : null;
+
+  const loggedDoseApplications = logs.filter(
+    (log) => Boolean(log.dose) || log.type === "dose",
+  ).length;
+  const totalDoseApplications = loggedDoseApplications + safePreviousDoseApplications;
+  const ampoulesUsed =
+    totalDoseApplications > 0 ? Math.ceil(totalDoseApplications / safeDosesPerAmpoule) : 0;
+  const dosesUsedFromCurrentAmpoule =
+    totalDoseApplications > 0 ? ((totalDoseApplications - 1) % safeDosesPerAmpoule) + 1 : 0;
+
+  return {
+    ampoulesUsed,
+    dosesUsedFromCurrentAmpoule,
+    journeyDays: differenceInDays !== null ? differenceInDays + 1 : null,
+    totalDoseApplications,
+  };
 }
 
 export function generateSmoothSvgPath(
@@ -75,4 +202,3 @@ export function buildGoogleCalendarLink({
 
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&details=${encodeURIComponent(details)}&dates=${formatGoogleDate(appointmentDate)}/${formatGoogleDate(endDate)}`;
 }
-

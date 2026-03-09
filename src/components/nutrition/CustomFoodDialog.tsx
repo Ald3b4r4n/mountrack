@@ -79,7 +79,7 @@ export function CustomFoodDialog({ open, onClose, onCreated }: CustomFoodDialogP
 
   async function handleSave() {
     if (!name.trim()) {
-      setError("O nome do alimento e obrigatorio.");
+      setError("Informe o nome do alimento.");
       return;
     }
 
@@ -112,7 +112,7 @@ export function CustomFoodDialog({ open, onClose, onCreated }: CustomFoodDialogP
         onCreated(data.item);
       }
     } catch {
-      setError("Ocorreu um erro ao salvar o alimento.");
+      setError("Nao consegui salvar esse alimento agora.");
     } finally {
       setIsSaving(false);
     }
@@ -164,10 +164,10 @@ export function CustomFoodDialog({ open, onClose, onCreated }: CustomFoodDialogP
       >
         <div className="mb-4">
           <h3 id={titleId} style={{ fontSize: "1.1rem", fontWeight: 600 }}>
-            Cadastrar alimento
+            Criar alimento manual
           </h3>
           <p id={descriptionId} style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-            Adicione um alimento customizado ao seu catalogo.
+            Salve um alimento seu para reencontrar depois na busca e registrar no diario mais rapido.
           </p>
         </div>
 
@@ -192,7 +192,7 @@ export function CustomFoodDialog({ open, onClose, onCreated }: CustomFoodDialogP
               className="input-field"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Ex.: Pao de queijo caseiro"
+              placeholder="Ex.: Pao de queijo da casa"
               style={{ width: "100%" }}
             />
           </label>
@@ -330,7 +330,7 @@ export function CustomFoodDialog({ open, onClose, onCreated }: CustomFoodDialogP
             Cancelar
           </button>
           <button onClick={() => void handleSave()} className="btn-primary" disabled={isSaving}>
-            {isSaving ? "Salvando..." : "Salvar alimento"}
+            {isSaving ? "Salvando..." : "Criar alimento"}
           </button>
         </div>
       </div>
