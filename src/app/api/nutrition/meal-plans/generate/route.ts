@@ -26,9 +26,18 @@ export async function POST(request: Request) {
     const catalogFoods = await listFoods({ includeInternal: false });
     const foods = catalogFoods.length >= 12 ? [...catalogFoods, ...INTERNAL_FOODS, ...TACO_FOODS] : [...catalogFoods, ...INTERNAL_FOODS, ...TACO_FOODS];
     const mealPlan = generateMealPlan(payload, foods);
+    const hasItems = mealPlan.meals.some((meal) => meal.items.length > 0);
+
+    if (!hasItems) {
+      return NextResponse.json(
+        { error: "Nao foi possivel montar um cardapio com as escolhas atuais." },
+        { status: 422, headers: getNutritionStorageHeaders() },
+      );
+    }
+
     await saveMealPlan(user.uid, mealPlan);
 
-    return NextResponse.json({ mealPlan }, { headers: getNutritionStorageHeaders() });
+    return NextResponse.json({ plan: mealPlan, mealPlan }, { headers: getNutritionStorageHeaders() });
   } catch (error) {
     return toNutritionRouteErrorResponse(error, {
       defaultMessage: "Unable to generate meal plan",

@@ -29,6 +29,15 @@ export interface OFFFoodResult {
   imageUrl?: string;
 }
 
+interface OFFSearchResponse {
+  products?: OFFProduct[];
+}
+
+interface OFFProductResponse {
+  status?: number;
+  product?: OFFProduct;
+}
+
 // Mapeia do formato OFF para o formato interno do nosso app
 const mapProductToFoodResult = (product: OFFProduct): OFFFoodResult | null => {
   // Ignora produtos sem os macros principais
@@ -67,9 +76,9 @@ export const OpenFoodFactsService = {
       const response = await fetch(`https://world.openfoodfacts.org/api/v2/product/${barcode}.json`);
       if (!response.ok) return null;
       
-      const data = await response.json();
+      const data = (await response.json()) as OFFProductResponse;
       if (data.status === 1 && data.product) {
-        return mapProductToFoodResult(data.product as OFFProduct);
+        return mapProductToFoodResult(data.product);
       }
       return null;
     } catch (error) {
@@ -90,10 +99,10 @@ export const OpenFoodFactsService = {
       
       if (!response.ok) return [];
 
-      const data = await response.json();
+      const data = (await response.json()) as OFFSearchResponse;
       if (data.products && Array.isArray(data.products)) {
         const results = data.products
-          .map((p: any) => mapProductToFoodResult(p as OFFProduct))
+          .map((product) => mapProductToFoodResult(product))
           .filter((p: OFFFoodResult | null) => p !== null) as OFFFoodResult[];
           
         return results;

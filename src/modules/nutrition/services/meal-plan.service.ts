@@ -1,15 +1,15 @@
 import type {
+  DefaultMealType,
   FoodItem,
   MealPlan,
   MealPlanItem,
   MealPlanMeal,
   MealPlanRequest,
-  MealType,
   NutritionUnit,
 } from "@/modules/nutrition/domain/types";
 import { calculateNutritionForQuantity } from "@/modules/nutrition/services/nutrition-calc.service";
 
-const DISTRIBUTIONS: Record<number, Array<{ mealType: MealType; label: string; share: number }>> = {
+const DISTRIBUTIONS: Record<number, Array<{ mealType: DefaultMealType; label: string; share: number }>> = {
   3: [
     { mealType: "breakfast", label: "Café da manhã", share: 0.25 },
     { mealType: "lunch", label: "Almoço", share: 0.4 },
@@ -30,7 +30,7 @@ const DISTRIBUTIONS: Record<number, Array<{ mealType: MealType; label: string; s
   ],
 };
 
-const CATEGORY_TEMPLATES: Record<MealType, Array<FoodItem["category"]>> = {
+const CATEGORY_TEMPLATES: Record<DefaultMealType, Array<FoodItem["category"]>> = {
   breakfast: ["carb", "protein", "fruit"],
   lunch: ["protein", "carb", "vegetable"],
   dinner: ["protein", "carb", "vegetable"],
@@ -111,7 +111,7 @@ function filterFoods(request: MealPlanRequest, foods: FoodItem[]): FoodItem[] {
 function pickBestFood(
   candidates: FoodItem[],
   category: FoodItem["category"],
-  mealType: MealType,
+  mealType: DefaultMealType,
   preferredFoods: string[] = [],
   usedIds: Set<string>,
 ): FoodItem | undefined {

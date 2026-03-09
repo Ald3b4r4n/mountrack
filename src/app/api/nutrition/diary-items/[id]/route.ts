@@ -25,6 +25,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       quantity: payload.quantity,
       unit: payload.unit,
       mealType: payload.mealType,
+      mealLabel: payload.mealLabel,
       consumedAt: payload.consumedAt ?? new Date().toISOString(),
     });
     nextItem.id = id;

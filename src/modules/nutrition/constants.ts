@@ -1,13 +1,19 @@
-import { MealType, NutritionObjective } from "./domain/types";
+import type { DefaultMealType, MealDefinition, NutritionObjective } from "./domain/types";
 
-export const MEAL_ORDER: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
+export const MEAL_ORDER: DefaultMealType[] = ["breakfast", "lunch", "snack", "dinner"];
 
-export const MEAL_LABELS: Record<MealType, string> = {
+export const MEAL_LABELS: Record<DefaultMealType, string> = {
   breakfast: "Cafe da manha",
   lunch: "Almoco",
   snack: "Lanche",
   dinner: "Jantar",
 };
+
+export const DEFAULT_MEAL_DEFINITIONS: MealDefinition[] = MEAL_ORDER.map((mealKey) => ({
+  key: mealKey,
+  label: MEAL_LABELS[mealKey],
+  isDefault: true,
+}));
 
 export const OBJECTIVE_LABELS: Record<NutritionObjective, string> = {
   lose: "Emagrecimento",

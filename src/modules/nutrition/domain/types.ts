@@ -1,7 +1,9 @@
 export type FoodSource = "openfoodfacts" | "usda" | "tbca" | "internal" | "custom";
 export type FoodBaseUnit = "g" | "ml" | "unit";
 export type NutritionUnit = "g" | "ml" | "serving" | "unit";
-export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
+export type DefaultMealType = "breakfast" | "lunch" | "dinner" | "snack";
+export type CustomMealType = `custom:${string}`;
+export type MealType = DefaultMealType | CustomMealType;
 export type NutritionObjective = "lose" | "maintain" | "gain";
 export type FoodCategory =
   | "protein"
@@ -12,6 +14,12 @@ export type FoodCategory =
   | "fat"
   | "snack"
   | "beverage";
+
+export interface MealDefinition {
+  key: MealType;
+  label: string;
+  isDefault?: boolean;
+}
 
 export interface FoodItem {
   id: string;
@@ -38,7 +46,7 @@ export interface FoodItem {
   countryCode?: string;
   isBranded?: boolean;
   externalUpdatedAt?: string;
-  mealCategories: MealType[];
+  mealCategories: DefaultMealType[];
   category?: FoodCategory;
   tags?: string[];
 }
@@ -58,6 +66,7 @@ export interface DiaryItemSnapshot extends NutritionTotals {
   foodId: string;
   foodName: string;
   mealType: MealType;
+  mealLabel?: string;
   quantity: number;
   unit: NutritionUnit;
   consumedAt: string;
@@ -70,7 +79,7 @@ export interface DailySummary extends NutritionTotals {
   consumedCalories: number;
   remainingCalories: number;
   waterIntakeMl: number;
-  meals: Record<MealType, number>;
+  meals: Record<string, number>;
 }
 
 export interface NutritionGoal {

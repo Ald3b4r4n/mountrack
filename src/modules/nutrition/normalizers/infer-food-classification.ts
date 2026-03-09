@@ -1,4 +1,4 @@
-import type { FoodCategory, FoodItem, MealType } from "@/modules/nutrition/domain/types";
+import type { DefaultMealType, FoodCategory, FoodItem } from "@/modules/nutrition/domain/types";
 
 function normalizeClassificationText(value: string): string {
   return value
@@ -17,7 +17,7 @@ const CATEGORY_RULES: Array<{ pattern: RegExp; category: FoodCategory }> = [
   { pattern: /(suco|agua|refrigerante|bebida|cafe|cha|drink)/i, category: "beverage" },
 ];
 
-const CATEGORY_MEALS: Record<FoodCategory, MealType[]> = {
+const CATEGORY_MEALS: Record<FoodCategory, DefaultMealType[]> = {
   protein: ["breakfast", "lunch", "dinner", "snack"],
   carb: ["breakfast", "lunch", "dinner", "snack"],
   fruit: ["breakfast", "snack"],

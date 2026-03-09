@@ -1,0 +1,581 @@
+import { useEffect, useState } from "react";
+import { ScanLine } from "lucide-react";
+import type {
+  FoodItem,
+  MealDefinition,
+  MealType,
+  NutritionUnit,
+} from "@/modules/nutrition/domain/types";
+import {
+  EmptyState,
+  Field,
+  MacroValue,
+  PanelHeader,
+  SegmentButton,
+} from "./CommonUI";
+import { formatCalories, formatGrams, getFoodLabel } from "@/modules/nutrition/ui-helpers";
+
+type SearchMode = "name" | "barcode" | "custom";
+
+interface FoodSearchPanelProps {
+  storageMode: string;
+  isMobileLayout: boolean;
+  embedded?: boolean;
+  searchQuery: string;
+  onSearchQueryChange: (val: string) => void;
+  onSearch: () => void;
+  isSearching: boolean;
+  barcodeQuery: string;
+  onBarcodeQueryChange: (val: string) => void;
+  onBarcodeLookup: (val: string) => void;
+  onOpenScanner: () => void;
+  searchSourceLabel: string | null;
+  resultsVisible: boolean;
+  searchResults: FoodItem[];
+  resultState: { title: string; text: string };
+  onApplyFoodSelection: (food: FoodItem) => void;
+  onCustomFoodOpen: () => void;
+  onClearSearch: () => void;
+  selectedFood: FoodItem | null;
+  selectedFoodTotals: { protein: number; carbs: number; fat: number } | null;
+  onReopenSearchResults: () => void;
+  quantity: string;
+  onQuantityChange: (val: string) => void;
+  unit: NutritionUnit;
+  onUnitChange: (val: NutritionUnit) => void;
+  mealOptions: MealDefinition[];
+  mealType: MealType;
+  onMealTypeChange: (val: MealType) => void;
+  onAddDiaryItem: () => void;
+  searchCatalogBadge: string;
+}
+
+function ComposerBody({
+  selectedFood,
+  selectedFoodTotals,
+  quantity,
+  onQuantityChange,
+  unit,
+  onUnitChange,
+  mealOptions,
+  mealType,
+  onMealTypeChange,
+  onAddDiaryItem,
+}: {
+  selectedFood: FoodItem | null;
+  selectedFoodTotals: { protein: number; carbs: number; fat: number } | null;
+  quantity: string;
+  onQuantityChange: (val: string) => void;
+  unit: NutritionUnit;
+  onUnitChange: (val: NutritionUnit) => void;
+  mealOptions: MealDefinition[];
+  mealType: MealType;
+  onMealTypeChange: (val: MealType) => void;
+  onAddDiaryItem: () => void;
+}) {
+  if (!selectedFood) {
+    return (
+      <EmptyState
+        title="Nenhum alimento selecionado"
+        text="Escolha um resultado para liberar o registro no diario."
+        compact
+      />
+    );
+  }
+
+  return (
+    <div className="grid gap-3.5">
+      <div className="glass-panel static-panel bg-[#040f20]/70 p-3.5">
+        <div className="mb-2.5 flex flex-wrap justify-between gap-3">
+          <div>
+            <strong className="block">{getFoodLabel(selectedFood)}</strong>
+            <span className="block text-[0.82rem] text-[var(--text-secondary)]">
+              {selectedFood.brand ? `${selectedFood.brand} - ` : ""}
+              {selectedFood.source.toUpperCase()}
+            </span>
+          </div>
+          <span className="badge badge-success self-start">
+            {selectedFood.caloriesPer100 != null
+              ? `${formatCalories(selectedFood.caloriesPer100)} / 100${selectedFood.baseUnit}`
+              : "Sem kcal base"}
+          </span>
+        </div>
+
+        {selectedFoodTotals ? (
+          <div className="grid grid-cols-3 gap-2">
+            <MacroValue
+              label="Proteina"
+              value={formatGrams(selectedFoodTotals.protein)}
+              accent="#34d399"
+              compact
+            />
+            <MacroValue
+              label="Carbo"
+              value={formatGrams(selectedFoodTotals.carbs)}
+              accent="#22d3ee"
+              compact
+            />
+            <MacroValue
+              label="Gordura"
+              value={formatGrams(selectedFoodTotals.fat)}
+              accent="#fb7185"
+              compact
+            />
+          </div>
+        ) : (
+          <p className="text-[0.82rem] text-[var(--text-secondary)]">
+            Ajuste a quantidade para calcular os macros desta porcao.
+          </p>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Field label="Quantidade">
+          <input
+            className="input-field"
+            value={quantity}
+            onChange={(event) => onQuantityChange(event.target.value)}
+            inputMode="decimal"
+          />
+        </Field>
+        <Field label="Unidade">
+          <select
+            className="input-field"
+            value={unit}
+            onChange={(event) => onUnitChange(event.target.value as NutritionUnit)}
+          >
+            <option value="g">Gramas</option>
+            <option value="ml">Mililitros</option>
+            <option value="serving">Porcao</option>
+            <option value="unit">Unidade</option>
+          </select>
+        </Field>
+        <Field label="Refeicao">
+          <select
+            className="input-field"
+            value={mealType}
+            onChange={(event) => onMealTypeChange(event.target.value as MealType)}
+          >
+            {mealOptions.map((option) => (
+              <option key={option.key} value={option.key}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
+
+      <button onClick={onAddDiaryItem} className="btn-primary w-full">
+        Adicionar ao diario
+      </button>
+    </div>
+  );
+}
+
+export function FoodSearchPanel({
+  storageMode,
+  isMobileLayout,
+  embedded = false,
+  mealOptions,
+  searchQuery,
+  onSearchQueryChange,
+  onSearch,
+  isSearching,
+  barcodeQuery,
+  onBarcodeQueryChange,
+  onBarcodeLookup,
+  onOpenScanner,
+  searchSourceLabel,
+  resultsVisible,
+  searchResults,
+  resultState,
+  onApplyFoodSelection,
+  onCustomFoodOpen,
+  onClearSearch,
+  selectedFood,
+  selectedFoodTotals,
+  onReopenSearchResults,
+  quantity,
+  onQuantityChange,
+  unit,
+  onUnitChange,
+  mealType,
+  onMealTypeChange,
+  onAddDiaryItem,
+  searchCatalogBadge,
+}: FoodSearchPanelProps) {
+  const [searchMode, setSearchMode] = useState<SearchMode>("name");
+  const [dismissedComposerFoodId, setDismissedComposerFoodId] = useState<string | null>(null);
+
+  const isComposerOpen =
+    isMobileLayout &&
+    selectedFood != null &&
+    dismissedComposerFoodId !== selectedFood.id;
+
+  useEffect(() => {
+    if (!isMobileLayout || !isComposerOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isMobileLayout, isComposerOpen]);
+
+  const storageSummary =
+    storageMode === "database"
+      ? "Busca com catalogo persistido e reforco por fontes externas quando necessario."
+      : storageMode === "checking"
+        ? "Conectando ao banco de dados e APIs de alimentos..."
+        : "Servicos externos de alimentos ativados.";
+
+  const hasVisibleResults = resultsVisible && searchResults.length > 0;
+  const hasSearchSession =
+    isSearching ||
+    searchSourceLabel !== null ||
+    searchResults.length > 0 ||
+    selectedFood !== null;
+  const resultEmptyState =
+    selectedFood && !resultsVisible
+      ? {
+          title: "Alimento selecionado",
+          text: isMobileLayout
+            ? "Abra o registro para ajustar quantidade e refeicao, ou troque o alimento."
+            : "Use o compositor ao lado para finalizar o lancamento.",
+        }
+      : resultState;
+
+  const composerContent = (
+    <ComposerBody
+      selectedFood={selectedFood}
+      selectedFoodTotals={selectedFoodTotals}
+      quantity={quantity}
+      onQuantityChange={onQuantityChange}
+      unit={unit}
+      onUnitChange={onUnitChange}
+      mealOptions={mealOptions}
+      mealType={mealType}
+      onMealTypeChange={onMealTypeChange}
+      onAddDiaryItem={onAddDiaryItem}
+    />
+  );
+
+  function handleSelectFood(food: FoodItem) {
+    setDismissedComposerFoodId(null);
+    onApplyFoodSelection(food);
+  }
+
+  return (
+    <>
+      <section className="grid gap-4">
+        <div className="glass-panel static-panel relative overflow-hidden p-4">
+          {!embedded ? (
+            <>
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+                <PanelHeader
+                  title="Buscar e registrar"
+                  subtitle="Encontre um alimento, revise o resultado e registre o consumo sem perder o contexto do dia."
+                />
+                <span className="badge badge-success self-start">{searchCatalogBadge}</span>
+              </div>
+
+              <p className="mb-4 text-sm text-[var(--text-secondary)]">{storageSummary}</p>
+            </>
+          ) : (
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <p className="max-w-[42rem] text-sm text-[var(--text-secondary)]">{storageSummary}</p>
+              <span className="badge badge-success self-start">{searchCatalogBadge}</span>
+            </div>
+          )}
+
+          <div className="mb-4 flex flex-wrap gap-2">
+            <SegmentButton
+              active={searchMode === "name"}
+              label="Nome"
+              onClick={() => setSearchMode("name")}
+            />
+            <SegmentButton
+              active={searchMode === "barcode"}
+              label="Codigo"
+              onClick={() => setSearchMode("barcode")}
+            />
+            <SegmentButton
+              active={searchMode === "custom"}
+              label="Custom"
+              onClick={() => setSearchMode("custom")}
+            />
+          </div>
+
+          {searchMode === "name" ? (
+            <Field label="Nome do alimento">
+              <div className={isMobileLayout ? "grid gap-2.5" : "flex flex-wrap gap-2.5"}>
+                <input
+                  className="input-field min-w-[14rem] flex-1"
+                  value={searchQuery}
+                  onChange={(event) => onSearchQueryChange(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      onSearch();
+                    }
+                  }}
+                  placeholder="Ex.: banana prata, arroz cozido, iogurte"
+                />
+                <div className={`grid gap-2.5 ${isMobileLayout ? "grid-cols-2" : "grid-cols-[auto]"}`}>
+                  <button onClick={onSearch} className="btn-primary" disabled={isSearching}>
+                    {isSearching ? "Buscando..." : "Buscar"}
+                  </button>
+                  {isMobileLayout ? (
+                    <button
+                      onClick={onOpenScanner}
+                      className="btn-outline inline-flex items-center justify-center gap-2 border-dashed text-[var(--accent-primary)]"
+                    >
+                      <ScanLine size={16} />
+                      Escanear
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </Field>
+          ) : null}
+
+          {searchMode === "barcode" ? (
+            <Field label="Codigo de barras">
+              <div className={isMobileLayout ? "grid gap-2.5" : "flex flex-wrap gap-2.5"}>
+                <input
+                  className="input-field min-w-[12rem] flex-1"
+                  value={barcodeQuery}
+                  onChange={(event) => onBarcodeQueryChange(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      onBarcodeLookup(barcodeQuery);
+                    }
+                  }}
+                  placeholder="EAN / GTIN"
+                />
+                <div className={`grid gap-2.5 ${isMobileLayout ? "grid-cols-2" : "grid-cols-[auto_auto]"}`}>
+                  <button onClick={() => onBarcodeLookup(barcodeQuery)} className="btn-primary">
+                    Consultar
+                  </button>
+                  <button
+                    onClick={onOpenScanner}
+                    className="btn-outline inline-flex items-center justify-center gap-2 border-dashed text-[var(--accent-primary)]"
+                  >
+                    <ScanLine size={16} />
+                    Escanear
+                  </button>
+                </div>
+              </div>
+            </Field>
+          ) : null}
+
+          {searchMode === "custom" ? (
+            <div className="glass-panel static-panel grid gap-3 bg-[#041225]/72 p-4">
+              <div>
+                <strong className="block">Cadastro manual</strong>
+                <p className="mt-1 text-[0.9rem] text-[var(--text-secondary)]">
+                  Use este fluxo quando o alimento nao existir no catalogo ou quando voce quiser salvar um item proprio.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2.5">
+                <button onClick={onCustomFoodOpen} className="btn-primary">
+                  Cadastrar alimento
+                </button>
+                <button
+                  onClick={() => setSearchMode("name")}
+                  className="btn-outline min-w-auto px-3 py-2"
+                >
+                  Voltar para busca
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        {isMobileLayout && selectedFood ? (
+          <div className="glass-panel static-panel border-[#34d399]/18 bg-[#06162d]/72 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <span className="text-[0.78rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                  Pronto para registrar
+                </span>
+                <strong className="mt-1 block">{getFoodLabel(selectedFood)}</strong>
+                <p className="mt-1 text-[0.84rem] text-[var(--text-secondary)]">
+                  Abra o registro para definir quantidade, unidade e refeicao.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setDismissedComposerFoodId(null)}
+                  className="btn-primary min-w-auto px-3 py-2"
+                >
+                  Registrar
+                </button>
+                <button
+                  onClick={() => {
+                    onReopenSearchResults();
+                    setDismissedComposerFoodId(selectedFood.id);
+                  }}
+                  className="btn-outline min-w-auto px-3 py-2"
+                >
+                  Trocar
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {hasSearchSession ? (
+          <div
+            className={`grid gap-4 ${
+              isMobileLayout ? "grid-cols-1" : "grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]"
+            }`}
+          >
+            <div className="glass-panel static-panel p-4">
+              <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <strong className="block font-['Outfit',sans-serif]">Resultados</strong>
+                  <span className="text-[0.84rem] text-[var(--text-secondary)]">
+                    Selecione um item para abrir o registro.
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap justify-end gap-2">
+                  {searchSourceLabel ? (
+                    <span className="badge badge-success">{searchSourceLabel}</span>
+                  ) : null}
+                  {hasVisibleResults ? (
+                    <span className="badge badge-success">{searchResults.length} itens</span>
+                  ) : null}
+                  <button onClick={onCustomFoodOpen} className="btn-outline min-w-auto px-3 py-1.5">
+                    Cadastrar alimento
+                  </button>
+                  {searchResults.length || selectedFood ? (
+                    <button
+                      onClick={() => {
+                        setDismissedComposerFoodId(null);
+                        onClearSearch();
+                      }}
+                      className="btn-outline min-w-auto px-3 py-1.5"
+                    >
+                      Limpar
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="grid max-h-[min(48vh,420px)] gap-2.5 overflow-y-auto pr-1">
+                {hasVisibleResults ? (
+                  searchResults.map((food) => {
+                    const caloriesLabel =
+                      food.caloriesPer100 == null
+                        ? "--"
+                        : `${formatCalories(food.caloriesPer100)} / 100${food.baseUnit}`;
+                    const isSelected = selectedFood?.id === food.id;
+
+                    return (
+                      <button
+                        key={food.id}
+                        onClick={() => handleSelectFood(food)}
+                        className={`glass-panel static-panel cursor-pointer p-3.5 text-left transition-all ${
+                          isSelected
+                            ? "border-[rgba(52,211,153,0.3)] bg-[#34d399]/10"
+                            : "bg-[#051227]/60 hover:border-[#34d399]/16 hover:bg-[#081b35]/72"
+                        }`}
+                      >
+                        <div className="flex justify-between gap-3">
+                          <div className="min-w-0">
+                            <strong className="mb-0.5 block">{getFoodLabel(food)}</strong>
+                            <span className="block text-[0.82rem] text-[var(--text-secondary)]">
+                              {food.brand ? `${food.brand} - ` : ""}
+                              {caloriesLabel}
+                            </span>
+                          </div>
+                          <span className="whitespace-nowrap text-xs uppercase text-[var(--text-muted)]">
+                            {food.source}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })
+                ) : (
+                  <EmptyState title={resultEmptyState.title} text={resultEmptyState.text} compact />
+                )}
+              </div>
+            </div>
+
+            {!isMobileLayout ? (
+              <div className="glass-panel static-panel bg-[#06162d]/60 p-4">
+                <div className="mb-3 flex flex-wrap justify-between gap-3">
+                  <div>
+                    <strong className="block">Compositor</strong>
+                    <span className="text-[0.84rem] text-[var(--text-secondary)]">
+                      Selecione, ajuste e registre sem sair da busca.
+                    </span>
+                  </div>
+                  {selectedFood ? (
+                    <button
+                      onClick={onReopenSearchResults}
+                      className="btn-outline min-w-auto px-3 py-1.5"
+                    >
+                      Trocar alimento
+                    </button>
+                  ) : null}
+                </div>
+
+                {composerContent}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </section>
+
+      {isMobileLayout && selectedFood && isComposerOpen ? (
+        <div className="fixed inset-0 z-50">
+          <button
+            className="absolute inset-0 bg-[#01060e]/72"
+            onClick={() => setDismissedComposerFoodId(selectedFood.id)}
+            aria-label="Fechar registro do alimento"
+          />
+
+          <div className="absolute bottom-0 left-0 right-0 max-h-[82vh] overflow-y-auto rounded-t-[1.8rem] border border-white/8 bg-[#03111f] px-4 pb-8 pt-3 shadow-[0_-24px_80px_rgba(0,0,0,0.48)]">
+            <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/12" />
+
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <span className="text-[0.78rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                  Registro rapido
+                </span>
+                <strong className="mt-1 block text-[1.05rem]">{getFoodLabel(selectedFood)}</strong>
+                <p className="mt-1 text-[0.84rem] text-[var(--text-secondary)]">
+                  Ajuste a porcao e escolha em qual refeicao este item entra.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => {
+                    onReopenSearchResults();
+                    setDismissedComposerFoodId(selectedFood.id);
+                  }}
+                  className="btn-outline min-w-auto px-3 py-2"
+                >
+                  Trocar
+                </button>
+                <button
+                  onClick={() => setDismissedComposerFoodId(selectedFood.id)}
+                  className="btn-outline min-w-auto px-3 py-2"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+
+            {composerContent}
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}

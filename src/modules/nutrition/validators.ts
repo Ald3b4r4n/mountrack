@@ -1,4 +1,16 @@
 import { z } from "zod";
+import type { MealDefinition, MealType } from "@/modules/nutrition/domain/types";
+
+const mealTypeSchema = z
+  .string()
+  .regex(/^(breakfast|lunch|dinner|snack|custom:[a-z0-9-]{1,48})$/)
+  .transform((value) => value as MealType);
+
+const mealDefinitionSchema: z.ZodType<MealDefinition> = z.object({
+  key: mealTypeSchema,
+  label: z.string().trim().min(1).max(40),
+  isDefault: z.boolean().optional(),
+});
 
 export const nutritionGoalSchema = z.object({
   targetCalories: z.number().min(1200).max(6000),
@@ -14,7 +26,8 @@ export const diaryItemSchema = z.object({
   foodId: z.string().min(1),
   quantity: z.number().positive(),
   unit: z.enum(["g", "ml", "serving", "unit"]),
-  mealType: z.enum(["breakfast", "lunch", "dinner", "snack"]),
+  mealType: mealTypeSchema,
+  mealLabel: z.string().trim().min(1).max(40).optional(),
   consumedAt: z.string().datetime().optional(),
 });
 
@@ -25,6 +38,15 @@ export const updateDiaryItemSchema = diaryItemSchema.extend({
 export const waterIntakeSchema = z.object({
   waterIntakeMl: z.number().min(0).max(12000),
 });
+
+export const diaryPatchSchema = z
+  .object({
+    waterIntakeMl: z.number().min(0).max(12000).optional(),
+    mealDefinitions: z.array(mealDefinitionSchema).min(4).optional(),
+  })
+  .refine((payload) => payload.waterIntakeMl !== undefined || payload.mealDefinitions !== undefined, {
+    message: "At least one diary field must be provided",
+  });
 
 export const mealPlanRequestSchema = z.object({
   targetCalories: z.number().min(600).max(8000),

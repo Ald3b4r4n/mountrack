@@ -25,6 +25,7 @@ export async function POST(request: Request) {
       quantity: payload.quantity,
       unit: payload.unit,
       mealType: payload.mealType,
+      mealLabel: payload.mealLabel,
       consumedAt: payload.consumedAt ?? new Date().toISOString(),
     });
 

@@ -78,31 +78,16 @@ function DesktopMacroHero({
         </div>
         <span className="badge badge-success">{Math.round(consumedRatio)}% da meta kcal</span>
       </div>
-      <div className="grid gap-[0.6rem] grid-cols-[repeat(auto-fit,minmax(170px,1fr))]">
-        <DesktopMacroStatusCard
-          label="Proteina"
-          current={summary.protein}
-          target={goal.targetProtein ?? 0}
-          accent="#34d399"
-        />
-        <DesktopMacroStatusCard
-          label="Carboidrato"
-          current={summary.carbs}
-          target={goal.targetCarbs ?? 0}
-          accent="#22d3ee"
-        />
-        <DesktopMacroStatusCard
-          label="Gordura"
-          current={summary.fat}
-          target={goal.targetFat ?? 0}
-          accent="#fb7185"
-        />
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-[0.6rem]">
+        <DesktopMacroStatusCard label="Proteina" current={summary.protein} target={goal.targetProtein ?? 0} accent="#34d399" />
+        <DesktopMacroStatusCard label="Carboidrato" current={summary.carbs} target={goal.targetCarbs ?? 0} accent="#22d3ee" />
+        <DesktopMacroStatusCard label="Gordura" current={summary.fat} target={goal.targetFat ?? 0} accent="#fb7185" />
       </div>
     </article>
   );
 }
 
-function MobileSummaryPill({
+function MobileSummaryTile({
   label,
   value,
   accentClass,
@@ -112,19 +97,55 @@ function MobileSummaryPill({
   accentClass: string;
 }) {
   return (
-    <div className="rounded-full border border-[var(--border-glass)] bg-[#07101d]/80 px-3 py-2">
-      <span className="block text-[0.64rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">{label}</span>
-      <strong className={`mt-1 block text-[0.88rem] ${accentClass}`}>{value}</strong>
-    </div>
+    <article className="rounded-[1rem] border border-white/7 bg-[linear-gradient(180deg,rgba(7,18,35,0.92),rgba(6,17,30,0.72))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+      <span className="block text-[0.66rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">{label}</span>
+      <strong className={`mt-1.5 block text-[1rem] leading-none ${accentClass}`}>{value}</strong>
+    </article>
+  );
+}
+
+function MobileMacroRail({
+  label,
+  current,
+  target,
+  accent,
+}: {
+  label: string;
+  current: number;
+  target: number;
+  accent: string;
+}) {
+  const ratio = target > 0 ? Math.min((current / target) * 100, 100) : 0;
+
+  return (
+    <article className="rounded-[0.95rem] border border-white/7 bg-[#071223]/76 p-3">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <span className="text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">{label}</span>
+        <strong className="text-[0.88rem] leading-none" style={{ color: accent }}>
+          {formatGrams(current)} / {formatGrams(target)}
+        </strong>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-white/6">
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: `${ratio}%`,
+            background: `linear-gradient(90deg, ${accent}, rgba(255,255,255,0.92))`,
+          }}
+        />
+      </div>
+    </article>
   );
 }
 
 function MobileSummaryStrip({
   summary,
   goal,
+  waterRatio,
 }: {
   summary: DailySummary;
   goal: NutritionGoal;
+  waterRatio: number;
 }) {
   return (
     <div className="grid gap-2.5">
@@ -132,32 +153,38 @@ function MobileSummaryStrip({
         <CompactMetricCard label="Consumido" value={formatCalories(summary.consumedCalories)} accent="var(--accent-warm)" />
         <CompactMetricCard label="Restante" value={formatCalories(summary.remainingCalories)} accent="var(--accent-secondary)" />
       </div>
-      <div className="glass-panel static-panel rounded-[1rem] bg-[#06162d]/58 p-3.5">
-        <div className="mb-2 flex items-start justify-between gap-3">
+      <div className="glass-panel static-panel rounded-[1rem] border-[#34d399]/14 bg-[linear-gradient(145deg,rgba(5,20,38,0.9),rgba(6,22,45,0.7))] p-3.5">
+        <div className="mb-3 flex items-start justify-between gap-3">
           <div>
-            <p className="stat-label mb-[0.3rem]">Resumo rapido</p>
-            <strong className="block text-[1rem] text-[var(--text-primary)]">Dia atual</strong>
+            <p className="text-[0.7rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Hoje</p>
+            <strong className="block text-[1rem] text-[var(--text-primary)]">Hidratacao e macros</strong>
+            <p className="mt-1 text-[0.82rem] text-[var(--text-secondary)]">
+              Veja o alvo de agua e como os macros estao distribuindo o dia.
+            </p>
           </div>
-          <span className="badge badge-success">{formatMilliliters(summary.waterIntakeMl)}</span>
+          <span className="badge badge-success whitespace-nowrap">
+            {formatMilliliters(summary.waterIntakeMl)} / {formatMilliliters(summary.targetWaterMl)}
+          </span>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <MobileSummaryPill label="Meta" value={formatCalories(summary.targetCalories)} accentClass="text-[var(--text-primary)]" />
-          <MobileSummaryPill label="Agua" value={formatMilliliters(summary.targetWaterMl)} accentClass="text-sky-300" />
-          <MobileSummaryPill
-            label="P"
-            value={`${formatGrams(summary.protein)} / ${formatGrams(goal.targetProtein ?? 0)}`}
-            accentClass="text-emerald-300"
-          />
-          <MobileSummaryPill
-            label="C"
-            value={`${formatGrams(summary.carbs)} / ${formatGrams(goal.targetCarbs ?? 0)}`}
-            accentClass="text-cyan-300"
-          />
-          <MobileSummaryPill
-            label="G"
-            value={`${formatGrams(summary.fat)} / ${formatGrams(goal.targetFat ?? 0)}`}
-            accentClass="text-rose-300"
-          />
+        <div className="mb-3">
+          <div className="progress-track mb-1.5 h-[0.42rem]">
+            <div
+              className="progress-fill bg-gradient-to-br from-[#38bdf8] to-[#22d3ee]"
+              style={{ width: `${waterRatio}%` }}
+            />
+          </div>
+          <span className="text-[0.8rem] text-[var(--text-secondary)]">
+            {Math.round(waterRatio)}% da meta de agua
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-2.5">
+          <MobileSummaryTile label="Meta kcal" value={formatCalories(summary.targetCalories)} accentClass="text-[var(--text-primary)]" />
+          <MobileSummaryTile label="Agua alvo" value={formatMilliliters(summary.targetWaterMl)} accentClass="text-sky-300" />
+        </div>
+        <div className="mt-2.5 grid gap-2">
+          <MobileMacroRail label="Proteina" current={summary.protein} target={goal.targetProtein ?? 0} accent="#6ee7b7" />
+          <MobileMacroRail label="Carbo" current={summary.carbs} target={goal.targetCarbs ?? 0} accent="#67e8f9" />
+          <MobileMacroRail label="Gordura" current={summary.fat} target={goal.targetFat ?? 0} accent="#fda4af" />
         </div>
       </div>
     </div>
@@ -195,7 +222,7 @@ export function NutritionHeader({
         />
       ) : null}
 
-      <div className={`relative grid ${isMobileLayout ? "gap-4" : "gap-4"}`}>
+      <div className="relative grid gap-4">
         <div className={`flex flex-wrap justify-between ${isMobileLayout ? "gap-3" : "gap-4"}`}>
           <div className={isMobileLayout ? "max-w-none" : "max-w-[42rem]"}>
             <span className={`badge badge-success ${isMobileLayout ? "mb-2" : "mb-3"}`}>Nutricao</span>
@@ -204,8 +231,8 @@ export function NutritionHeader({
             </h1>
             <p className={`page-subtitle ${isMobileLayout ? "max-w-[30ch] text-[0.92rem]" : "max-w-[58ch]"}`}>
               {isMobileLayout
-                ? "Acompanhe o dia, registre refeicoes e ajuste sua rotina sem excesso de navegação."
-                : "Registre refeicoes, acompanhe agua, ajuste metas e monte seu plano alimentar ideal."}
+                ? "Acompanhe o dia, registre refeicoes e ajuste sua rotina com clareza."
+                : "Registre refeicoes, acompanhe agua, ajuste metas e organize seu plano alimentar."}
             </p>
             {!isMobileLayout && isPreview ? (
               <p className="mt-2 text-[0.85rem] text-[var(--accent-secondary)]">
@@ -221,7 +248,7 @@ export function NutritionHeader({
         </div>
 
         {isMobileLayout ? (
-          <MobileSummaryStrip summary={summary} goal={goal} />
+          <MobileSummaryStrip summary={summary} goal={goal} waterRatio={waterRatio} />
         ) : (
           <div className="grid grid-cols-12 gap-[0.7rem]">
             <div className="col-span-3">

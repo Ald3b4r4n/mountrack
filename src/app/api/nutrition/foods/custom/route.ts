@@ -21,7 +21,6 @@ export async function POST(request: Request) {
       barcode,
       caloriesPer100,
       proteinPer100,
-      carbsPer100,
       fatPer100,
       servingGrams,
     } = body;

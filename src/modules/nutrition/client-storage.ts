@@ -4,10 +4,12 @@ import type {
   DailySummary,
   DiaryHistoryEntry,
   DiaryItemSnapshot,
+  MealDefinition,
   MealPlan,
   NutritionGoal,
 } from "@/modules/nutrition/domain/types";
 import { buildDailySummary } from "@/modules/nutrition/services/daily-calories.service";
+import { getDefaultMealDefinitions, getMealLabel } from "@/modules/nutrition/meal-helpers";
 
 interface NutritionBrowserDiary {
   id: string;
@@ -16,6 +18,7 @@ interface NutritionBrowserDiary {
   targetCalories: number;
   targetWaterMl: number;
   waterIntakeMl: number;
+  mealDefinitions: MealDefinition[];
   items: DiaryItemSnapshot[];
 }
 
@@ -26,7 +29,7 @@ interface NutritionBrowserState {
 }
 
 export interface NutritionDashboardSnapshot {
-  diary: { items: DiaryItemSnapshot[] };
+  diary: { items: DiaryItemSnapshot[]; mealDefinitions?: MealDefinition[] };
   summary: DailySummary;
   goal: NutritionGoal;
   mealPlan: MealPlan | null;
@@ -66,6 +69,7 @@ function createDiaryRecord(userId: string, date: string, goal: NutritionGoal): N
     targetCalories: goal.targetCalories,
     targetWaterMl: goal.targetWaterMl ?? 2200,
     waterIntakeMl: 0,
+    mealDefinitions: getDefaultMealDefinitions(),
     items: [],
   };
 }
@@ -94,6 +98,9 @@ function getOrCreateDiary(
   if (existingDiary) {
     existingDiary.targetCalories = goal.targetCalories;
     existingDiary.targetWaterMl = goal.targetWaterMl ?? 2200;
+    existingDiary.mealDefinitions = existingDiary.mealDefinitions?.length
+      ? existingDiary.mealDefinitions
+      : getDefaultMealDefinitions();
     return existingDiary;
   }
 
@@ -162,7 +169,7 @@ export function loadNutritionDashboardFromBrowser(
   });
 
   return {
-    diary: { items: sortDiaryItems(diary.items) },
+    diary: { items: sortDiaryItems(diary.items), mealDefinitions: diary.mealDefinitions },
     summary,
     goal,
     mealPlan: state.mealPlan ?? null,
@@ -224,6 +231,9 @@ export function seedNutritionBrowserFromDashboard(
   if (payload.diary || payload.summary) {
     const diary = getOrCreateDiary(state, userId, date, goal);
     diary.items = sortDiaryItems(payload.diary?.items ?? []);
+    diary.mealDefinitions = payload.diary?.mealDefinitions?.length
+      ? payload.diary.mealDefinitions
+      : diary.mealDefinitions;
     diary.targetCalories = payload.summary?.targetCalories ?? goal.targetCalories;
     diary.targetWaterMl = payload.summary?.targetWaterMl ?? goal.targetWaterMl ?? 2200;
     diary.waterIntakeMl = payload.summary?.waterIntakeMl ?? 0;
@@ -265,7 +275,28 @@ export function saveNutritionDiaryItemToBrowser(
 ): void {
   const state = readRawState(userId);
   const diary = getOrCreateDiary(state, userId, date, resolveGoal(userId, state, goal));
+  if (!diary.mealDefinitions.some((definition) => definition.key === item.mealType)) {
+    diary.mealDefinitions = [
+      ...diary.mealDefinitions,
+      {
+        key: item.mealType,
+        label: getMealLabel(item.mealType, item.mealLabel),
+      },
+    ];
+  }
   diary.items = sortDiaryItems([...diary.items, item]);
+  writeRawState(userId, state);
+}
+
+export function saveNutritionMealDefinitionsToBrowser(
+  userId: string,
+  date: string,
+  goal: NutritionGoal,
+  mealDefinitions: MealDefinition[],
+): void {
+  const state = readRawState(userId);
+  const diary = getOrCreateDiary(state, userId, date, resolveGoal(userId, state, goal));
+  diary.mealDefinitions = mealDefinitions;
   writeRawState(userId, state);
 }
 

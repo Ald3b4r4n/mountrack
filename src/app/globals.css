@@ -61,6 +61,7 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  scrollbar-gutter: stable both-edges;
 }
 
 body {
@@ -71,6 +72,12 @@ body {
   overflow-x: hidden;
   line-height: 1.6;
   position: relative;
+}
+
+@media (min-width: 861px) {
+  body {
+    overflow-y: scroll;
+  }
 }
 
 /* ===== BACKGROUND ATMOSFERICO ===== */
@@ -145,6 +152,14 @@ h1, h2, h3, h4 {
   overflow: hidden;
 }
 
+.btn-primary:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgba(52, 211, 153, 0.22),
+    0 8px 25px var(--accent-glow-strong),
+    inset 0 1px 0 rgba(255,255,255,0.2);
+}
+
 .btn-primary::after {
   content: '';
   position: absolute;
@@ -156,6 +171,7 @@ h1, h2, h3, h4 {
 
 .btn-primary:active {
   transform: translateY(-1px) scale(0.98);
+  box-shadow: 0 6px 18px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.16);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -290,17 +306,29 @@ h1, h2, h3, h4 {
     background-color var(--duration-normal) var(--ease-out-expo),
     border-color var(--duration-normal) var(--ease-out-expo),
     color var(--duration-normal) var(--ease-out-expo),
+    box-shadow var(--duration-normal) var(--ease-out-expo),
     transform var(--duration-normal) var(--ease-out-expo);
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
 }
 
+.nav-pill:focus-visible {
+  outline: none;
+  border-color: rgba(52, 211, 153, 0.22);
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.16);
+}
+
 .nav-pill:hover {
   background: rgba(52, 211, 153, 0.08);
   color: var(--accent-primary);
   border-color: rgba(52, 211, 153, 0.2);
+  box-shadow: 0 10px 24px rgba(4, 20, 38, 0.18);
   transform: translateY(-2px);
+}
+
+.nav-pill:active {
+  transform: translateY(-1px) scale(0.98);
 }
 
 /* ===== CARD STAT NUMBERS ===== */
@@ -384,13 +412,27 @@ h1, h2, h3, h4 {
     background-color var(--duration-fast) ease,
     border-color var(--duration-fast) ease,
     color var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease,
     transform var(--duration-fast) ease;
 }
 
+.btn-outline:focus-visible {
+  outline: none;
+  border-color: rgba(52, 211, 153, 0.24);
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.14);
+}
+
 .btn-outline:hover {
-  border-color: var(--accent-danger);
-  color: var(--accent-danger);
-  background: rgba(244, 63, 94, 0.08);
+  border-color: rgba(52, 211, 153, 0.24);
+  color: var(--text-primary);
+  background: rgba(52, 211, 153, 0.08);
+  box-shadow: 0 10px 22px rgba(4, 20, 38, 0.16);
+  transform: translateY(-1px);
+}
+
+.btn-outline:active {
+  background: rgba(52, 211, 153, 0.12);
+  transform: scale(0.98);
 }
 
 /* ===== SKELETON / LOADING ===== */

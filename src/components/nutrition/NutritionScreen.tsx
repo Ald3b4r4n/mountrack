@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { BarcodeScannerDialog } from "@/components/nutrition/BarcodeScannerDialog";
 import { SegmentButton } from "@/components/nutrition/CommonUI";
@@ -11,6 +11,8 @@ import { GoalPanel, type GoalInputState } from "@/components/nutrition/GoalPanel
 import { MealPlanPanel } from "@/components/nutrition/MealPlanPanel";
 import { NutritionHeader } from "@/components/nutrition/NutritionHeader";
 import { NutritionLayout } from "@/components/nutrition/NutritionLayout";
+import { NutritionWorkspaceFrame } from "@/components/nutrition/NutritionWorkspaceFrame";
+import { CustomMealDialog } from "@/components/nutrition/CustomMealDialog";
 import {
   NutritionWorkspaceNav,
   type NutritionArea,
@@ -23,6 +25,7 @@ import {
   removeNutritionDiaryItemFromBrowser,
   saveNutritionDiaryItemToBrowser,
   saveNutritionGoalToBrowser,
+  saveNutritionMealDefinitionsToBrowser,
   saveNutritionMealPlanToBrowser,
   saveNutritionWaterToBrowser,
   type NutritionDashboardSnapshot,
@@ -30,6 +33,7 @@ import {
 import { authorizedNutritionFetch } from "@/modules/nutrition/client";
 import { PLANNING_TABS, type PlanningTabKey } from "@/modules/nutrition/constants";
 import type {
+  MealDefinition,
   MealPlan,
   MealPlanItem,
   MealType,
@@ -41,6 +45,13 @@ import type {
 import { useHydration, buildNextWaterIntake } from "@/modules/nutrition/hooks/useHydration";
 import { useNutritionDashboard } from "@/modules/nutrition/hooks/useNutritionDashboard";
 import { useNutritionSearch } from "@/modules/nutrition/hooks/useNutritionSearch";
+import {
+  buildMealDefinitions,
+  createCustomMealDefinition,
+  getDefaultMealDefinitions,
+  getMealLabel,
+  isDefaultMealType,
+} from "@/modules/nutrition/meal-helpers";
 import { createDiaryItemSnapshot } from "@/modules/nutrition/services/daily-calories.service";
 import { calculateNutritionForQuantity } from "@/modules/nutrition/services/nutrition-calc.service";
 import { getFoodLabel } from "@/modules/nutrition/ui-helpers";
@@ -180,6 +191,8 @@ export function NutritionScreen() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [isSavingGoal, setIsSavingGoal] = useState(false);
   const [customFoodOpen, setCustomFoodOpen] = useState(false);
+  const [customMealOpen, setCustomMealOpen] = useState(false);
+  const [editingMeal, setEditingMeal] = useState<MealDefinition | null>(null);
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const canUseBrowserPersistence = Boolean(activeUser && !("devBypass" in activeUser && activeUser.devBypass));
@@ -192,8 +205,20 @@ export function NutritionScreen() {
   const { state: sState, setters: sSetters, actions: sActions } = searchHook;
   const { state: hState, setters: hSetters, actions: hActions } = hydrationHook;
 
-  const { summary, diaryItems, mealPlan, goal, isLoading, storageMode, historyPage, historyEntries, isHistoryLoading, historyTotalPages } = dState;
-  const { setSummary, setMealPlan, setGoal, setHistoryPage } = dSetters;
+  const {
+    summary,
+    diaryItems,
+    diaryMealDefinitions,
+    mealPlan,
+    goal,
+    isLoading,
+    storageMode,
+    historyPage,
+    historyEntries,
+    isHistoryLoading,
+    historyTotalPages,
+  } = dState;
+  const { setSummary, setMealPlan, setGoal, setDiaryMealDefinitions, setHistoryPage } = dSetters;
   const { resolveRequestError, loadDashboard, loadBrowserDashboard, hydrateDashboard, loadHistory, loadBrowserHistory, hydrateHistory } = dActions;
 
   const { isSearching, searchResults, resultsVisible, searchQuery, barcodeQuery, selectedFood, lastSearchSource } = sState;
@@ -216,10 +241,28 @@ export function NutritionScreen() {
   const [, setGoalInputsDirty] = useState(false);
   const [mealPlanDraft, setMealPlanDraft] = useState<MealPlan | null>(null);
   const [planCalories, setPlanCalories] = useState("2000");
+  const [workspaceMinHeight, setWorkspaceMinHeight] = useState(0);
+  const [planningPanelMinHeight, setPlanningPanelMinHeight] = useState(0);
+  const activeWorkspaceRef = useRef<HTMLDivElement | null>(null);
+  const activePlanningPanelRef = useRef<HTMLDivElement | null>(null);
 
   function updateGoalInput(key: keyof GoalInputState, value: string) {
     setGoalInputs((current) => ({ ...current, [key]: value }));
     setGoalInputsDirty(true);
+  }
+
+  const mealDefinitions = useMemo(
+    () => buildMealDefinitions(diaryItems, diaryMealDefinitions),
+    [diaryItems, diaryMealDefinitions],
+  );
+
+  function getActiveMealDefinition(selectedMealType: MealType): MealDefinition {
+    return (
+      mealDefinitions.find((definition) => definition.key === selectedMealType) ?? {
+        key: selectedMealType,
+        label: getMealLabel(selectedMealType),
+      }
+    );
   }
 
   function openSearchForMeal(nextMealType?: MealType) {
@@ -227,7 +270,186 @@ export function NutritionScreen() {
       setMealType(nextMealType);
       setActiveDiaryMeal(nextMealType);
     }
-    setActiveArea("search");
+    handleChangeArea("search");
+  }
+
+  function closeCustomMealDialog() {
+    setCustomMealOpen(false);
+    setEditingMeal(null);
+  }
+
+  function openCreateMealDialog() {
+    setEditingMeal(null);
+    setCustomMealOpen(true);
+  }
+
+  function openManageMealDialog(meal: MealDefinition) {
+    if (isDefaultMealType(meal.key)) {
+      return;
+    }
+
+    setEditingMeal(meal);
+    setCustomMealOpen(true);
+  }
+
+  function handleChangeArea(nextArea: NutritionArea) {
+    setActiveArea(nextArea);
+  }
+
+  async function persistMealDefinitions(nextMealDefinitions: MealDefinition[], failureMessage: string): Promise<boolean> {
+    if (!activeUser) {
+      return false;
+    }
+
+    if (storageMode === "volatile" && canUseBrowserPersistence) {
+      saveNutritionMealDefinitionsToBrowser(
+        activeUser.uid,
+        today,
+        {
+          ...DEFAULT_GOAL,
+          ...goal,
+          userId: activeUser.uid,
+          targetWaterMl: goal.targetWaterMl ?? DEFAULT_WATER_TARGET,
+        },
+        nextMealDefinitions,
+      );
+
+      const browserDashboard = loadBrowserDashboard();
+      if (browserDashboard) {
+        hydrateDashboard(browserDashboard);
+      }
+      setDiaryMealDefinitions(nextMealDefinitions);
+      return true;
+    }
+
+    const response = await authorizedNutritionFetch(activeUser, `/api/nutrition/diaries/${today}`, {
+      method: "PATCH",
+      body: JSON.stringify({ mealDefinitions: nextMealDefinitions }),
+    });
+    if (!response.ok) {
+      await resolveRequestError(response, failureMessage);
+      return false;
+    }
+
+    const payload = (await response.json()) as Partial<NutritionDashboardSnapshot>;
+    hydrateDashboard(payload);
+    setDiaryMealDefinitions(nextMealDefinitions);
+    return true;
+  }
+
+  async function handleCreateCustomMeal(label: string) {
+    if (!activeUser) return;
+
+    const nextDefinition = createCustomMealDefinition(label, mealDefinitions);
+    const nextMealDefinitions = buildMealDefinitions(diaryItems, [...diaryMealDefinitions, nextDefinition]);
+
+    try {
+      const saved = await persistMealDefinitions(nextMealDefinitions, "Nao foi possivel criar a nova refeicao agora.");
+      if (!saved) {
+        return;
+      }
+
+      setMealType(nextDefinition.key);
+      setActiveDiaryMeal(nextDefinition.key);
+      closeCustomMealDialog();
+      handleChangeArea("search");
+      setMessage(`${nextDefinition.label} pronta para receber itens.`);
+    } catch {
+      setMessage((current) => current ?? "Nao foi possivel criar a nova refeicao agora.");
+    }
+  }
+
+  async function handleRenameCustomMeal(label: string) {
+    const targetMeal = editingMeal;
+    if (!activeUser || !targetMeal || isDefaultMealType(targetMeal.key)) return;
+
+    const normalizedLabel = label.trim().replace(/\s+/g, " ");
+    const hasDuplicateLabel = mealDefinitions.some(
+      (definition) =>
+        definition.key !== targetMeal.key &&
+        definition.label.trim().toLocaleLowerCase("pt-BR") === normalizedLabel.toLocaleLowerCase("pt-BR"),
+    );
+    if (hasDuplicateLabel) {
+      setMessage("Ja existe uma refeicao com esse nome.");
+      return;
+    }
+
+    const nextMealDefinitions = mealDefinitions.map((definition) =>
+      definition.key === targetMeal.key ? { ...definition, label: normalizedLabel } : definition,
+    );
+
+    try {
+      const saved = await persistMealDefinitions(nextMealDefinitions, "Nao foi possivel renomear a refeicao agora.");
+      if (!saved) {
+        return;
+      }
+
+      setActiveDiaryMeal(targetMeal.key);
+      closeCustomMealDialog();
+      setMessage(`Refeicao atualizada para ${normalizedLabel}.`);
+    } catch {
+      setMessage((current) => current ?? "Nao foi possivel renomear a refeicao agora.");
+    }
+  }
+
+  async function handleDeleteCustomMeal() {
+    const targetMeal = editingMeal;
+    if (!activeUser || !targetMeal || isDefaultMealType(targetMeal.key)) return;
+
+    const targetMealItems = groupedDiaryItems[targetMeal.key] ?? [];
+    const nextMealDefinitions = mealDefinitions.filter((definition) => definition.key !== targetMeal.key);
+    const fallbackMeal = nextMealDefinitions[0]?.key ?? getDefaultMealDefinitions()[0].key;
+
+    try {
+      if (storageMode === "volatile" && canUseBrowserPersistence) {
+        for (const item of targetMealItems) {
+          removeNutritionDiaryItemFromBrowser(activeUser.uid, item.id);
+        }
+
+        const saved = await persistMealDefinitions(nextMealDefinitions, "Nao foi possivel excluir a refeicao agora.");
+        if (!saved) {
+          return;
+        }
+
+        const browserHistory = loadBrowserHistory(historyPage);
+        if (browserHistory) {
+          hydrateHistory(browserHistory);
+        }
+      } else {
+        for (const item of targetMealItems) {
+          const response = await authorizedNutritionFetch(activeUser, `/api/nutrition/diary-items/${item.id}`, {
+            method: "DELETE",
+          });
+          if (!response.ok) {
+            await resolveRequestError(response, "Nao foi possivel excluir a refeicao agora.");
+            return;
+          }
+        }
+
+        const saved = await persistMealDefinitions(nextMealDefinitions, "Nao foi possivel excluir a refeicao agora.");
+        if (!saved) {
+          return;
+        }
+
+        await Promise.all([loadDashboard(), loadHistory(historyPage)]);
+      }
+
+      if (activeDiaryMeal === targetMeal.key) {
+        setActiveDiaryMeal(fallbackMeal);
+        setDiaryPage(1);
+      }
+      if (mealType === targetMeal.key) {
+        setMealType(fallbackMeal);
+      }
+      closeCustomMealDialog();
+      setMessage(
+        targetMealItems.length > 0
+          ? `${targetMeal.label} e ${targetMealItems.length} item(ns) foram removidos do diario de hoje.`
+          : `${targetMeal.label} removida do diario de hoje.`,
+      );
+    } catch {
+      setMessage((current) => current ?? "Nao foi possivel excluir a refeicao agora.");
+    }
   }
 
   useEffect(() => {
@@ -245,6 +467,18 @@ export function NutritionScreen() {
   }, []);
 
   useEffect(() => {
+    const fallbackMeal = mealDefinitions[0]?.key ?? getDefaultMealDefinitions()[0].key;
+
+    if (!mealDefinitions.some((definition) => definition.key === activeDiaryMeal)) {
+      setActiveDiaryMeal(fallbackMeal);
+    }
+
+    if (!mealDefinitions.some((definition) => definition.key === mealType)) {
+      setMealType(fallbackMeal);
+    }
+  }, [activeDiaryMeal, mealDefinitions, mealType]);
+
+  useEffect(() => {
     if (!activeUser) return;
 
     setHistoryPage(1);
@@ -260,8 +494,7 @@ export function NutritionScreen() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeUser]);
+  }, [activeUser, loadDashboard, loadHistory, setHistoryPage]);
 
   useEffect(() => {
     setGoalInputs({
@@ -275,8 +508,51 @@ export function NutritionScreen() {
     setPlanCalories(String(goal.targetCalories ?? DEFAULT_GOAL.targetCalories));
   }, [goal]);
 
+  useEffect(() => {
+    const node = activeWorkspaceRef.current;
+    if (!node || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const updateHeight = () => {
+      setWorkspaceMinHeight((current) => Math.max(current, Math.ceil(node.getBoundingClientRect().height)));
+    };
+
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(node);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [activeArea, planningTab, isMobileLayout]);
+
+  useEffect(() => {
+    if (activeArea !== "planning") {
+      return;
+    }
+
+    const node = activePlanningPanelRef.current;
+    if (!node || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const updateHeight = () => {
+      setPlanningPanelMinHeight((current) => Math.max(current, Math.ceil(node.getBoundingClientRect().height)));
+    };
+
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(node);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [activeArea, planningTab, isMobileLayout]);
+
   async function handleAddDiaryItem() {
     if (!activeUser || !selectedFood) return;
+    const activeMealDefinition = getActiveMealDefinition(mealType);
 
     const parsedQuantity = parseInputNumber(quantity);
     if (parsedQuantity == null) {
@@ -292,6 +568,7 @@ export function NutritionScreen() {
           quantity: parsedQuantity,
           unit,
           mealType,
+          mealLabel: activeMealDefinition.label,
           consumedAt: new Date().toISOString(),
         });
 
@@ -312,11 +589,11 @@ export function NutritionScreen() {
         if (browserDashboard) hydrateDashboard(browserDashboard);
         if (browserHistory) hydrateHistory(browserHistory);
 
-        setActiveArea("today");
+        handleChangeArea("today");
         setActiveDiaryView("today");
         setActiveDiaryMeal(mealType);
         setHistoryPage(1);
-        setMessage(`${getFoodLabel(selectedFood)} adicionado ao diario.`);
+        setMessage(`${getFoodLabel(selectedFood)} adicionado em ${activeMealDefinition.label}.`);
         resetSearchComposer(true);
         return;
       }
@@ -329,6 +606,7 @@ export function NutritionScreen() {
           quantity: parsedQuantity,
           unit,
           mealType,
+          mealLabel: activeMealDefinition.label,
           consumedAt: new Date().toISOString(),
         }),
       });
@@ -337,11 +615,11 @@ export function NutritionScreen() {
         return;
       }
 
-      setActiveArea("today");
+      handleChangeArea("today");
       setActiveDiaryView("today");
       setActiveDiaryMeal(mealType);
       setHistoryPage(1);
-      setMessage(`${getFoodLabel(selectedFood)} adicionado ao diario.`);
+      setMessage(`${getFoodLabel(selectedFood)} adicionado em ${activeMealDefinition.label}.`);
       resetSearchComposer(true);
       await Promise.all([loadDashboard(), loadHistory(1)]);
     } catch {
@@ -423,7 +701,7 @@ export function NutritionScreen() {
         if (browserDashboard) hydrateDashboard(browserDashboard);
         if (browserHistory) hydrateHistory(browserHistory);
         setPlanningTab("goal");
-        setActiveArea("planning");
+        handleChangeArea("planning");
         setMessage("Meta nutricional atualizada.");
         return;
       }
@@ -461,7 +739,7 @@ export function NutritionScreen() {
         remainingCalories: roundValue(savedGoal.targetCalories - current.consumedCalories),
       }));
       setPlanningTab("goal");
-      setActiveArea("planning");
+      handleChangeArea("planning");
       setMessage("Meta nutricional atualizada.");
       await Promise.all([loadDashboard(), loadHistory(historyPage)]);
     } catch {
@@ -570,7 +848,7 @@ export function NutritionScreen() {
     }
 
     setPlanningTab("plan");
-    setActiveArea("planning");
+    handleChangeArea("planning");
     setIsGeneratingPlan(true);
     setMessage(null);
 
@@ -580,7 +858,7 @@ export function NutritionScreen() {
         body: JSON.stringify({
           targetCalories: requestedCalories,
           objective: goalObjectiveDraft,
-          rejectedFoods: planRejectedFoods,
+          excludedFoods: planRejectedFoods,
         }),
       });
 
@@ -589,13 +867,14 @@ export function NutritionScreen() {
         return;
       }
 
-      const payload = (await response.json()) as { plan?: MealPlan };
-      if (!payload.plan) {
-        setMessage("Servico retornou um plano vazio.");
+      const payload = (await response.json()) as { plan?: MealPlan; mealPlan?: MealPlan };
+      const generatedPlan = payload.plan ?? payload.mealPlan;
+      if (!generatedPlan || !generatedPlan.meals.some((meal) => meal.items.length > 0)) {
+        setMessage("Nao foi possivel montar um cardapio com as escolhas atuais. Ajuste a meta ou limpe as rejeicoes.");
         return;
       }
 
-      const normalized = normalizeMealPlan(payload.plan);
+      const normalized = normalizeMealPlan(generatedPlan);
       setMealPlanDraft(normalized);
       setMessage("Novo plano gerado. Ajuste as quantidades se desejar.");
 
@@ -703,15 +982,20 @@ export function NutritionScreen() {
     return calculateNutritionForQuantity({ food: selectedFood, quantity: parsedQuantity, unit });
   }, [selectedFood, quantity, unit]);
 
-  const groupedDiaryItems = useMemo(
-    () => ({
-      breakfast: diaryItems.filter((item) => item.mealType === "breakfast"),
-      lunch: diaryItems.filter((item) => item.mealType === "lunch"),
-      snack: diaryItems.filter((item) => item.mealType === "snack"),
-      dinner: diaryItems.filter((item) => item.mealType === "dinner"),
-    }),
-    [diaryItems],
-  );
+  const groupedDiaryItems = useMemo(() => {
+    const groupedItems = Object.fromEntries(
+      mealDefinitions.map((definition) => [definition.key, [] as typeof diaryItems]),
+    ) as Record<string, typeof diaryItems>;
+
+    for (const item of diaryItems) {
+      if (!groupedItems[item.mealType]) {
+        groupedItems[item.mealType] = [];
+      }
+      groupedItems[item.mealType].push(item);
+    }
+
+    return groupedItems;
+  }, [diaryItems, mealDefinitions]);
 
   const activeDiaryItems = useMemo(() => groupedDiaryItems[activeDiaryMeal] ?? [], [groupedDiaryItems, activeDiaryMeal]);
   const diaryTotalPages = Math.max(1, Math.ceil(activeDiaryItems.length / DIARY_PAGE_SIZE));
@@ -741,6 +1025,201 @@ export function NutritionScreen() {
     selectedFood && !resultsVisible
       ? { title: "Resultados recolhidos", text: "Selecao pronta. Limpe ou faca outra busca para trocar o alimento." }
       : { title: "Nenhum alimento listado", text: isSearching ? "Consultando fontes de alimentos..." : "Faca uma busca para ver resultados aqui." };
+  const planningTabs = (
+    <div className="flex flex-wrap gap-[0.55rem]">
+      {PLANNING_TABS.map((tab) => (
+        <SegmentButton
+          key={tab.key}
+          active={planningTab === tab.key}
+          label={tab.label}
+          meta={tab.key === "goal" ? undefined : displayedMealPlan?.meals.length}
+          onClick={() => setPlanningTab(tab.key)}
+        />
+      ))}
+    </div>
+  );
+  const todayWorkspaceContent = (
+    <TodayWorkspace
+      activeDiaryMeal={activeDiaryMeal}
+      groupedDiaryItems={groupedDiaryItems}
+      mealDefinitions={mealDefinitions}
+      mealSummary={summary.meals}
+      embedded={!isMobileLayout}
+      onOpenMeal={(meal) => {
+        handleChangeArea("today");
+        setActiveDiaryView("today");
+        setActiveDiaryMeal(meal);
+        setDiaryPage(1);
+      }}
+      onOpenSearchForMeal={openSearchForMeal}
+      onManageMeal={openManageMealDialog}
+      onAddMeal={openCreateMealDialog}
+    >
+      <DiaryPanel
+        activeDiaryView={activeDiaryView}
+        setActiveDiaryView={setActiveDiaryView}
+        setDiaryPage={setDiaryPage}
+        summary={summary}
+        waterRatio={waterRatio}
+        hydrationMode={hydrationMode}
+        handleSelectHydrationMode={handleSelectHydrationMode}
+        isMobileLayout={isMobileLayout}
+        handleAdjustWater={handleAdjustWater}
+        waterDraft={waterDraft}
+        setWaterDraft={setWaterDraft}
+        handleSaveWater={handleSaveWater}
+        isUpdatingWater={isUpdatingWater}
+        mealDefinitions={mealDefinitions}
+        activeDiaryMeal={activeDiaryMeal}
+        setActiveDiaryMeal={setActiveDiaryMeal}
+        groupedDiaryItems={groupedDiaryItems}
+        activeDiaryItems={activeDiaryItems}
+        diaryPage={diaryPage}
+        diaryTotalPages={diaryTotalPages}
+        isLoading={isLoading}
+        pagedDiaryItems={pagedDiaryItems}
+        handleDeleteDiaryItem={handleDeleteDiaryItem}
+        isHistoryLoading={isHistoryLoading}
+        historyEntries={historyEntries}
+        historyPage={historyPage}
+        historyTotalPages={historyTotalPages}
+        loadHistory={(page) => void loadHistory(page)}
+        onManageMeal={openManageMealDialog}
+      />
+    </TodayWorkspace>
+  );
+  const searchWorkspaceContent = (
+    <FoodSearchPanel
+      storageMode={storageMode}
+      isMobileLayout={isMobileLayout}
+      embedded={!isMobileLayout}
+      mealOptions={mealDefinitions}
+      searchQuery={searchQuery}
+      onSearchQueryChange={handleSearchQueryChange}
+      onSearch={() => void handleSearch()}
+      isSearching={isSearching}
+      barcodeQuery={barcodeQuery}
+      onBarcodeQueryChange={handleBarcodeQueryChange}
+      onBarcodeLookup={(value) => void handleBarcodeLookup(value)}
+      onOpenScanner={() => setScannerOpen(true)}
+      searchSourceLabel={searchSourceLabel}
+      resultsVisible={resultsVisible}
+      searchResults={searchResults}
+      resultState={resultState}
+      onApplyFoodSelection={applyFoodSelection}
+      onCustomFoodOpen={() => setCustomFoodOpen(true)}
+      onClearSearch={() => {
+        resetSearchComposer();
+        setMessage(null);
+      }}
+      selectedFood={selectedFood}
+      selectedFoodTotals={selectedFoodTotals}
+      onReopenSearchResults={reopenSearchResults}
+      quantity={quantity}
+      onQuantityChange={setQuantity}
+      unit={unit}
+      onUnitChange={setUnit}
+      mealType={mealType}
+      onMealTypeChange={(value) => {
+        setMealType(value);
+        setActiveDiaryMeal(value);
+      }}
+      onAddDiaryItem={() => void handleAddDiaryItem()}
+      searchCatalogBadge={searchCatalogBadge}
+    />
+  );
+  const planningWorkspaceContent = (
+    <section className="grid gap-4">
+      {isMobileLayout ? (
+        <div className="glass-panel static-panel rounded-[1.2rem] bg-[#06162d]/58 p-4">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <strong className="block font-['Outfit',sans-serif] text-[1.08rem] text-[var(--text-primary)]">
+                Planejamento nutricional
+              </strong>
+              <span className="text-[0.88rem] text-[var(--text-secondary)]">
+                Defina sua meta e monte um cardapio diario para ajustar depois.
+              </span>
+            </div>
+            {displayedMealPlan ? <span className="badge badge-success">{displayedMealPlan.meals.length} refeicoes</span> : null}
+          </div>
+
+          {planningTabs}
+        </div>
+      ) : (
+        <div className="glass-panel static-panel rounded-[1.2rem] bg-[#06162d]/44 p-3.5">
+          {planningTabs}
+        </div>
+      )}
+
+      <div
+        className="min-w-0"
+        style={planningPanelMinHeight > 0 ? { minHeight: `${planningPanelMinHeight}px` } : undefined}
+      >
+        <div ref={activePlanningPanelRef} className="min-w-0">
+          {planningTab === "goal" ? (
+          <GoalPanel
+            goal={goal}
+            summary={summary}
+            goalInputs={goalInputs}
+            goalObjectiveDraft={goalObjectiveDraft}
+            isSavingGoal={isSavingGoal}
+            defaultWaterTarget={DEFAULT_WATER_TARGET}
+            onUpdateGoalInput={updateGoalInput}
+            onChangeObjective={(objective) => {
+              setGoalInputsDirty(true);
+              setGoalObjectiveDraft(objective);
+            }}
+            onSaveGoal={() => void handleSaveGoal()}
+          />
+          ) : (
+          <MealPlanPanel
+            displayedMealPlan={displayedMealPlan}
+            planTotals={planTotals}
+            planCalories={planCalories}
+            requestedPlanCalories={requestedPlanCalories}
+            planDelta={planDelta}
+            planRejectedFoods={planRejectedFoods}
+            isGeneratingPlan={isGeneratingPlan}
+            isExportingPdf={isExportingPdf}
+            isMobileLayout={isMobileLayout}
+            onPlanCaloriesChange={setPlanCalories}
+            onGenerateMealPlan={() => void handleGenerateMealPlan()}
+            onUseGoalCalories={() => setPlanCalories(String(goal.targetCalories))}
+            onExportPdf={() => void handleExportMealPlanPdf()}
+            onDiscardMealPlan={() => void handleDiscardMealPlan()}
+            onClearRejections={() => setPlanRejectedFoods([])}
+            onChangeQuantity={handleChangeMealPlanItemQuantity}
+            onRejectItem={handleRejectMealPlanItem}
+          />
+          )}
+        </div>
+      </div>
+    </section>
+  );
+  const activeWorkspaceContent =
+    activeArea === "today"
+      ? isMobileLayout
+        ? todayWorkspaceContent
+        : <NutritionWorkspaceFrame activeArea="today">{todayWorkspaceContent}</NutritionWorkspaceFrame>
+      : activeArea === "search"
+        ? isMobileLayout
+          ? searchWorkspaceContent
+          : <NutritionWorkspaceFrame activeArea="search">{searchWorkspaceContent}</NutritionWorkspaceFrame>
+        : isMobileLayout
+          ? planningWorkspaceContent
+          : <NutritionWorkspaceFrame activeArea="planning">{planningWorkspaceContent}</NutritionWorkspaceFrame>;
+
+  const workspaceContent = (
+    <div
+      className="min-w-0"
+      style={workspaceMinHeight > 0 ? { minHeight: `${workspaceMinHeight}px` } : undefined}
+    >
+      <div ref={activeWorkspaceRef} className="min-w-0">
+        {activeWorkspaceContent}
+      </div>
+    </div>
+  );
 
   const pageContent = (
     <NutritionLayout isMobileLayout={isMobileLayout}>
@@ -750,6 +1229,44 @@ export function NutritionScreen() {
         onDetected={(code) => {
           setScannerOpen(false);
           void handleBarcodeLookup(code);
+        }}
+      />
+      <CustomMealDialog
+        key={`${editingMeal?.key ?? "new"}:${customMealOpen ? "open" : "closed"}`}
+        open={customMealOpen}
+        onClose={closeCustomMealDialog}
+        initialLabel={editingMeal?.label}
+        title={editingMeal ? "Gerenciar refeicao" : "Nova refeicao"}
+        description={
+          editingMeal
+            ? "Atualize o nome do bloco extra ou exclua a refeicao com todos os itens lancados nela."
+            : "Nomeie um bloco extra como Pre treino, Ceia ou Sobremesa."
+        }
+        confirmLabel={editingMeal ? "Salvar nome" : "Continuar"}
+        deleteAction={
+          editingMeal
+            ? {
+                onDelete: () => {
+                  void handleDeleteCustomMeal();
+                },
+                label:
+                  (groupedDiaryItems[editingMeal.key]?.length ?? 0) > 0
+                    ? "Excluir refeicao e itens"
+                    : "Excluir refeicao",
+                hint:
+                  (groupedDiaryItems[editingMeal.key]?.length ?? 0) > 0
+                    ? `Excluir tambem remove ${groupedDiaryItems[editingMeal.key]?.length ?? 0} item(ns) registrados nela.`
+                    : "Excluir remove esse bloco extra do diario de hoje.",
+              }
+            : undefined
+        }
+        onCreate={(label) => {
+          if (editingMeal) {
+            void handleRenameCustomMeal(label);
+            return;
+          }
+
+          void handleCreateCustomMeal(label);
         }}
       />
       <CustomFoodDialog
@@ -771,171 +1288,19 @@ export function NutritionScreen() {
         consumedRatio={consumedRatio}
       />
 
+      <NutritionWorkspaceNav
+        activeArea={activeArea}
+        isMobileLayout={isMobileLayout}
+        onChangeArea={handleChangeArea}
+      />
+
       {message ? (
         <div className="glass-panel static-panel anim-enter mb-4 border-[#34d399]/20 p-[0.9rem_1rem]">
           <p className="text-[var(--text-secondary)]">{message}</p>
         </div>
       ) : null}
 
-      {!isMobileLayout ? (
-        <NutritionWorkspaceNav activeArea={activeArea} isMobileLayout={false} onChangeArea={setActiveArea} />
-      ) : null}
-
-      {activeArea === "today" ? (
-        <TodayWorkspace
-          activeDiaryMeal={activeDiaryMeal}
-          groupedDiaryItems={groupedDiaryItems}
-          mealSummary={summary.meals}
-          onOpenMeal={(meal) => {
-            setActiveArea("today");
-            setActiveDiaryView("today");
-            setActiveDiaryMeal(meal);
-            setDiaryPage(1);
-          }}
-          onOpenSearchForMeal={openSearchForMeal}
-          onAddMeal={() => openSearchForMeal(activeDiaryMeal)}
-        >
-          <DiaryPanel
-            activeDiaryView={activeDiaryView}
-            setActiveDiaryView={setActiveDiaryView}
-            setDiaryPage={setDiaryPage}
-            summary={summary}
-            waterRatio={waterRatio}
-            hydrationMode={hydrationMode}
-            handleSelectHydrationMode={handleSelectHydrationMode}
-            isMobileLayout={isMobileLayout}
-            handleAdjustWater={handleAdjustWater}
-            waterDraft={waterDraft}
-            setWaterDraft={setWaterDraft}
-            handleSaveWater={handleSaveWater}
-            isUpdatingWater={isUpdatingWater}
-            activeDiaryMeal={activeDiaryMeal}
-            setActiveDiaryMeal={setActiveDiaryMeal}
-            groupedDiaryItems={groupedDiaryItems}
-            activeDiaryItems={activeDiaryItems}
-            diaryPage={diaryPage}
-            diaryTotalPages={diaryTotalPages}
-            isLoading={isLoading}
-            pagedDiaryItems={pagedDiaryItems}
-            handleDeleteDiaryItem={handleDeleteDiaryItem}
-            isHistoryLoading={isHistoryLoading}
-            historyEntries={historyEntries}
-            historyPage={historyPage}
-            historyTotalPages={historyTotalPages}
-            loadHistory={(page) => void loadHistory(page)}
-          />
-        </TodayWorkspace>
-      ) : null}
-
-      {activeArea === "search" ? (
-        <FoodSearchPanel
-          storageMode={storageMode}
-          isMobileLayout={isMobileLayout}
-          searchQuery={searchQuery}
-          onSearchQueryChange={handleSearchQueryChange}
-          onSearch={() => void handleSearch()}
-          isSearching={isSearching}
-          barcodeQuery={barcodeQuery}
-          onBarcodeQueryChange={handleBarcodeQueryChange}
-          onBarcodeLookup={(value) => void handleBarcodeLookup(value)}
-          onOpenScanner={() => setScannerOpen(true)}
-          searchSourceLabel={searchSourceLabel}
-          resultsVisible={resultsVisible}
-          searchResults={searchResults}
-          resultState={resultState}
-          onApplyFoodSelection={applyFoodSelection}
-          onCustomFoodOpen={() => setCustomFoodOpen(true)}
-          onClearSearch={() => {
-            resetSearchComposer();
-            setMessage(null);
-          }}
-          selectedFood={selectedFood}
-          selectedFoodTotals={selectedFoodTotals}
-          onReopenSearchResults={reopenSearchResults}
-          quantity={quantity}
-          onQuantityChange={setQuantity}
-          unit={unit}
-          onUnitChange={setUnit}
-          mealType={mealType}
-          onMealTypeChange={(value) => {
-            setMealType(value);
-            setActiveDiaryMeal(value);
-          }}
-          onAddDiaryItem={() => void handleAddDiaryItem()}
-          searchCatalogBadge={searchCatalogBadge}
-        />
-      ) : null}
-
-      {activeArea === "planning" ? (
-        <section className="grid gap-4">
-          <div className="glass-panel static-panel rounded-[1.2rem] bg-[#06162d]/58 p-4">
-            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <strong className="block font-['Outfit',sans-serif] text-[1.08rem] text-[var(--text-primary)]">
-                  Planejamento nutricional
-                </strong>
-                <span className="text-[0.88rem] text-[var(--text-secondary)]">
-                  Ajuste metas primeiro e depois gere um plano alimentar a partir delas.
-                </span>
-              </div>
-              {displayedMealPlan ? <span className="badge badge-success">{displayedMealPlan.meals.length} refeicoes</span> : null}
-            </div>
-
-            <div className="flex flex-wrap gap-[0.55rem]">
-              {PLANNING_TABS.map((tab) => (
-                <SegmentButton
-                  key={tab.key}
-                  active={planningTab === tab.key}
-                  label={tab.label}
-                  meta={tab.key === "goal" ? undefined : displayedMealPlan?.meals.length}
-                  onClick={() => setPlanningTab(tab.key)}
-                />
-              ))}
-            </div>
-          </div>
-
-          {planningTab === "goal" ? (
-            <GoalPanel
-              goal={goal}
-              summary={summary}
-              goalInputs={goalInputs}
-              goalObjectiveDraft={goalObjectiveDraft}
-              isSavingGoal={isSavingGoal}
-              defaultWaterTarget={DEFAULT_WATER_TARGET}
-              onUpdateGoalInput={updateGoalInput}
-              onChangeObjective={(objective) => {
-                setGoalInputsDirty(true);
-                setGoalObjectiveDraft(objective);
-              }}
-              onSaveGoal={() => void handleSaveGoal()}
-            />
-          ) : (
-            <MealPlanPanel
-              displayedMealPlan={displayedMealPlan}
-              planTotals={planTotals}
-              planCalories={planCalories}
-              requestedPlanCalories={requestedPlanCalories}
-              planDelta={planDelta}
-              planRejectedFoods={planRejectedFoods}
-              isGeneratingPlan={isGeneratingPlan}
-              isExportingPdf={isExportingPdf}
-              isMobileLayout={isMobileLayout}
-              onPlanCaloriesChange={setPlanCalories}
-              onGenerateMealPlan={() => void handleGenerateMealPlan()}
-              onUseGoalCalories={() => setPlanCalories(String(goal.targetCalories))}
-              onExportPdf={() => void handleExportMealPlanPdf()}
-              onDiscardMealPlan={() => void handleDiscardMealPlan()}
-              onClearRejections={() => setPlanRejectedFoods([])}
-              onChangeQuantity={handleChangeMealPlanItemQuantity}
-              onRejectItem={handleRejectMealPlanItem}
-            />
-          )}
-        </section>
-      ) : null}
-
-      {isMobileLayout ? (
-        <NutritionWorkspaceNav activeArea={activeArea} isMobileLayout onChangeArea={setActiveArea} />
-      ) : null}
+      {workspaceContent}
     </NutritionLayout>
   );
 

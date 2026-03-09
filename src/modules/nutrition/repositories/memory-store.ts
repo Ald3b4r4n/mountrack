@@ -2,9 +2,11 @@ import type {
   DailySummary,
   DiaryItemSnapshot,
   FoodItem,
+  MealDefinition,
   MealPlan,
   NutritionGoal,
 } from "@/modules/nutrition/domain/types";
+import { getDefaultMealDefinitions } from "@/modules/nutrition/meal-helpers";
 
 export interface DiaryRecord {
   id: string;
@@ -13,6 +15,7 @@ export interface DiaryRecord {
   targetCalories: number;
   targetWaterMl: number;
   waterIntakeMl: number;
+  mealDefinitions: MealDefinition[];
   items: DiaryItemSnapshot[];
 }
 
@@ -55,7 +58,9 @@ export function cloneDiarySummary(
   waterIntakeMl: number,
   items: DiaryItemSnapshot[],
 ): DailySummary {
-  const meals = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 };
+  const meals = Object.fromEntries(
+    getDefaultMealDefinitions().map((definition) => [definition.key, 0]),
+  ) as Record<string, number>;
   let calories = 0;
   let protein = 0;
   let carbs = 0;
@@ -70,7 +75,7 @@ export function cloneDiarySummary(
     fat += item.fat;
     fiber += item.fiber;
     sodium += item.sodium;
-    meals[item.mealType] += item.calories;
+    meals[item.mealType] = (meals[item.mealType] ?? 0) + item.calories;
   }
 
   return {
@@ -86,11 +91,8 @@ export function cloneDiarySummary(
     fat: Number(fat.toFixed(2)),
     fiber: Number(fiber.toFixed(2)),
     sodium: Number(sodium.toFixed(2)),
-    meals: {
-      breakfast: Number(meals.breakfast.toFixed(2)),
-      lunch: Number(meals.lunch.toFixed(2)),
-      dinner: Number(meals.dinner.toFixed(2)),
-      snack: Number(meals.snack.toFixed(2)),
-    },
+    meals: Object.fromEntries(
+      Object.entries(meals).map(([mealKey, value]) => [mealKey, Number(value.toFixed(2))]),
+    ),
   };
 }

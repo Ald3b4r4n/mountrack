@@ -2,9 +2,10 @@ import type {
   DailySummary,
   DiaryItemSnapshot,
   FoodItem,
-  MealType,
   NutritionUnit,
 } from "@/modules/nutrition/domain/types";
+import type { MealType } from "@/modules/nutrition/domain/types";
+import { getDefaultMealDefinitions } from "@/modules/nutrition/meal-helpers";
 import { calculateNutritionForQuantity } from "@/modules/nutrition/services/nutrition-calc.service";
 
 interface CreateDiaryItemSnapshotInput {
@@ -13,6 +14,7 @@ interface CreateDiaryItemSnapshotInput {
   quantity: number;
   unit: NutritionUnit;
   mealType: MealType;
+  mealLabel?: string;
   consumedAt: string;
 }
 
@@ -30,6 +32,7 @@ export function createDiaryItemSnapshot({
   quantity,
   unit,
   mealType,
+  mealLabel,
   consumedAt,
 }: CreateDiaryItemSnapshotInput): DiaryItemSnapshot {
   const totals = calculateNutritionForQuantity({ food, quantity, unit });
@@ -40,6 +43,7 @@ export function createDiaryItemSnapshot({
     foodId: food.id,
     foodName: food.displayName ?? food.name,
     mealType,
+    mealLabel,
     quantity,
     unit,
     consumedAt,
@@ -54,12 +58,9 @@ export function buildDailySummary({
   waterIntakeMl,
   items,
 }: BuildDailySummaryInput): DailySummary {
-  const baseMeals = {
-    breakfast: 0,
-    lunch: 0,
-    dinner: 0,
-    snack: 0,
-  } as Record<MealType, number>;
+  const baseMeals = Object.fromEntries(
+    getDefaultMealDefinitions().map((definition) => [definition.key, 0]),
+  ) as Record<string, number>;
 
   const consumedProtein = items.reduce((total, item) => total + item.protein, 0);
   const consumedCarbs = items.reduce((total, item) => total + item.carbs, 0);
@@ -69,7 +70,7 @@ export function buildDailySummary({
   const consumedCalories = items.reduce((total, item) => total + item.calories, 0);
 
   for (const item of items) {
-    baseMeals[item.mealType] += item.calories;
+    baseMeals[item.mealType] = (baseMeals[item.mealType] ?? 0) + item.calories;
   }
 
   return {
@@ -85,11 +86,8 @@ export function buildDailySummary({
     fiber: Number(consumedFiber.toFixed(2)),
     sodium: Number(consumedSodium.toFixed(2)),
     calories: Number(consumedCalories.toFixed(2)),
-    meals: {
-      breakfast: Number(baseMeals.breakfast.toFixed(2)),
-      lunch: Number(baseMeals.lunch.toFixed(2)),
-      dinner: Number(baseMeals.dinner.toFixed(2)),
-      snack: Number(baseMeals.snack.toFixed(2)),
-    },
+    meals: Object.fromEntries(
+      Object.entries(baseMeals).map(([mealKey, value]) => [mealKey, Number(value.toFixed(2))]),
+    ),
   };
 }

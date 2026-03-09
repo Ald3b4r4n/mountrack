@@ -4,9 +4,11 @@ import { TACO_FOODS } from "@/modules/nutrition/data/taco-foods";
 import type {
   DiaryItemSnapshot,
   FoodItem,
+  MealDefinition,
   MealPlan,
   NutritionGoal,
 } from "@/modules/nutrition/domain/types";
+import { getDefaultMealDefinitions, getMealLabel } from "@/modules/nutrition/meal-helpers";
 import {
   diaryKey,
   getNutritionMemoryStore,
@@ -115,11 +117,13 @@ create table if not exists nutrition_diaries (
   target_calories numeric not null,
   target_water_ml numeric not null default 0,
   water_intake_ml numeric not null default 0,
+  meal_definitions jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
   unique(user_id, diary_date)
 );
 alter table nutrition_diaries add column if not exists target_water_ml numeric not null default 0;
 alter table nutrition_diaries add column if not exists water_intake_ml numeric not null default 0;
+alter table nutrition_diaries add column if not exists meal_definitions jsonb not null default '[]'::jsonb;
 create index if not exists nutrition_diaries_user_date_idx on nutrition_diaries (user_id, diary_date desc);
 
 create table if not exists nutrition_diary_items (
@@ -178,6 +182,36 @@ export function getNutritionStorageHeaders(): HeadersInit {
   return {
     "x-nutrition-storage": getNutritionStorageResponse(),
   };
+}
+
+function cloneMealDefinitions(mealDefinitions: MealDefinition[] | undefined): MealDefinition[] {
+  if (!mealDefinitions?.length) {
+    return getDefaultMealDefinitions();
+  }
+
+  return mealDefinitions.map((definition) => ({ ...definition }));
+}
+
+function ensureMealDefinitions(
+  mealDefinitions: MealDefinition[] | undefined,
+  items: DiaryItemSnapshot[] = [],
+): MealDefinition[] {
+  const definitions = cloneMealDefinitions(mealDefinitions);
+  const knownKeys = new Set(definitions.map((definition) => definition.key));
+
+  for (const item of items) {
+    if (knownKeys.has(item.mealType)) {
+      continue;
+    }
+
+    definitions.push({
+      key: item.mealType,
+      label: getMealLabel(item.mealType, item.mealLabel),
+    });
+    knownKeys.add(item.mealType);
+  }
+
+  return definitions;
 }
 
 function getPool(): Pool {
@@ -411,12 +445,16 @@ export async function getOrCreateDiary(
           ...existing,
           targetCalories,
           targetWaterMl,
+          mealDefinitions: ensureMealDefinitions(existing.mealDefinitions, existing.items),
         };
         store.diaries.set(key, refreshedDiary);
         return refreshedDiary;
       }
 
-      return existing;
+      return {
+        ...existing,
+        mealDefinitions: ensureMealDefinitions(existing.mealDefinitions, existing.items),
+      };
     }
 
     const diary = {
@@ -426,6 +464,7 @@ export async function getOrCreateDiary(
       targetCalories,
       targetWaterMl,
       waterIntakeMl: 0,
+      mealDefinitions: getDefaultMealDefinitions(),
       items: [],
     } satisfies DiaryRecord;
     store.diaries.set(key, diary);
@@ -440,6 +479,7 @@ export async function getOrCreateDiary(
     target_calories: string;
     target_water_ml: string;
     water_intake_ml: string;
+    meal_definitions: MealDefinition[];
   }>(
     `
     insert into nutrition_diaries (id, user_id, diary_date, target_calories, target_water_ml)
@@ -447,7 +487,7 @@ export async function getOrCreateDiary(
     on conflict (user_id, diary_date) do update set
       target_calories = excluded.target_calories,
       target_water_ml = excluded.target_water_ml
-    returning id, user_id, diary_date, target_calories, target_water_ml, water_intake_ml
+    returning id, user_id, diary_date, target_calories, target_water_ml, water_intake_ml, meal_definitions
     `,
     [crypto.randomUUID(), userId, date, targetCalories, targetWaterMl],
   );
@@ -457,6 +497,7 @@ export async function getOrCreateDiary(
     "select payload from nutrition_diary_items where diary_id = $1 order by consumed_at asc",
     [diaryRow.id],
   );
+  const items = itemsResult.rows.map((row: { payload: DiaryItemSnapshot }) => row.payload);
 
   return {
     id: diaryRow.id,
@@ -465,7 +506,8 @@ export async function getOrCreateDiary(
     targetCalories: Number(diaryRow.target_calories),
     targetWaterMl: Number(diaryRow.target_water_ml),
     waterIntakeMl: Number(diaryRow.water_intake_ml),
-    items: itemsResult.rows.map((row: { payload: DiaryItemSnapshot }) => row.payload),
+    mealDefinitions: ensureMealDefinitions(diaryRow.meal_definitions as MealDefinition[] | undefined, items),
+    items,
   };
 }
 
@@ -481,12 +523,24 @@ export async function saveDiaryItem(
   if (!hasDatabaseUrl()) {
     const store = getNutritionMemoryStore();
     const key = diaryKey(userId, date);
+    const mealDefinitions = ensureMealDefinitions(diary.mealDefinitions, [item]);
     const nextDiary: DiaryRecord = {
       ...diary,
+      mealDefinitions,
       items: [...diary.items, item].sort((left, right) => left.consumedAt.localeCompare(right.consumedAt)),
     };
     store.diaries.set(key, nextDiary);
     return nextDiary;
+  }
+
+  if (!diary.mealDefinitions.some((definition) => definition.key === item.mealType)) {
+    await updateDiaryMealDefinitions(
+      userId,
+      date,
+      targetCalories,
+      targetWaterMl,
+      ensureMealDefinitions(diary.mealDefinitions, [item]),
+    );
   }
 
   await getPool().query(
@@ -513,6 +567,7 @@ export async function updateDiaryWater(
     const nextDiary: DiaryRecord = {
       ...currentDiary,
       waterIntakeMl,
+      mealDefinitions: ensureMealDefinitions(currentDiary.mealDefinitions, currentDiary.items),
     };
     store.diaries.set(diaryKey(userId, date), nextDiary);
     return nextDiary;
@@ -526,6 +581,7 @@ export async function updateDiaryWater(
     target_calories: string;
     target_water_ml: string;
     water_intake_ml: string;
+    meal_definitions: MealDefinition[];
   }>(
     `
     insert into nutrition_diaries (id, user_id, diary_date, target_calories, target_water_ml, water_intake_ml)
@@ -534,7 +590,7 @@ export async function updateDiaryWater(
       target_calories = excluded.target_calories,
       target_water_ml = excluded.target_water_ml,
       water_intake_ml = excluded.water_intake_ml
-    returning id, user_id, diary_date, target_calories, target_water_ml, water_intake_ml
+    returning id, user_id, diary_date, target_calories, target_water_ml, water_intake_ml, meal_definitions
     `,
     [crypto.randomUUID(), userId, date, targetCalories, targetWaterMl, waterIntakeMl],
   );
@@ -544,6 +600,7 @@ export async function updateDiaryWater(
     "select payload from nutrition_diary_items where diary_id = $1 order by consumed_at asc",
     [diaryRow.id],
   );
+  const items = itemsResult.rows.map((row: { payload: DiaryItemSnapshot }) => row.payload);
 
   return {
     id: diaryRow.id,
@@ -552,8 +609,43 @@ export async function updateDiaryWater(
     targetCalories: Number(diaryRow.target_calories),
     targetWaterMl: Number(diaryRow.target_water_ml),
     waterIntakeMl: Number(diaryRow.water_intake_ml),
-    items: itemsResult.rows.map((row: { payload: DiaryItemSnapshot }) => row.payload),
+    mealDefinitions: ensureMealDefinitions(diaryRow.meal_definitions as MealDefinition[] | undefined, items),
+    items,
   };
+}
+
+export async function updateDiaryMealDefinitions(
+  userId: string,
+  date: string,
+  targetCalories: number,
+  targetWaterMl: number,
+  mealDefinitions: MealDefinition[],
+): Promise<DiaryRecord> {
+  if (!hasDatabaseUrl()) {
+    const store = getNutritionMemoryStore();
+    const currentDiary = await getOrCreateDiary(userId, date, targetCalories, targetWaterMl);
+    const nextDiary: DiaryRecord = {
+      ...currentDiary,
+      mealDefinitions: ensureMealDefinitions(mealDefinitions, currentDiary.items),
+    };
+    store.diaries.set(diaryKey(userId, date), nextDiary);
+    return nextDiary;
+  }
+
+  await ensureSchema();
+  await getPool().query(
+    `
+    insert into nutrition_diaries (id, user_id, diary_date, target_calories, target_water_ml, meal_definitions)
+    values ($1, $2, $3, $4, $5, $6::jsonb)
+    on conflict (user_id, diary_date) do update set
+      target_calories = excluded.target_calories,
+      target_water_ml = excluded.target_water_ml,
+      meal_definitions = excluded.meal_definitions
+    `,
+    [crypto.randomUUID(), userId, date, targetCalories, targetWaterMl, JSON.stringify(mealDefinitions)],
+  );
+
+  return getOrCreateDiary(userId, date, targetCalories, targetWaterMl);
 }
 
 export async function listDiaryHistory(
@@ -584,9 +676,10 @@ export async function listDiaryHistory(
     target_calories: string;
     target_water_ml: string;
     water_intake_ml: string;
+    meal_definitions: MealDefinition[];
   }>(
     `
-    select id, user_id, diary_date, target_calories, target_water_ml, water_intake_ml
+    select id, user_id, diary_date, target_calories, target_water_ml, water_intake_ml, meal_definitions
     from nutrition_diaries
     where user_id = $1
     order by diary_date desc
@@ -624,6 +717,7 @@ export async function listDiaryHistory(
       targetCalories: Number(row.target_calories),
       targetWaterMl: Number(row.target_water_ml),
       waterIntakeMl: Number(row.water_intake_ml),
+      mealDefinitions: ensureMealDefinitions(row.meal_definitions as MealDefinition[] | undefined, itemsByDiary.get(row.id) ?? []),
       items: itemsByDiary.get(row.id) ?? [],
     })),
     total: Number(totalResult.rows[0]?.count ?? 0),
@@ -646,7 +740,11 @@ export async function replaceDiaryItem(userId: string, itemId: string, nextItem:
           id: itemId,
           diaryId: diary.id,
         };
-        const nextDiary = { ...diary, items };
+        const nextDiary = {
+          ...diary,
+          mealDefinitions: ensureMealDefinitions(diary.mealDefinitions, items),
+          items,
+        };
         store.diaries.set(key, nextDiary);
         return nextDiary;
       }
@@ -679,6 +777,23 @@ export async function replaceDiaryItem(userId: string, itemId: string, nextItem:
     id: itemId,
     diaryId: diaryRow.diary_id,
   } satisfies DiaryItemSnapshot;
+
+  const currentDiary = await getOrCreateDiary(
+    diaryRow.user_id,
+    diaryRow.diary_date,
+    Number(diaryRow.target_calories),
+    Number(diaryRow.target_water_ml),
+  );
+
+  if (!currentDiary.mealDefinitions.some((definition) => definition.key === nextPayload.mealType)) {
+    await updateDiaryMealDefinitions(
+      diaryRow.user_id,
+      diaryRow.diary_date,
+      Number(diaryRow.target_calories),
+      Number(diaryRow.target_water_ml),
+      ensureMealDefinitions(currentDiary.mealDefinitions, [nextPayload]),
+    );
+  }
 
   await getPool().query(
     `

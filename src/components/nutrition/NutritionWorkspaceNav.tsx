@@ -54,13 +54,13 @@ function AreaButton({
       type="button"
       onClick={onClick}
       className={[
-        "group rounded-[1.1rem] border transition-colors",
+        "group rounded-[1.1rem] border transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#34d399]/35 active:scale-[0.985]",
         compact
           ? "flex min-h-[4.5rem] flex-1 flex-col items-center justify-center gap-1.5 px-3 py-2"
           : "flex min-h-[5.5rem] flex-1 items-center gap-3 px-4 py-3 text-left",
         active
-          ? "border-[#34d399]/30 bg-[linear-gradient(135deg,rgba(52,211,153,0.14),rgba(6,182,212,0.08))] text-[var(--text-primary)]"
-          : "border-[var(--border-glass)] bg-[#071121]/72 text-[var(--text-secondary)]",
+          ? "border-[#34d399]/30 bg-[linear-gradient(135deg,rgba(52,211,153,0.14),rgba(6,182,212,0.08))] text-[var(--text-primary)] shadow-[0_14px_32px_rgba(4,20,38,0.24)]"
+          : "border-[var(--border-glass)] bg-[#071121]/72 text-[var(--text-secondary)] hover:border-[#34d399]/18 hover:bg-[#08182d]/82 hover:text-[var(--text-primary)] hover:shadow-[0_14px_32px_rgba(4,20,38,0.18)]",
       ].join(" ")}
       aria-pressed={active}
     >
@@ -70,7 +70,7 @@ function AreaButton({
           compact ? "h-9 w-9" : "h-11 w-11",
           active
             ? "border-[#34d399]/25 bg-[#34d399]/12 text-[var(--accent-primary)]"
-            : "border-[var(--border-glass)] bg-white/5 text-[var(--text-secondary)]",
+            : "border-[var(--border-glass)] bg-white/5 text-[var(--text-secondary)] transition-colors duration-200 group-hover:border-[#34d399]/18 group-hover:text-[var(--accent-primary)]",
         ].join(" ")}
       >
         <Icon size={compact ? 18 : 20} />
@@ -94,8 +94,8 @@ export function NutritionWorkspaceNav({
 }: NutritionWorkspaceNavProps) {
   if (isMobileLayout) {
     return (
-      <div className="fixed inset-x-0 bottom-3 z-40 px-3">
-        <nav className="glass-panel static-panel mx-auto flex max-w-md items-center gap-2 rounded-[1.4rem] border border-[#34d399]/10 bg-[#04101e]/90 p-2 shadow-[0_18px_40px_rgba(0,0,0,0.35)]">
+      <section className="sticky top-3 z-30 mb-4">
+        <nav className="glass-panel static-panel flex items-center gap-2 rounded-[1.35rem] border border-[#34d399]/12 bg-[#04101e]/92 p-2 shadow-[0_12px_30px_rgba(0,0,0,0.24)] backdrop-blur-xl">
           {AREA_ITEMS.map((item) => (
             <AreaButton
               key={item.key}
@@ -108,7 +108,7 @@ export function NutritionWorkspaceNav({
             />
           ))}
         </nav>
-      </div>
+      </section>
     );
   }
 

@@ -7,9 +7,10 @@ import {
   getMealPlan,
   getNutritionStorageHeaders,
   getOrCreateDiary,
+  updateDiaryMealDefinitions,
   updateDiaryWater,
 } from "@/modules/nutrition/repositories/nutrition-store";
-import { waterIntakeSchema } from "@/modules/nutrition/validators";
+import { diaryPatchSchema } from "@/modules/nutrition/validators";
 
 export const runtime = "nodejs";
 
@@ -42,14 +43,28 @@ export async function PATCH(request: Request, context: { params: Promise<{ date:
     const { user, defaultGoal } = await requireNutritionUser(request);
     const { date } = await context.params;
     const goal = await getGoal(user.uid, defaultGoal);
-    const payload = waterIntakeSchema.parse(await request.json());
-    const diary = await updateDiaryWater(
-      user.uid,
-      date,
-      goal.targetCalories,
-      goal.targetWaterMl ?? defaultGoal.targetWaterMl ?? 2200,
-      payload.waterIntakeMl,
-    );
+    const payload = diaryPatchSchema.parse(await request.json());
+    const targetWaterMl = goal.targetWaterMl ?? defaultGoal.targetWaterMl ?? 2200;
+
+    let diary = await getOrCreateDiary(user.uid, date, goal.targetCalories, targetWaterMl);
+    if (payload.mealDefinitions) {
+      diary = await updateDiaryMealDefinitions(
+        user.uid,
+        date,
+        goal.targetCalories,
+        targetWaterMl,
+        payload.mealDefinitions,
+      );
+    }
+    if (payload.waterIntakeMl !== undefined) {
+      diary = await updateDiaryWater(
+        user.uid,
+        date,
+        goal.targetCalories,
+        targetWaterMl,
+        payload.waterIntakeMl,
+      );
+    }
     const summary = buildDailySummary({
       date,
       targetCalories: diary.targetCalories,
