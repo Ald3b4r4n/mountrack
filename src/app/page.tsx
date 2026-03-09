@@ -731,7 +731,6 @@ export default function Home() {
                   <span className="stat-unit">ampolas</span>
                 </div>
                 <p style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>Ajustado pela sua configuracao atual de ampola.</p>
-                <p style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>Ajustado pela sua configuraÃ§Ã£o atual de ampola.</p>
               </article>
 
               <article className="glass-panel anim-enter anim-delay-4" style={{ padding: '1.75rem' }}>
