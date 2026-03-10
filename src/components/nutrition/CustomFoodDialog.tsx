@@ -3,14 +3,24 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { FoodItem } from "@/modules/nutrition/domain/types";
+import {
+  authorizedNutritionFetch,
+  getNutritionErrorMessage,
+} from "@/modules/nutrition/client";
 
 interface CustomFoodDialogProps {
+  authUser: Parameters<typeof authorizedNutritionFetch>[0] | null;
   open: boolean;
   onClose: () => void;
   onCreated: (food: FoodItem) => void;
 }
 
-export function CustomFoodDialog({ open, onClose, onCreated }: CustomFoodDialogProps) {
+export function CustomFoodDialog({
+  authUser,
+  open,
+  onClose,
+  onCreated,
+}: CustomFoodDialogProps) {
   const titleId = useId();
   const descriptionId = useId();
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -63,7 +73,9 @@ export function CustomFoodDialog({ open, onClose, onCreated }: CustomFoodDialogP
 
     const frame = window.requestAnimationFrame(() => {
       firstInputRef.current?.focus();
-      dialogRef.current?.scrollTo({ top: 0, behavior: "instant" });
+      if (typeof dialogRef.current?.scrollTo === "function") {
+        dialogRef.current.scrollTo({ top: 0, behavior: "auto" });
+      }
     });
 
     return () => {
@@ -78,6 +90,11 @@ export function CustomFoodDialog({ open, onClose, onCreated }: CustomFoodDialogP
   }
 
   async function handleSave() {
+    if (!authUser) {
+      setError("Sua sessao da nutricao nao foi validada. Entre novamente e tente de novo.");
+      return;
+    }
+
     if (!name.trim()) {
       setError("Informe o nome do alimento.");
       return;
@@ -97,22 +114,28 @@ export function CustomFoodDialog({ open, onClose, onCreated }: CustomFoodDialogP
         servingGrams: Number(serving.replace(",", ".")) || undefined,
       };
 
-      const response = await fetch("/api/nutrition/foods/custom", {
+      const response = await authorizedNutritionFetch(authUser, "/api/nutrition/foods/custom", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        throw new Error("Falha ao salvar");
+        throw new Error(
+          await getNutritionErrorMessage(response, "Nao consegui salvar esse alimento agora."),
+        );
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as { item?: FoodItem };
       if (data.item) {
         onCreated(data.item);
+        return;
       }
-    } catch {
-      setError("Nao consegui salvar esse alimento agora.");
+
+      throw new Error("Nao consegui salvar esse alimento agora.");
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error ? saveError.message : "Nao consegui salvar esse alimento agora.",
+      );
     } finally {
       setIsSaving(false);
     }

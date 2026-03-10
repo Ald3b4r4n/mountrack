@@ -1282,6 +1282,7 @@ export function NutritionScreen() {
         }}
       />
       <CustomFoodDialog
+        authUser={activeUser}
         open={customFoodOpen}
         onClose={() => setCustomFoodOpen(false)}
         onCreated={(food) => {
