@@ -20,6 +20,10 @@ type NutritionSearchPayload = {
 };
 
 type NutritionSearchUser = User | { uid: string; getIdToken?: () => Promise<string>; devBypass?: boolean } | null;
+type FoodSelectionOptions = {
+  openComposer?: boolean;
+  hideResults?: boolean;
+};
 
 export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowserPersistence: boolean) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -27,6 +31,7 @@ export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowse
   const [searchResults, setSearchResults] = useState<FoodItem[]>([]);
   const [lastSearchSource, setLastSearchSource] = useState<NutritionSearchSource>(null);
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [resultsVisible, setResultsVisible] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isEnrichingExternal, setIsEnrichingExternal] = useState(false);
@@ -53,6 +58,7 @@ export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowse
 
   function clearSelectedFood() {
     setSelectedFood(null);
+    setIsComposerOpen(false);
   }
 
   function resetSearchComposer(clearInputs = false) {
@@ -141,6 +147,7 @@ export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowse
 
       if (results.length === 1) {
         setSelectedFood(results[0]);
+        setIsComposerOpen(false);
         setMessage(`${results[0].displayName ?? results[0].name} pronto para registro.`);
       } else if (payload.externalPending) {
         setIsEnrichingExternal(true);
@@ -189,6 +196,8 @@ export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowse
         setSearchResults([foundItem]);
         setLastSearchSource(payload.source ?? "openfoodfacts");
         setSelectedFood(foundItem);
+        setResultsVisible(false);
+        setIsComposerOpen(true);
         setMessage(`${foundItem.displayName ?? foundItem.name} encontrado pelo codigo de barras.`);
       } else {
         setLastSearchSource(payload.source ?? "none");
@@ -203,14 +212,27 @@ export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowse
     }
   }
 
-  function applyFoodSelection(food: FoodItem) {
+  function applyFoodSelection(food: FoodItem, options: FoodSelectionOptions = {}) {
+    const { openComposer = true, hideResults = true } = options;
     setSelectedFood(food);
-    setResultsVisible(false);
+    setResultsVisible(!hideResults);
+    setIsComposerOpen(openComposer);
     setMessage(`${food.displayName ?? food.name} pronto para registro.`);
+  }
+
+  function openSelectedFoodComposer() {
+    if (!selectedFoodRef.current) return;
+    setResultsVisible(false);
+    setIsComposerOpen(true);
+  }
+
+  function closeSelectedFoodComposer() {
+    setIsComposerOpen(false);
   }
 
   function reopenSearchResults() {
     setResultsVisible(true);
+    setIsComposerOpen(false);
   }
 
   return {
@@ -220,6 +242,7 @@ export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowse
       searchResults,
       lastSearchSource,
       selectedFood,
+      isComposerOpen,
       resultsVisible,
       isSearching,
       isEnrichingExternal,
@@ -245,6 +268,8 @@ export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowse
       clearSearchResults,
       clearSelectedFood,
       applyFoodSelection,
+      openSelectedFoodComposer,
+      closeSelectedFoodComposer,
       reopenSearchResults,
     },
   };
