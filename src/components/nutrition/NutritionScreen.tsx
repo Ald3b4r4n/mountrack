@@ -1240,7 +1240,9 @@ export function NutritionScreen() {
         onClose={() => setScannerOpen(false)}
         onDetected={(code) => {
           setScannerOpen(false);
-          void handleBarcodeLookup(code);
+          window.setTimeout(() => {
+            void handleBarcodeLookup(code);
+          }, 180);
         }}
       />
       <CustomMealDialog

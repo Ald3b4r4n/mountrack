@@ -1,5 +1,6 @@
-﻿import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { BarcodeScannerDialog } from "@/components/nutrition/BarcodeScannerDialog";
 
 const startMock = jest.fn();
@@ -46,7 +47,9 @@ describe("BarcodeScannerDialog", () => {
   });
 
   it("does not render when closed", () => {
-    const { container } = render(<BarcodeScannerDialog open={false} onClose={jest.fn()} onDetected={jest.fn()} />);
+    const { container } = render(
+      <BarcodeScannerDialog open={false} onClose={jest.fn()} onDetected={jest.fn()} />,
+    );
 
     expect(container).toBeEmptyDOMElement();
   });
@@ -119,6 +122,68 @@ describe("BarcodeScannerDialog", () => {
     await user.click(screen.getByRole("button", { name: /^Fechar$/i }));
 
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("restores focus to the trigger after a manual close", async () => {
+    const user = userEvent.setup();
+
+    function Harness() {
+      const [open, setOpen] = useState(false);
+
+      return (
+        <div>
+          <button type="button" onClick={() => setOpen(true)}>
+            Abrir scanner
+          </button>
+          <BarcodeScannerDialog open={open} onClose={() => setOpen(false)} onDetected={jest.fn()} />
+        </div>
+      );
+    }
+
+    render(<Harness />);
+
+    const trigger = screen.getByRole("button", { name: /Abrir scanner/i });
+    trigger.focus();
+
+    await user.click(trigger);
+    await user.click(await screen.findByRole("button", { name: /^Fechar$/i }));
+
+    await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
+  it("does not restore focus to the trigger after a successful detection", async () => {
+    const user = userEvent.setup();
+
+    function Harness() {
+      const [open, setOpen] = useState(false);
+
+      return (
+        <div>
+          <button type="button" onClick={() => setOpen(true)}>
+            Abrir scanner
+          </button>
+          <BarcodeScannerDialog open={open} onClose={() => setOpen(false)} onDetected={jest.fn()} />
+        </div>
+      );
+    }
+
+    render(<Harness />);
+
+    const trigger = screen.getByRole("button", { name: /Abrir scanner/i });
+    trigger.focus();
+    await user.click(trigger);
+
+    await waitFor(() => expect(startMock).toHaveBeenCalled());
+
+    latestSuccessHandler?.("7891234567890");
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("dialog", { name: /Leitor de codigo de barras/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    expect(trigger).not.toHaveFocus();
   });
 
   it("closes the dialog when the user presses Escape", async () => {
