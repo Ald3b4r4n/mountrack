@@ -1033,7 +1033,11 @@ export function NutritionScreen() {
       ? "Catalogo sincronizado"
       : storageMode === "checking"
         ? "Preparando catalogo"
-        : "Catalogo da sessao";
+        : "Somente neste aparelho";
+  const syncWarningMessage =
+    !isPreview && (storageMode === "volatile" || storageMode === "memory")
+      ? "Sincronizacao indisponivel. Os lancamentos da nutricao estao sendo salvos apenas neste aparelho ate a base de dados responder normalmente."
+      : null;
   const searchSourceLabel = formatSearchSourceLabel(lastSearchSource);
   const resultState =
     selectedFood && !resultsVisible
@@ -1335,6 +1339,13 @@ export function NutritionScreen() {
       {message ? (
         <div className="glass-panel static-panel anim-enter mb-4 border-[#34d399]/20 p-[0.9rem_1rem]">
           <p className="text-[var(--text-secondary)]">{message}</p>
+        </div>
+      ) : null}
+
+      {syncWarningMessage ? (
+        <div className="glass-panel static-panel anim-enter mb-4 border-[#f59e0b]/26 bg-[#2a1806]/45 p-[0.95rem_1rem]">
+          <strong className="block text-[0.95rem] text-[#fcd34d]">Sincronizacao entre dispositivos desativada</strong>
+          <p className="mt-1 text-[0.88rem] text-[var(--text-secondary)]">{syncWarningMessage}</p>
         </div>
       ) : null}
 
