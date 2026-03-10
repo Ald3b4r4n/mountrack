@@ -132,6 +132,49 @@ describe("POST /api/nutrition/diary-items", () => {
     expect(saveDiaryItemMock).not.toHaveBeenCalled();
   });
 
+  it("falls back to the provided food snapshot when the food id is not yet accessible", async () => {
+    findAccessibleFoodByIdMock.mockResolvedValue(null);
+
+    const response = await POST(
+      new Request("http://localhost/api/nutrition/diary-items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: "2026-03-09",
+          foodId: "barcode-food-1",
+          foodSnapshot: {
+            id: "barcode-food-1",
+            source: "openfoodfacts",
+            name: "Pao integral",
+            displayName: "Pao integral",
+            baseUnit: "g",
+            caloriesPer100: 256,
+            proteinPer100: 4.12,
+            carbsPer100: 18.74,
+            fatPer100: 1.08,
+            confidenceScore: 1,
+            mealCategories: ["breakfast"],
+          },
+          quantity: 39,
+          unit: "g",
+          mealType: "breakfast",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(createDiaryItemSnapshotMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        food: expect.objectContaining({
+          id: "barcode-food-1",
+          source: "openfoodfacts",
+          name: "Pao integral",
+        }),
+      }),
+    );
+    expect(saveDiaryItemMock).toHaveBeenCalled();
+  });
+
   it("rejects invalid diary item payloads", async () => {
     const response = await POST(
       new Request("http://localhost/api/nutrition/diary-items", {

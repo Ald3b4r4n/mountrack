@@ -26,6 +26,19 @@ const selectedFood: FoodItem = {
   mealCategories: ["snack"],
 };
 
+const nextScannedFood: FoodItem = {
+  ...selectedFood,
+  id: "barcode-food-2",
+  name: "Pao de Forma Artesano Integral",
+  displayName: "Pao de Forma Artesano Integral - Pullman",
+  brand: "Pullman",
+  barcode: "7896002303460",
+  caloriesPer100: 256,
+  proteinPer100: 4.12,
+  carbsPer100: 18.74,
+  fatPer100: 1.08,
+};
+
 function ClosedComposerPanel({ onAddDiaryItem = jest.fn() }: { onAddDiaryItem?: () => void } = {}) {
   const [composerOpen, setComposerOpen] = useState(false);
 
@@ -112,6 +125,58 @@ function OpenComposerPanel({ onAddDiaryItem = jest.fn() }: { onAddDiaryItem?: ()
   );
 }
 
+function OpenComposerWithFoodSwap() {
+  const [food, setFood] = useState(selectedFood);
+
+  return (
+    <>
+      <button type="button" onClick={() => setFood(nextScannedFood)}>
+        Simular novo escaneamento
+      </button>
+      <FoodSearchPanel
+        storageMode="database"
+        isMobileLayout
+        searchQuery=""
+        onSearchQueryChange={jest.fn()}
+        onSearch={jest.fn()}
+        isSearching={false}
+        isEnrichingExternal={false}
+        barcodeQuery={food.barcode ?? ""}
+        onBarcodeQueryChange={jest.fn()}
+        onBarcodeLookup={jest.fn()}
+        onOpenScanner={jest.fn()}
+        searchSourceLabel="Catalogo do app"
+        searchFeedback="Item encontrado"
+        resultsVisible={false}
+        searchResults={[food]}
+        resultState={{ title: "Selecao pronta", text: "Item pronto para registro." }}
+        onApplyFoodSelection={jest.fn()}
+        onCustomFoodOpen={jest.fn()}
+        onClearSearch={jest.fn()}
+        selectedFood={food}
+        isComposerOpen
+        selectedFoodTotals={{
+          protein: food.proteinPer100 ?? 0,
+          carbs: food.carbsPer100 ?? 0,
+          fat: food.fatPer100 ?? 0,
+        }}
+        onOpenComposer={jest.fn()}
+        onCloseComposer={jest.fn()}
+        onReopenSearchResults={jest.fn()}
+        quantity="39"
+        onQuantityChange={jest.fn()}
+        unit="g"
+        onUnitChange={jest.fn()}
+        mealOptions={mealOptions}
+        mealType="breakfast"
+        onMealTypeChange={jest.fn()}
+        onAddDiaryItem={jest.fn()}
+        searchCatalogBadge="Catalogo sincronizado"
+      />
+    </>
+  );
+}
+
 describe("FoodSearchPanel", () => {
   beforeEach(() => {
     window.scrollTo = jest.fn();
@@ -161,5 +226,21 @@ describe("FoodSearchPanel", () => {
     await user.click(screen.getByRole("button", { name: /Adicionar ao diario/i }));
 
     expect(onAddDiaryItem).toHaveBeenCalledTimes(1);
+  });
+
+  it("resets the composer scroll when a new scanned food replaces the current one", async () => {
+    const user = userEvent.setup();
+    render(<OpenComposerWithFoodSwap />);
+
+    const scrollArea = screen.getByTestId("mobile-composer-scroll-area");
+    scrollArea.scrollTop = 180;
+
+    await user.click(screen.getByRole("button", { name: /Simular novo escaneamento/i }));
+
+    await waitFor(() => {
+      expect(scrollArea.scrollTop).toBe(0);
+    });
+
+    expect(screen.getByText(/Pao de Forma Artesano Integral - Pullman/i)).toBeInTheDocument();
   });
 });

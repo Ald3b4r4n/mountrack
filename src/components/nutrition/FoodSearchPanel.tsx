@@ -246,14 +246,7 @@ export function FoodSearchPanel({
     document.body.style.right = "0";
     document.body.style.width = "100%";
 
-    const scrollFrame = window.requestAnimationFrame(() => {
-      if (composerScrollRef.current) {
-        composerScrollRef.current.scrollTop = 0;
-      }
-    });
-
     return () => {
-      window.cancelAnimationFrame(scrollFrame);
       document.body.style.overflow = previousOverflow;
       document.body.style.position = previousPosition;
       document.body.style.top = previousTop;
@@ -267,6 +260,20 @@ export function FoodSearchPanel({
       }
     };
   }, [isMobileLayout, isComposerOpen]);
+
+  useEffect(() => {
+    if (!isMobileLayout || !isComposerOpen || !selectedFood) return;
+
+    const scrollFrame = window.requestAnimationFrame(() => {
+      if (composerScrollRef.current) {
+        composerScrollRef.current.scrollTop = 0;
+      }
+    });
+
+    return () => {
+      window.cancelAnimationFrame(scrollFrame);
+    };
+  }, [isMobileLayout, isComposerOpen, selectedFood?.id]);
 
   const storageSummary =
     storageMode === "database"
@@ -381,6 +388,7 @@ export function FoodSearchPanel({
 
                 <div
                   ref={composerScrollRef}
+                  data-testid="mobile-composer-scroll-area"
                   className="flex-1 overflow-y-auto px-4 py-4 [overscroll-behavior:contain]"
                 >
                   <ComposerBody
