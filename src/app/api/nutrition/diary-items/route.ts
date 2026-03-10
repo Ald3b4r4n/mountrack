@@ -12,7 +12,14 @@ export async function POST(request: Request) {
     const { user, defaultGoal } = await requireNutritionUser(request);
     const payload = diaryItemSchema.parse(await request.json());
     const goal = await getGoal(user.uid, defaultGoal);
-    const food = await findAccessibleFoodById(user.uid, payload.foodId);
+    const fallbackFood =
+      payload.foodSnapshot != null
+        ? {
+            ...payload.foodSnapshot,
+            id: payload.foodId,
+          }
+        : null;
+    const food = (await findAccessibleFoodById(user.uid, payload.foodId)) ?? fallbackFood;
 
     if (!food) {
       return NextResponse.json({ error: "Food not found" }, { status: 404 });

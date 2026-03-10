@@ -617,6 +617,7 @@ export function NutritionScreen() {
         body: JSON.stringify({
           date: today,
           foodId: selectedFood.id,
+          foodSnapshot: selectedFood,
           quantity: parsedQuantity,
           unit,
           mealType,
