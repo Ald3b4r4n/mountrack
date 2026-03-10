@@ -273,7 +273,7 @@ export function FoodSearchPanel({
       ? "Busque no catalogo salvo e receba novas referencias sem travar a tela."
       : storageMode === "checking"
         ? "Preparando o catalogo e as referencias de apoio..."
-        : "Busque no catalogo disponivel nesta sessao.";
+        : "Os registros desta area estao ativos so neste aparelho enquanto a sincronizacao nao volta.";
   const searchActivitySummary = isSearching
     ? "Buscando no catalogo do app..."
     : isEnrichingExternal
