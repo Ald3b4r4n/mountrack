@@ -26,7 +26,7 @@ const selectedFood: FoodItem = {
   mealCategories: ["snack"],
 };
 
-function ClosedComposerPanel() {
+function ClosedComposerPanel({ onAddDiaryItem = jest.fn() }: { onAddDiaryItem?: () => void } = {}) {
   const [composerOpen, setComposerOpen] = useState(false);
 
   return (
@@ -63,13 +63,13 @@ function ClosedComposerPanel() {
       mealOptions={mealOptions}
       mealType="breakfast"
       onMealTypeChange={jest.fn()}
-      onAddDiaryItem={jest.fn()}
+      onAddDiaryItem={onAddDiaryItem}
       searchCatalogBadge="Catalogo sincronizado"
     />
   );
 }
 
-function OpenComposerPanel() {
+function OpenComposerPanel({ onAddDiaryItem = jest.fn() }: { onAddDiaryItem?: () => void } = {}) {
   const [composerOpen, setComposerOpen] = useState(true);
 
   return (
@@ -106,7 +106,7 @@ function OpenComposerPanel() {
       mealOptions={mealOptions}
       mealType="breakfast"
       onMealTypeChange={jest.fn()}
-      onAddDiaryItem={jest.fn()}
+      onAddDiaryItem={onAddDiaryItem}
       searchCatalogBadge="Catalogo sincronizado"
     />
   );
@@ -151,5 +151,15 @@ describe("FoodSearchPanel", () => {
 
     expect(screen.getByText(/Pronto para registrar/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Registrar/i })).toBeInTheDocument();
+  });
+
+  it("wires the mobile composer CTA to the add handler", async () => {
+    const user = userEvent.setup();
+    const onAddDiaryItem = jest.fn();
+    render(<OpenComposerPanel onAddDiaryItem={onAddDiaryItem} />);
+
+    await user.click(screen.getByRole("button", { name: /Adicionar ao diario/i }));
+
+    expect(onAddDiaryItem).toHaveBeenCalledTimes(1);
   });
 });

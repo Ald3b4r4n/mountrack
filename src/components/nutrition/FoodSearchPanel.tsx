@@ -179,7 +179,7 @@ function ComposerBody({
       </div>
 
       {showActionButton ? (
-        <button onClick={onAddDiaryItem} className="btn-primary w-full">
+        <button type="button" onClick={onAddDiaryItem} className="btn-primary w-full">
           Adicionar ao diario
         </button>
       ) : null}
@@ -319,15 +319,16 @@ export function FoodSearchPanel({
   const mobileComposer =
     isMobileLayout && selectedFood && isComposerOpen && portalTarget
       ? createPortal(
-          <div className="fixed inset-0 z-[80]">
+          <div className="fixed inset-0 z-[80] pointer-events-none">
             <button
-              className="absolute inset-0 bg-[#01060e]/92"
+              type="button"
+              className="pointer-events-auto absolute inset-0 z-0 bg-[#01060e]/96"
               onClick={onCloseComposer}
               aria-label="Fechar registro do alimento"
             />
 
             <div
-              className="relative flex h-full flex-col px-3"
+              className="relative z-10 flex h-full flex-col px-3"
               style={{
                 paddingTop: "calc(0.75rem + env(safe-area-inset-top, 0px))",
                 paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))",
@@ -337,9 +338,9 @@ export function FoodSearchPanel({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="nutrition-mobile-composer-title"
-                className="glass-panel static-panel relative flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#03111f]/98 shadow-[0_24px_80px_rgba(0,0,0,0.52)]"
+                className="pointer-events-auto relative isolate flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#03111f] shadow-[0_24px_80px_rgba(0,0,0,0.52)]"
               >
-                <div className="border-b border-white/8 bg-[#03111f]/98 px-4 py-4">
+                <div className="border-b border-white/8 bg-[#03111f] px-4 py-4">
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <span className="badge badge-success">Registro rapido</span>
@@ -354,6 +355,7 @@ export function FoodSearchPanel({
                       </p>
                     </div>
                     <button
+                      type="button"
                       onClick={onCloseComposer}
                       className="btn-outline min-w-auto px-3 py-2"
                     >
@@ -363,6 +365,7 @@ export function FoodSearchPanel({
 
                   <div className="flex flex-wrap gap-2">
                     <button
+                      type="button"
                       onClick={() => {
                         onReopenSearchResults();
                       }}
@@ -395,9 +398,13 @@ export function FoodSearchPanel({
                   />
                 </div>
 
-                <div className="border-t border-white/8 bg-[#03111f]/98 px-4 py-3 backdrop-blur">
+                <div className="border-t border-white/8 bg-[#03111f] px-4 py-3">
                   <div className="grid gap-2">
-                    <button onClick={onAddDiaryItem} className="btn-primary min-h-[3.35rem] w-full">
+                    <button
+                      type="button"
+                      onClick={onAddDiaryItem}
+                      className="btn-primary min-h-[3.35rem] w-full"
+                    >
                       Adicionar ao diario
                     </button>
                     <p className="text-center text-[0.78rem] text-[var(--text-muted)]">
@@ -484,11 +491,12 @@ export function FoodSearchPanel({
                   placeholder="Ex.: banana prata, arroz cozido, iogurte"
                 />
                 <div className={`grid gap-2.5 ${isMobileLayout ? "grid-cols-2" : "grid-cols-[auto]"}`}>
-                  <button onClick={onSearch} className="btn-primary" disabled={isSearching}>
+                  <button type="button" onClick={onSearch} className="btn-primary" disabled={isSearching}>
                     {isSearching ? "Buscando..." : "Buscar"}
                   </button>
                   {isMobileLayout ? (
                     <button
+                      type="button"
                       onClick={onOpenScanner}
                       className="btn-outline inline-flex items-center justify-center gap-2 border-dashed text-[var(--accent-primary)]"
                     >
@@ -521,10 +529,11 @@ export function FoodSearchPanel({
                   placeholder="Ex.: 7891234567890"
                 />
                   <div className={`grid gap-2.5 ${isMobileLayout ? "grid-cols-2" : "grid-cols-[auto_auto]"}`}>
-                    <button onClick={() => onBarcodeLookup(barcodeQuery)} className="btn-primary">
+                    <button type="button" onClick={() => onBarcodeLookup(barcodeQuery)} className="btn-primary">
                       Buscar codigo
                     </button>
                     <button
+                      type="button"
                       onClick={onOpenScanner}
                       className="btn-outline inline-flex items-center justify-center gap-2 border-dashed text-[var(--accent-primary)]"
                     >
@@ -546,10 +555,11 @@ export function FoodSearchPanel({
                 </p>
               </div>
               <div className="flex flex-wrap gap-2.5">
-                <button onClick={onCustomFoodOpen} className="btn-primary">
+                <button type="button" onClick={onCustomFoodOpen} className="btn-primary">
                   Criar alimento
                 </button>
                 <button
+                  type="button"
                   onClick={() => setSearchMode("name")}
                   className="btn-outline min-w-auto px-3 py-2"
                 >
@@ -573,10 +583,11 @@ export function FoodSearchPanel({
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <button onClick={onOpenComposer} className="btn-primary min-w-auto px-3 py-2">
+                <button type="button" onClick={onOpenComposer} className="btn-primary min-w-auto px-3 py-2">
                   Registrar
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     onReopenSearchResults();
                   }}
@@ -614,14 +625,15 @@ export function FoodSearchPanel({
                   {hasVisibleResults ? (
                     <span className="badge badge-success">{searchResults.length} itens</span>
                   ) : null}
-                  <button onClick={onCustomFoodOpen} className="btn-outline min-w-auto px-3 py-1.5">
-                    Criar alimento
-                  </button>
-                  {searchResults.length || selectedFood ? (
-                    <button
-                      onClick={onClearSearch}
-                      className="btn-outline min-w-auto px-3 py-1.5"
-                    >
+                    <button type="button" onClick={onCustomFoodOpen} className="btn-outline min-w-auto px-3 py-1.5">
+                      Criar alimento
+                    </button>
+                    {searchResults.length || selectedFood ? (
+                      <button
+                        type="button"
+                        onClick={onClearSearch}
+                        className="btn-outline min-w-auto px-3 py-1.5"
+                      >
                       Limpar
                     </button>
                   ) : null}
@@ -639,6 +651,7 @@ export function FoodSearchPanel({
 
                     return (
                       <button
+                        type="button"
                         key={food.id}
                         onClick={() => handleSelectFood(food)}
                         className={`glass-panel static-panel cursor-pointer p-3.5 text-left transition-all ${
@@ -679,6 +692,7 @@ export function FoodSearchPanel({
                   </div>
                   {selectedFood ? (
                     <button
+                      type="button"
                       onClick={onReopenSearchResults}
                       className="btn-outline min-w-auto px-3 py-1.5"
                     >
