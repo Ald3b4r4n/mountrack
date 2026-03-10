@@ -12,6 +12,9 @@ interface TodayWorkspaceProps {
   mealDefinitions: MealDefinition[];
   mealSummary: Record<string, number>;
   embedded?: boolean;
+  mealsSectionOpen?: boolean;
+  onMealsSectionOpenChange?: (open: boolean) => void;
+  mealsSectionRef?: React.Ref<HTMLElement>;
   onOpenMeal: (meal: MealType) => void;
   onOpenSearchForMeal: (meal: MealType) => void;
   onManageMeal?: (meal: MealDefinition) => void;
@@ -108,6 +111,9 @@ export function TodayWorkspace({
   mealDefinitions,
   mealSummary,
   embedded = false,
+  mealsSectionOpen,
+  onMealsSectionOpenChange,
+  mealsSectionRef,
   onOpenMeal,
   onOpenSearchForMeal,
   onManageMeal,
@@ -120,6 +126,9 @@ export function TodayWorkspace({
         title="Refeicoes do dia"
         subtitle="Troque entre as refeicoes, registre novos itens e gerencie blocos extras por aqui."
         badge={!embedded ? <span className="badge badge-success">Diario ativo</span> : undefined}
+        open={mealsSectionOpen}
+        onOpenChange={onMealsSectionOpenChange}
+        sectionRef={mealsSectionRef}
       >
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           {mealDefinitions.map((meal) => (

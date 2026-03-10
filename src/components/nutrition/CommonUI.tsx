@@ -59,6 +59,9 @@ export function CollapsibleSection({
   subtitle,
   badge,
   defaultOpen = false,
+  open: controlledOpen,
+  onOpenChange,
+  sectionRef,
   className = "",
   contentClassName = "",
   children,
@@ -67,17 +70,32 @@ export function CollapsibleSection({
   subtitle?: string;
   badge?: ReactNode;
   defaultOpen?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  sectionRef?: React.Ref<HTMLElement>;
   className?: string;
   contentClassName?: string;
   children: ReactNode;
 }) {
-  const [open, setOpen] = React.useState(defaultOpen);
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen);
+  const open = controlledOpen ?? uncontrolledOpen;
+
+  function handleToggle() {
+    const nextOpen = !open;
+    if (controlledOpen == null) {
+      setUncontrolledOpen(nextOpen);
+    }
+    onOpenChange?.(nextOpen);
+  }
 
   return (
-    <section className={`glass-panel static-panel rounded-[1.35rem] bg-[#06162d]/64 p-4 ${className}`.trim()}>
+    <section
+      ref={sectionRef}
+      className={`glass-panel static-panel rounded-[1.35rem] bg-[#06162d]/64 p-4 ${className}`.trim()}
+    >
       <button
         type="button"
-        onClick={() => setOpen((current) => !current)}
+        onClick={handleToggle}
         className="group flex w-full items-start justify-between gap-3 rounded-[1rem] text-left transition-transform duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#34d399]/35 active:scale-[0.99]"
         aria-expanded={open}
       >

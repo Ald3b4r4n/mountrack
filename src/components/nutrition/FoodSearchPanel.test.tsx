@@ -208,7 +208,7 @@ describe("FoodSearchPanel", () => {
     const user = userEvent.setup();
     render(<OpenComposerPanel />);
 
-    await user.click(screen.getByRole("button", { name: /^Fechar$/i }));
+    await user.click(screen.getByRole("button", { name: /^Voltar$/i }));
 
     await waitFor(() => {
       expect(screen.queryByRole("dialog", { name: /Registrar no diario/i })).not.toBeInTheDocument();
