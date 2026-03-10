@@ -247,6 +247,22 @@ npm run nutrition:enrich -- --base-url https://seu-app.vercel.app --limit 10
 
 O script usa `NUTRITION_INGEST_TOKEN` ou `CRON_SECRET` e chama a rota interna autenticada.
 
+Para validar o fechamento operacional da persistencia em ambiente local:
+
+```bash
+npm run nutrition:validate-persistence
+npm run nutrition:validate-persistence -- --date 2026-03-10 --token <NUTRITION_INGEST_TOKEN>
+```
+
+O comando valida:
+
+- `x-nutrition-storage: database`
+- gravacao e leitura de metas
+- gravacao e leitura de agua no diario
+- isolamento de `custom foods` entre dois usuarios de preview
+- `401` ou `503` na rota de `enrichment` sem token
+- `200` na rota de `enrichment` com token valido quando o segredo e fornecido
+
 ### Resultado esperado
 
 - a busca do usuario continua rapida e previsivel
@@ -403,7 +419,8 @@ Status pratico desta fase:
 - revisao de rotas e validacao de entrada: praticamente concluida
 - testes de escopo por usuario nas rotas privadas: em andamento avancado
 - linguagem de erro no workspace `Buscar`: concluida
-- validacao operacional final e documentacao de encerramento: pendentes
+- script repetivel de validacao operacional local: concluido
+- validacao operacional final em sessao/dispositivo real e documentacao de encerramento: pendentes
 
 ## Checklist operacional final
 
@@ -414,6 +431,10 @@ Antes de declarar a implantacao concluida em producao:
 - validar que usuario A nao consegue ler, editar nem localizar dados privados de usuario B pelas rotas HTTP
 - confirmar que a rota interna de `enrichment` responde `401` sem token, `503` sem configuracao e `200` quando chamada com segredo valido
 - revisar se `nutrition_foods` e `nutrition_food_sources_raw` ficaram apenas no caminho de ingestao/backfill, nunca no caminho principal de runtime
+
+Observacao:
+
+- o comando `npm run nutrition:validate-persistence` cobre localmente `database`, metas, diario, isolamento de custom foods e o fluxo de `enrichment`; o que ainda falta e a rodada final com sessao autenticada real e mais de um dispositivo
 
 ## Limites operacionais do Free Plan
 

@@ -114,6 +114,18 @@ npm run nutrition:enrich -- --limit 5
 npm run nutrition:enrich -- --base-url https://seu-app-final.vercel.app --limit 10
 ```
 
+#### Validação Operacional da Persistência
+Para confirmar localmente que a nutrição está realmente em `database`, com escrita/leitura privada e isolamento por usuário:
+```bash
+# Valida storage, metas, água no diário e isolamento de custom foods
+npm run nutrition:validate-persistence
+
+# Inclui também a checagem autenticada da rota interna de enrichment
+npm run nutrition:validate-persistence -- --token <NUTRITION_INGEST_TOKEN>
+```
+
+Se nenhum token for informado, o script ainda valida a rota de `enrichment` sem autenticação, mas marca a etapa autenticada como `skipped`.
+
 Com estas chaves e procedimentos de ingestão definidos no Vercel, clique em **Deploy**. Espere a compilação paralela da Vercel otimizar os fluxos; agora seu App Premium estará ao vivo!
 
 ---
