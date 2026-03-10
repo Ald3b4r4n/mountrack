@@ -3,13 +3,14 @@ import { requireNutritionUser } from "@/modules/nutrition/auth/require-user";
 import { toNutritionRouteErrorResponse } from "@/modules/nutrition/http/route-error";
 import { getNutritionStorageHeaders } from "@/modules/nutrition/repositories/nutrition-store";
 import { lookupNutritionBarcode } from "@/modules/nutrition/services/catalog-search.service";
+import { barcodeLookupParamsSchema } from "@/modules/nutrition/validators";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request, context: { params: Promise<{ code: string }> }) {
   try {
     const { user } = await requireNutritionUser(request);
-    const { code } = await context.params;
+    const { code } = barcodeLookupParamsSchema.parse(await context.params);
     const { item, source } = await lookupNutritionBarcode(user.uid, code);
 
     if (!item) {

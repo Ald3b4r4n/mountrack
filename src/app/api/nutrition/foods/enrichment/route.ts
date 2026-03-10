@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getNutritionStorageHeaders } from "@/modules/nutrition/repositories/nutrition-store";
 import { processQueuedFoodLookups } from "@/modules/nutrition/services/catalog-search.service";
+import { enrichmentPayloadSchema } from "@/modules/nutrition/validators";
 
 export const runtime = "nodejs";
 
@@ -50,21 +51,18 @@ async function parseRequestPayload(request: Request): Promise<{ limit?: unknown 
     return {};
   }
 
-  try {
-    const payload = JSON.parse(rawBody) as { limit?: unknown };
-    return payload && typeof payload === "object" ? payload : {};
-  } catch {
-    return {};
-  }
+  const payload = JSON.parse(rawBody) as unknown;
+  return enrichmentPayloadSchema.parse(payload);
 }
 
-function resolveLimitFromRequest(request: Request, payloadLimit?: unknown): number {
-  const url = new URL(request.url);
-  const urlLimit = url.searchParams.get("limit");
-  return resolveBatchLimit(payloadLimit ?? urlLimit ?? DEFAULT_BATCH_LIMIT);
+function buildInvalidPayloadResponse() {
+  return NextResponse.json(
+    { error: "Invalid request payload", code: "nutrition_invalid_payload" },
+    { status: 400, headers: getNutritionStorageHeaders() },
+  );
 }
 
-async function handleAuthorizedEnrichment(request: Request, payloadLimit?: unknown) {
+function getUnauthorizedOrUnavailableResponse(request: Request): NextResponse | null {
   const ingestTokens = getConfiguredIngestTokens();
   if (!ingestTokens.length) {
     return NextResponse.json(
@@ -78,6 +76,21 @@ async function handleAuthorizedEnrichment(request: Request, payloadLimit?: unkno
       { error: "Unauthorized" },
       { status: 401, headers: getNutritionStorageHeaders() },
     );
+  }
+
+  return null;
+}
+
+function resolveLimitFromRequest(request: Request, payloadLimit?: unknown): number {
+  const url = new URL(request.url);
+  const urlLimit = url.searchParams.get("limit");
+  return resolveBatchLimit(payloadLimit ?? urlLimit ?? DEFAULT_BATCH_LIMIT);
+}
+
+async function handleAuthorizedEnrichment(request: Request, payloadLimit?: unknown) {
+  const authorizationResponse = getUnauthorizedOrUnavailableResponse(request);
+  if (authorizationResponse) {
+    return authorizationResponse;
   }
 
   try {
@@ -106,6 +119,15 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const payload = await parseRequestPayload(request);
-  return handleAuthorizedEnrichment(request, payload.limit);
+  const authorizationResponse = getUnauthorizedOrUnavailableResponse(request);
+  if (authorizationResponse) {
+    return authorizationResponse;
+  }
+
+  try {
+    const payload = await parseRequestPayload(request);
+    return handleAuthorizedEnrichment(request, payload.limit);
+  } catch {
+    return buildInvalidPayloadResponse();
+  }
 }

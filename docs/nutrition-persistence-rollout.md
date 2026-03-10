@@ -265,6 +265,8 @@ O script usa `NUTRITION_INGEST_TOKEN` ou `CRON_SECRET` e chama a rota interna au
 - `nutrition-store.ts` passou a responder com o catalogo publico em JSON no runtime
 - `nutrition_foods` segue apenas como apoio de ingestao, enriquecimento e backfill legado, nao mais como fonte principal de busca em runtime
 - custom foods legados agora sao migrados para `nutrition_user_foods_custom` no bootstrap do schema e o runtime le apenas a tabela privada nova
+- rotas HTTP de nutricao agora validam payloads e params criticos com schema explicito, incluindo `custom`, `history`, `barcode`, `search`, `diaries`, `diary-items` e a rota interna de `enrichment`
+- a cobertura de testes de rota agora verifica escopo por usuario, validacao de entrada e comportamento defensivo nas principais operacoes privadas do modulo
 
 ### 1. Importacao
 
@@ -360,7 +362,7 @@ Todos os dados privados devem ser filtrados por `user_id`:
 
 ### Observacao importante
 
-Hoje o maior risco do modulo esta em custom foods ainda misturados ao catalogo geral. Esse ponto precisa ser fechado antes de considerar a persistencia pronta para producao multiusuario.
+O risco principal nao esta mais no isolamento de custom foods, que ja foi separado do catalogo publico. O que ainda falta para declarar a implantacao concluida e o fechamento operacional: validacao final de sincronizacao real com sessao autenticada, revisao dos fluxos legados que sobraram apenas para ingestao e confirmacao de que o modo `database` se mantem dominante em producao.
 
 ## Estrategia de rollout
 
@@ -396,6 +398,33 @@ Hoje o maior risco do modulo esta em custom foods ainda misturados ao catalogo g
 - revisar logs e mensagens de erro
 - documentar limites operacionais do Free Plan
 
+Status pratico desta fase:
+
+- revisao de rotas e validacao de entrada: praticamente concluida
+- testes de escopo por usuario nas rotas privadas: em andamento avancado
+- linguagem de erro no workspace `Buscar`: concluida
+- validacao operacional final e documentacao de encerramento: pendentes
+
+## Checklist operacional final
+
+Antes de declarar a implantacao concluida em producao:
+
+- confirmar que requests autenticadas de nutricao respondem com `x-nutrition-storage: database`
+- validar que o mesmo usuario enxerga o mesmo diario, metas, agua e custom foods em mais de um dispositivo
+- validar que usuario A nao consegue ler, editar nem localizar dados privados de usuario B pelas rotas HTTP
+- confirmar que a rota interna de `enrichment` responde `401` sem token, `503` sem configuracao e `200` quando chamada com segredo valido
+- revisar se `nutrition_foods` e `nutrition_food_sources_raw` ficaram apenas no caminho de ingestao/backfill, nunca no caminho principal de runtime
+
+## Limites operacionais do Free Plan
+
+Para manter o plano viavel no Free Plan do Supabase:
+
+- guardar no banco apenas dados privados e mutaveis do usuario
+- manter o catalogo publico, payloads brutos e artefatos de curadoria fora do banco principal
+- monitorar crescimento de diario, meal plans e custom foods por usuario
+- tratar dependencias externas e ingestao como background, nunca como parte do fluxo interativo critico
+- assumir que o ambiente gratuito pode exigir degradacao controlada e observacao periodica de uso
+
 ## Validacao
 
 Antes de considerar a implantacao concluida:
@@ -409,6 +438,10 @@ Antes de considerar a implantacao concluida:
 
 ## Proxima decisao tecnica recomendada
 
-Executar primeiro a separacao de `custom foods` e a confirmacao do modo `database`.
+Fechar a validacao operacional final da persistencia e, na sequencia, voltar para o plano de UX em `docs/nutrition-ux-redesign.md`.
 
-Esse e o ponto minimo para dizer que a nutricao tem persistencia real e segura.
+Traduzindo para a pratica:
+
+- validar `database` de ponta a ponta com sessao autenticada real
+- revisar se ainda sobra algum fluxo legado usando store local como caminho principal
+- depois retomar o acabamento estrutural do workspace `Hoje`, do desktop e dos estados vazios no redesign de UX

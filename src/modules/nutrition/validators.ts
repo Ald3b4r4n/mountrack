@@ -56,3 +56,45 @@ export const mealPlanRequestSchema = z.object({
   preferredFoods: z.array(z.string()).optional(),
   excludedFoods: z.array(z.string()).optional(),
 });
+
+export const customFoodSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  brand: z.string().trim().min(1).max(120).optional(),
+  barcode: z
+    .string()
+    .trim()
+    .regex(/^\d{8,14}$/)
+    .optional(),
+  caloriesPer100: z.number().min(0).max(1200).optional(),
+  proteinPer100: z.number().min(0).max(100).optional(),
+  carbsPer100: z.number().min(0).max(100).optional(),
+  fatPer100: z.number().min(0).max(100).optional(),
+  fiberPer100: z.number().min(0).max(100).optional(),
+  sodiumPer100: z.number().min(0).max(100000).optional(),
+  servingGrams: z.number().positive().max(5000).optional(),
+});
+
+export const historyQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).catch(1),
+  pageSize: z.coerce.number().int().min(3).max(12).catch(6),
+});
+
+export const barcodeLookupParamsSchema = z.object({
+  code: z.string().trim().regex(/^\d{8,14}$/),
+});
+
+export const searchQuerySchema = z.object({
+  q: z.string().trim().catch(""),
+});
+
+export const diaryDateParamsSchema = z.object({
+  date: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
+export const entityIdParamsSchema = z.object({
+  id: z.string().trim().min(1).max(120),
+});
+
+export const enrichmentPayloadSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(25).optional(),
+});

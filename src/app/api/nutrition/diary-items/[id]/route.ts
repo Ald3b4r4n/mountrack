@@ -3,14 +3,14 @@ import { requireNutritionUser } from "@/modules/nutrition/auth/require-user";
 import { findAccessibleFoodById, replaceDiaryItem, removeDiaryItem } from "@/modules/nutrition/repositories/nutrition-store";
 import { toNutritionRouteErrorResponse } from "@/modules/nutrition/http/route-error";
 import { createDiaryItemSnapshot } from "@/modules/nutrition/services/daily-calories.service";
-import { updateDiaryItemSchema } from "@/modules/nutrition/validators";
+import { entityIdParamsSchema, updateDiaryItemSchema } from "@/modules/nutrition/validators";
 
 export const runtime = "nodejs";
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { user } = await requireNutritionUser(request);
-    const { id } = await context.params;
+    const { id } = entityIdParamsSchema.parse(await context.params);
     const payload = updateDiaryItemSchema.parse({ id, ...(await request.json()) });
     const food = await findAccessibleFoodById(user.uid, payload.foodId);
 
@@ -46,7 +46,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { user } = await requireNutritionUser(request);
-    const { id } = await context.params;
+    const { id } = entityIdParamsSchema.parse(await context.params);
     const diary = await removeDiaryItem(user.uid, id);
     if (!diary) {
       return NextResponse.json({ error: "Diary item not found" }, { status: 404 });

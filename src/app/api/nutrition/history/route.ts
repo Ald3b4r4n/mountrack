@@ -4,6 +4,7 @@ import { requireNutritionUser } from "@/modules/nutrition/auth/require-user";
 import { toNutritionRouteErrorResponse } from "@/modules/nutrition/http/route-error";
 import { buildDailySummary } from "@/modules/nutrition/services/daily-calories.service";
 import { getGoal, getNutritionStorageHeaders, listDiaryHistory } from "@/modules/nutrition/repositories/nutrition-store";
+import { historyQuerySchema } from "@/modules/nutrition/validators";
 
 export const runtime = "nodejs";
 
@@ -11,8 +12,10 @@ export async function GET(request: Request) {
   try {
     const { user, defaultGoal } = await requireNutritionUser(request);
     const url = new URL(request.url);
-    const page = Math.max(1, Number(url.searchParams.get("page") ?? 1));
-    const pageSize = Math.min(12, Math.max(3, Number(url.searchParams.get("pageSize") ?? 6)));
+    const { page, pageSize } = historyQuerySchema.parse({
+      page: url.searchParams.get("page") ?? undefined,
+      pageSize: url.searchParams.get("pageSize") ?? undefined,
+    });
     const offset = (page - 1) * pageSize;
     const goal = await getGoal(user.uid, defaultGoal);
     const { diaries, total } = await listDiaryHistory(user.uid, { limit: pageSize, offset });

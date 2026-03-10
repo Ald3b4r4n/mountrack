@@ -10,14 +10,14 @@ import {
   updateDiaryMealDefinitions,
   updateDiaryWater,
 } from "@/modules/nutrition/repositories/nutrition-store";
-import { diaryPatchSchema } from "@/modules/nutrition/validators";
+import { diaryDateParamsSchema, diaryPatchSchema } from "@/modules/nutrition/validators";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request, context: { params: Promise<{ date: string }> }) {
   try {
     const { user, defaultGoal } = await requireNutritionUser(request);
-    const { date } = await context.params;
+    const { date } = diaryDateParamsSchema.parse(await context.params);
     const goal = await getGoal(user.uid, defaultGoal);
     const diary = await getOrCreateDiary(user.uid, date, goal.targetCalories, goal.targetWaterMl ?? defaultGoal.targetWaterMl ?? 2200);
     const summary = buildDailySummary({
@@ -41,7 +41,7 @@ export async function GET(request: Request, context: { params: Promise<{ date: s
 export async function PATCH(request: Request, context: { params: Promise<{ date: string }> }) {
   try {
     const { user, defaultGoal } = await requireNutritionUser(request);
-    const { date } = await context.params;
+    const { date } = diaryDateParamsSchema.parse(await context.params);
     const goal = await getGoal(user.uid, defaultGoal);
     const payload = diaryPatchSchema.parse(await request.json());
     const targetWaterMl = goal.targetWaterMl ?? defaultGoal.targetWaterMl ?? 2200;
