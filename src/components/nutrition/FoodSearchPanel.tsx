@@ -583,7 +583,7 @@ export function FoodSearchPanel({
           />
 
           <div className="absolute bottom-0 left-0 right-0 flex max-h-[88dvh] flex-col rounded-t-[1.8rem] border border-white/8 bg-[#03111f] shadow-[0_-24px_80px_rgba(0,0,0,0.48)]">
-            <div className="overflow-y-auto px-4 pb-4 pt-3">
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 pt-3">
               <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/12" />
 
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
