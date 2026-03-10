@@ -36,6 +36,7 @@ export function BarcodeScannerDialog({
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const previousOverflowRef = useRef("");
+  const shouldRestoreFocusRef = useRef(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export function BarcodeScannerDialog({
 
     let active = true;
     let hasDetected = false;
+    shouldRestoreFocusRef.current = true;
     setError(null);
 
     async function stopAndClearScanner(scanner: Html5Qrcode | null) {
@@ -103,6 +105,7 @@ export function BarcodeScannerDialog({
             }
 
             hasDetected = true;
+            shouldRestoreFocusRef.current = false;
             onDetected(decodedText);
             void stopAndClearScanner(scanner).finally(() => {
               if (active) {
@@ -183,7 +186,9 @@ export function BarcodeScannerDialog({
       window.cancelAnimationFrame(focusFrame);
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = previousOverflowRef.current;
-      previousFocusRef.current?.focus();
+      if (shouldRestoreFocusRef.current) {
+        previousFocusRef.current?.focus();
+      }
     };
   }, [onClose, open]);
 

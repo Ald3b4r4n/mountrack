@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ScanLine } from "lucide-react";
 import type {
   FoodItem,
@@ -219,6 +219,7 @@ export function FoodSearchPanel({
 }: FoodSearchPanelProps) {
   const [searchMode, setSearchMode] = useState<SearchMode>("name");
   const [dismissedComposerFoodId, setDismissedComposerFoodId] = useState<string | null>(null);
+  const composerScrollRef = useRef<HTMLDivElement | null>(null);
 
   const isComposerOpen =
     isMobileLayout &&
@@ -229,10 +230,39 @@ export function FoodSearchPanel({
     if (!isMobileLayout || !isComposerOpen) return;
 
     const previousOverflow = document.body.style.overflow;
+    const previousPosition = document.body.style.position;
+    const previousTop = document.body.style.top;
+    const previousLeft = document.body.style.left;
+    const previousRight = document.body.style.right;
+    const previousWidth = document.body.style.width;
+    const scrollY = window.scrollY;
+
     document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+
+    const scrollFrame = window.requestAnimationFrame(() => {
+      if (composerScrollRef.current) {
+        composerScrollRef.current.scrollTop = 0;
+      }
+    });
 
     return () => {
+      window.cancelAnimationFrame(scrollFrame);
       document.body.style.overflow = previousOverflow;
+      document.body.style.position = previousPosition;
+      document.body.style.top = previousTop;
+      document.body.style.left = previousLeft;
+      document.body.style.right = previousRight;
+      document.body.style.width = previousWidth;
+      try {
+        window.scrollTo(0, scrollY);
+      } catch {
+        // jsdom and some embedded browsers do not implement scroll restoration.
+      }
     };
   }, [isMobileLayout, isComposerOpen]);
 
@@ -577,27 +607,46 @@ export function FoodSearchPanel({
       {isMobileLayout && selectedFood && isComposerOpen ? (
         <div className="fixed inset-0 z-50">
           <button
-            className="absolute inset-0 bg-[#01060e]/84"
+            className="absolute inset-0 bg-[#01060e]/92"
             onClick={() => setDismissedComposerFoodId(selectedFood.id)}
             aria-label="Fechar registro do alimento"
           />
 
-          <div className="absolute bottom-0 left-0 right-0 flex max-h-[88dvh] flex-col rounded-t-[1.8rem] border border-white/8 bg-[#03111f] shadow-[0_-24px_80px_rgba(0,0,0,0.48)]">
-            <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 pt-3">
-              <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/12" />
-
-              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <span className="text-[0.78rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    Registrar alimento
-                  </span>
-                  <strong className="mt-1 block text-[1.05rem]">
-                    Ajuste a porcao e confirme no diario
-                  </strong>
-                  <p className="mt-1 text-[0.84rem] text-[var(--text-secondary)]">
-                    Revise o item encontrado, escolha a refeicao e finalize sem sair desta tela.
-                  </p>
+          <div
+            className="relative flex h-full flex-col px-3"
+            style={{
+              paddingTop: "calc(0.75rem + env(safe-area-inset-top, 0px))",
+              paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))",
+            }}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="nutrition-mobile-composer-title"
+              className="glass-panel static-panel flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#03111f]/98 shadow-[0_24px_80px_rgba(0,0,0,0.52)]"
+            >
+              <div className="border-b border-white/8 bg-[#03111f]/98 px-4 py-4">
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <span className="badge badge-success">Registro rapido</span>
+                    <strong
+                      id="nutrition-mobile-composer-title"
+                      className="mt-3 block text-[1.12rem] leading-tight"
+                    >
+                      Registrar no diario
+                    </strong>
+                    <p className="mt-1 text-[0.88rem] text-[var(--text-secondary)]">
+                      Revise o item encontrado, ajuste a porcao e confirme o consumo sem depender do fundo da tela.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setDismissedComposerFoodId(selectedFood.id)}
+                    className="btn-outline min-w-auto px-3 py-2"
+                  >
+                    Fechar
+                  </button>
                 </div>
+
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => {
@@ -606,39 +655,43 @@ export function FoodSearchPanel({
                     }}
                     className="btn-outline min-w-auto px-3 py-2"
                   >
-                    Trocar
+                    Trocar alimento
                   </button>
-                  <button
-                    onClick={() => setDismissedComposerFoodId(selectedFood.id)}
-                    className="btn-outline min-w-auto px-3 py-2"
-                  >
-                    Fechar
-                  </button>
+                  <span className="badge badge-success max-w-full truncate">
+                    {selectedFood.barcode ? `Codigo ${selectedFood.barcode}` : "Selecionado para registro"}
+                  </span>
                 </div>
               </div>
 
-              <ComposerBody
-                selectedFood={selectedFood}
-                selectedFoodTotals={selectedFoodTotals}
-                quantity={quantity}
-                onQuantityChange={onQuantityChange}
-                unit={unit}
-                onUnitChange={onUnitChange}
-                mealOptions={mealOptions}
-                mealType={mealType}
-                onMealTypeChange={onMealTypeChange}
-                onAddDiaryItem={onAddDiaryItem}
-                showActionButton={false}
-              />
-            </div>
+              <div
+                ref={composerScrollRef}
+                className="flex-1 overflow-y-auto px-4 py-4 [overscroll-behavior:contain]"
+              >
+                <ComposerBody
+                  selectedFood={selectedFood}
+                  selectedFoodTotals={selectedFoodTotals}
+                  quantity={quantity}
+                  onQuantityChange={onQuantityChange}
+                  unit={unit}
+                  onUnitChange={onUnitChange}
+                  mealOptions={mealOptions}
+                  mealType={mealType}
+                  onMealTypeChange={onMealTypeChange}
+                  onAddDiaryItem={onAddDiaryItem}
+                  showActionButton={false}
+                />
+              </div>
 
-            <div
-              className="border-t border-white/8 bg-[#03111f]/96 px-4 pt-3 backdrop-blur"
-              style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
-            >
-              <button onClick={onAddDiaryItem} className="btn-primary w-full">
-                Adicionar ao diario
-              </button>
+              <div className="border-t border-white/8 bg-[#03111f]/98 px-4 py-3 backdrop-blur">
+                <div className="grid gap-2">
+                  <button onClick={onAddDiaryItem} className="btn-primary min-h-[3.35rem] w-full">
+                    Adicionar ao diario
+                  </button>
+                  <p className="text-center text-[0.78rem] text-[var(--text-muted)]">
+                    O registro sera salvo no bloco de refeicao escolhido acima.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
