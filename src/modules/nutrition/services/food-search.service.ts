@@ -15,9 +15,10 @@ const STOP_WORDS = new Set(["a", "as", "de", "da", "das", "do", "dos", "e", "em"
 function normalizeTerm(value: string): string {
   return value
     .normalize("NFD")
-    .replace(/[^\w\s]/g, " ")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .toLowerCase()
+    .replace(/\s+/g, " ")
     .trim();
 }
 

@@ -68,6 +68,7 @@ function ComposerBody({
   mealType,
   onMealTypeChange,
   onAddDiaryItem,
+  showActionButton = true,
 }: {
   selectedFood: FoodItem | null;
   selectedFoodTotals: { protein: number; carbs: number; fat: number } | null;
@@ -79,6 +80,7 @@ function ComposerBody({
   mealType: MealType;
   onMealTypeChange: (val: MealType) => void;
   onAddDiaryItem: () => void;
+  showActionButton?: boolean;
 }) {
   if (!selectedFood) {
     return (
@@ -172,9 +174,11 @@ function ComposerBody({
         </Field>
       </div>
 
-      <button onClick={onAddDiaryItem} className="btn-primary w-full">
-        Adicionar ao diario
-      </button>
+      {showActionButton ? (
+        <button onClick={onAddDiaryItem} className="btn-primary w-full">
+          Adicionar ao diario
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -429,7 +433,7 @@ export function FoodSearchPanel({
           ) : null}
         </div>
 
-        {isMobileLayout && selectedFood ? (
+        {isMobileLayout && selectedFood && !isComposerOpen ? (
           <div className="glass-panel static-panel border-[#34d399]/18 bg-[#06162d]/72 p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -573,44 +577,69 @@ export function FoodSearchPanel({
       {isMobileLayout && selectedFood && isComposerOpen ? (
         <div className="fixed inset-0 z-50">
           <button
-            className="absolute inset-0 bg-[#01060e]/72"
+            className="absolute inset-0 bg-[#01060e]/84"
             onClick={() => setDismissedComposerFoodId(selectedFood.id)}
             aria-label="Fechar registro do alimento"
           />
 
-          <div className="absolute bottom-0 left-0 right-0 max-h-[82vh] overflow-y-auto rounded-t-[1.8rem] border border-white/8 bg-[#03111f] px-4 pb-8 pt-3 shadow-[0_-24px_80px_rgba(0,0,0,0.48)]">
-            <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/12" />
+          <div className="absolute bottom-0 left-0 right-0 flex max-h-[88dvh] flex-col rounded-t-[1.8rem] border border-white/8 bg-[#03111f] shadow-[0_-24px_80px_rgba(0,0,0,0.48)]">
+            <div className="overflow-y-auto px-4 pb-4 pt-3">
+              <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/12" />
 
-            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <span className="text-[0.78rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                  Registro rapido
-                </span>
-                <strong className="mt-1 block text-[1.05rem]">{getFoodLabel(selectedFood)}</strong>
-                <p className="mt-1 text-[0.84rem] text-[var(--text-secondary)]">
-                  Ajuste a porcao e escolha em qual refeicao este item entra.
-                </p>
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <span className="text-[0.78rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    Registrar alimento
+                  </span>
+                  <strong className="mt-1 block text-[1.05rem]">
+                    Ajuste a porcao e confirme no diario
+                  </strong>
+                  <p className="mt-1 text-[0.84rem] text-[var(--text-secondary)]">
+                    Revise o item encontrado, escolha a refeicao e finalize sem sair desta tela.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => {
+                      onReopenSearchResults();
+                      setDismissedComposerFoodId(selectedFood.id);
+                    }}
+                    className="btn-outline min-w-auto px-3 py-2"
+                  >
+                    Trocar
+                  </button>
+                  <button
+                    onClick={() => setDismissedComposerFoodId(selectedFood.id)}
+                    className="btn-outline min-w-auto px-3 py-2"
+                  >
+                    Fechar
+                  </button>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => {
-                    onReopenSearchResults();
-                    setDismissedComposerFoodId(selectedFood.id);
-                  }}
-                  className="btn-outline min-w-auto px-3 py-2"
-                >
-                  Trocar
-                </button>
-                <button
-                  onClick={() => setDismissedComposerFoodId(selectedFood.id)}
-                  className="btn-outline min-w-auto px-3 py-2"
-                >
-                  Fechar
-                </button>
-              </div>
+
+              <ComposerBody
+                selectedFood={selectedFood}
+                selectedFoodTotals={selectedFoodTotals}
+                quantity={quantity}
+                onQuantityChange={onQuantityChange}
+                unit={unit}
+                onUnitChange={onUnitChange}
+                mealOptions={mealOptions}
+                mealType={mealType}
+                onMealTypeChange={onMealTypeChange}
+                onAddDiaryItem={onAddDiaryItem}
+                showActionButton={false}
+              />
             </div>
 
-            {composerContent}
+            <div
+              className="border-t border-white/8 bg-[#03111f]/96 px-4 pt-3 backdrop-blur"
+              style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
+            >
+              <button onClick={onAddDiaryItem} className="btn-primary w-full">
+                Adicionar ao diario
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

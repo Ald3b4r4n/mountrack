@@ -1,5 +1,14 @@
 import { FoodItem, FoodSource, NutritionUnit } from "@/modules/nutrition/domain/types";
 
+const DECIMAL_FORMATTER = new Intl.NumberFormat("pt-BR", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
+
+function formatDecimal(value: number): string {
+  return DECIMAL_FORMATTER.format(Number(value.toFixed(2)));
+}
+
 export function getFoodLabel(food: FoodItem): string {
   return food.displayName ?? food.name;
 }
@@ -39,7 +48,7 @@ export function formatCalories(value: number): string {
 }
 
 export function formatGrams(value: number): string {
-  return `${value.toFixed(0)} g`;
+  return `${formatDecimal(value)} g`;
 }
 
 export function formatMilliliters(value: number): string {
