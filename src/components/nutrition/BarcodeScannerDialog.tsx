@@ -45,8 +45,36 @@ export function BarcodeScannerDialog({
     let hasDetected = false;
     setError(null);
 
+    async function stopAndClearScanner(scanner: Html5Qrcode | null) {
+      if (!scanner) {
+        return;
+      }
+
+      try {
+        await scanner.stop();
+      } catch {
+        // noop
+      }
+
+      try {
+        scanner.clear();
+      } catch {
+        // noop
+      }
+    }
+
     async function startScanner() {
       try {
+        if (!window.isSecureContext) {
+          setError("A camera so funciona em conexao segura. Digite o codigo manualmente.");
+          return;
+        }
+
+        if (!navigator.mediaDevices?.getUserMedia) {
+          setError("Este navegador nao liberou a camera aqui. Digite o codigo manualmente.");
+          return;
+        }
+
         const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
         if (!active) return;
 
@@ -76,7 +104,7 @@ export function BarcodeScannerDialog({
 
             hasDetected = true;
             onDetected(decodedText);
-            void scanner.stop().catch(() => undefined).finally(() => {
+            void stopAndClearScanner(scanner).finally(() => {
               if (active) {
                 onClose();
               }
@@ -97,12 +125,7 @@ export function BarcodeScannerDialog({
       active = false;
       const scanner = scannerRef.current;
       if (scanner) {
-        void scanner.stop().catch(() => undefined);
-        try {
-          scanner.clear();
-        } catch {
-          // noop
-        }
+        void stopAndClearScanner(scanner);
       }
       scannerRef.current = null;
       setError(null);
@@ -168,11 +191,6 @@ export function BarcodeScannerDialog({
 
   return (
     <div
-      onClick={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
       style={{
         position: "fixed",
         inset: 0,
@@ -184,6 +202,17 @@ export function BarcodeScannerDialog({
         padding: "1rem",
       }}
     >
+      <button
+        type="button"
+        aria-label="Fechar leitor de codigo de barras"
+        onClick={onClose}
+        style={{
+          position: "absolute",
+          inset: 0,
+          border: "none",
+          background: "transparent",
+        }}
+      />
       <div
         ref={dialogRef}
         role="dialog"
@@ -192,7 +221,7 @@ export function BarcodeScannerDialog({
         aria-describedby={descriptionId}
         className="glass-panel"
         tabIndex={-1}
-        style={{ width: "100%", maxWidth: "32rem", padding: "1.25rem" }}
+        style={{ position: "relative", width: "100%", maxWidth: "32rem", padding: "1.25rem" }}
       >
         <div
           style={{

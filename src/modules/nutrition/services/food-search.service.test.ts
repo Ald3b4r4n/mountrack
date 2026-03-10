@@ -1,3 +1,4 @@
+import type { FoodItem } from "@/modules/nutrition/domain/types";
 import { INTERNAL_FOODS } from "@/modules/nutrition/data/internal-foods";
 import { SUPPLEMENT_FOODS } from "@/modules/nutrition/data/supplement-foods";
 import { hasStrongFoodSearchResult, searchFoodsByQuery } from "@/modules/nutrition/services/food-search.service";
@@ -344,5 +345,83 @@ describe("food search service", () => {
 
     expect(leiteResults[0]?.id).toBe("leite-integral");
     expect(aveiaResults[0]?.id).toBe("aveia-flocos");
+  });
+
+  it("matches partial queries regardless of case for staple foods", async () => {
+    const internalFoods: FoodItem[] = [
+      {
+        id: "batata-doce",
+        source: "internal" as const,
+        name: "Batata-doce cozida",
+        displayName: "Batata-doce cozida",
+        baseUnit: "g" as const,
+        caloriesPer100: 77,
+        proteinPer100: 0.6,
+        carbsPer100: 18.4,
+        fatPer100: 0.1,
+        confidenceScore: 0.98,
+        category: "carb",
+        mealCategories: ["lunch", "dinner"],
+      },
+    ];
+
+    for (const query of ["Bata", "bat", "BAT", "BATATA", "batata"]) {
+      const results = await searchFoodsByQuery(query, {
+        internalFoods,
+        externalResults: [],
+      });
+
+      expect(results[0]?.id).toBe("batata-doce");
+    }
+  });
+
+  it("matches foods regardless of accents and cedilla", async () => {
+    const internalFoods: FoodItem[] = [
+      {
+        id: "maca",
+        source: "internal" as const,
+        name: "Maçã",
+        displayName: "Maçã",
+        baseUnit: "g" as const,
+        caloriesPer100: 56,
+        proteinPer100: 0.3,
+        carbsPer100: 15.2,
+        fatPer100: 0.0,
+        confidenceScore: 0.98,
+        category: "fruit",
+        mealCategories: ["breakfast", "snack"],
+      },
+      {
+        id: "acai",
+        source: "internal" as const,
+        name: "Açaí, polpa, congelada",
+        displayName: "Açaí, polpa, congelada",
+        baseUnit: "g" as const,
+        caloriesPer100: 58,
+        proteinPer100: 0.8,
+        carbsPer100: 6.2,
+        fatPer100: 3.9,
+        confidenceScore: 0.98,
+        category: "fruit",
+        mealCategories: ["breakfast", "snack"],
+      },
+    ];
+
+    const macaResults = await searchFoodsByQuery("maca", {
+      internalFoods,
+      externalResults: [],
+    });
+    const acaiResults = await searchFoodsByQuery("acai", {
+      internalFoods,
+      externalResults: [],
+    });
+    const acucarResults = await searchFoodsByQuery("açai", {
+      internalFoods,
+      externalResults: [],
+    });
+
+    expect(macaResults[0]?.id).toBe("maca");
+    expect(acaiResults[0]?.id).toBe("acai");
+    expect(acucarResults[0]?.id).toBe("acai");
   });
 });

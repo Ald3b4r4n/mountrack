@@ -34,7 +34,15 @@ describe("BarcodeScannerDialog", () => {
     clearMock.mockReset();
     startMock.mockResolvedValue(undefined);
     stopMock.mockResolvedValue(undefined);
-    clearMock.mockResolvedValue(undefined);
+    clearMock.mockImplementation(() => undefined);
+    Object.defineProperty(window, "isSecureContext", {
+      configurable: true,
+      value: true,
+    });
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: { getUserMedia: jest.fn() },
+    });
   });
 
   it("does not render when closed", () => {
@@ -74,7 +82,7 @@ describe("BarcodeScannerDialog", () => {
     render(<BarcodeScannerDialog open onClose={jest.fn()} onDetected={jest.fn()} />);
 
     const dialog = await screen.findByRole("dialog", { name: /Leitor de codigo de barras/i });
-    const closeButton = screen.getByRole("button", { name: /Fechar/i });
+    const closeButton = screen.getByRole("button", { name: /^Fechar$/i });
 
     expect(dialog).toHaveAttribute("aria-modal", "true");
     await waitFor(() => expect(closeButton).toHaveFocus());
@@ -88,13 +96,27 @@ describe("BarcodeScannerDialog", () => {
     expect(await screen.findByText(/Permissao da camera negada/i)).toBeInTheDocument();
   });
 
+  it("falls back gracefully when the browser does not expose camera access", async () => {
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: undefined,
+    });
+
+    render(<BarcodeScannerDialog open onClose={jest.fn()} onDetected={jest.fn()} />);
+
+    expect(
+      await screen.findByText(/Este navegador nao liberou a camera aqui/i),
+    ).toBeInTheDocument();
+    expect(startMock).not.toHaveBeenCalled();
+  });
+
   it("lets the user close the dialog manually", async () => {
     const user = userEvent.setup();
     const onClose = jest.fn();
 
     render(<BarcodeScannerDialog open onClose={onClose} onDetected={jest.fn()} />);
 
-    await user.click(screen.getByRole("button", { name: /Fechar/i }));
+    await user.click(screen.getByRole("button", { name: /^Fechar$/i }));
 
     expect(onClose).toHaveBeenCalled();
   });
