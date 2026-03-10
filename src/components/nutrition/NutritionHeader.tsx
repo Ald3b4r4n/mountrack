@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import type { DailySummary, NutritionGoal } from "@/modules/nutrition/domain/types";
 import { formatCalories, formatGrams, formatMilliliters } from "@/modules/nutrition/ui-helpers";
 
@@ -91,16 +92,47 @@ function MobileSummaryTile({
   label,
   value,
   accentClass,
+  hint,
+  onClick,
 }: {
   label: string;
   value: string;
   accentClass: string;
+  hint?: string;
+  onClick?: () => void;
 }) {
-  return (
-    <article className="rounded-[1rem] border border-white/7 bg-[linear-gradient(180deg,rgba(7,18,35,0.92),rgba(6,17,30,0.72))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+  const tileClassName = [
+    "rounded-[1rem] border border-white/7 bg-[linear-gradient(180deg,rgba(7,18,35,0.92),rgba(6,17,30,0.72))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]",
+    onClick
+      ? "w-full text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#34d399]/35 active:scale-[0.985]"
+      : "",
+  ]
+    .join(" ")
+    .trim();
+
+  const content = (
+    <>
       <span className="block text-[0.66rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">{label}</span>
       <strong className={`mt-1.5 block text-[1rem] leading-none ${accentClass}`}>{value}</strong>
-    </article>
+      {hint ? (
+        <span className="mt-2 flex items-center gap-1 text-[0.76rem] text-[var(--text-secondary)]">
+          {hint}
+          {onClick ? <ChevronRight size={14} className="shrink-0 text-[var(--accent-primary)]" /> : null}
+        </span>
+      ) : null}
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={tileClassName}>
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <article className={tileClassName}>{content}</article>
   );
 }
 
@@ -142,16 +174,28 @@ function MobileSummaryStrip({
   summary,
   goal,
   waterRatio,
+  onOpenConsumedSummary,
 }: {
   summary: DailySummary;
   goal: NutritionGoal;
   waterRatio: number;
+  onOpenConsumedSummary?: () => void;
 }) {
   return (
     <div className="grid gap-2.5">
       <div className="grid grid-cols-2 gap-2.5">
-        <CompactMetricCard label="Consumido" value={formatCalories(summary.consumedCalories)} accent="var(--accent-warm)" />
-        <CompactMetricCard label="Restante" value={formatCalories(summary.remainingCalories)} accent="var(--accent-secondary)" />
+        <MobileSummaryTile
+          label="Consumido"
+          value={formatCalories(summary.consumedCalories)}
+          accentClass="text-[var(--text-primary)]"
+          hint={onOpenConsumedSummary ? "Ver refeicoes" : undefined}
+          onClick={onOpenConsumedSummary}
+        />
+        <MobileSummaryTile
+          label="Restante"
+          value={formatCalories(summary.remainingCalories)}
+          accentClass="text-[var(--text-primary)]"
+        />
       </div>
       <div className="glass-panel static-panel rounded-[1rem] border-[#34d399]/14 bg-[linear-gradient(145deg,rgba(5,20,38,0.9),rgba(6,22,45,0.7))] p-3.5">
         <div className="mb-3 flex items-start justify-between gap-3">
@@ -198,6 +242,7 @@ interface NutritionHeaderProps {
   goal: NutritionGoal;
   waterRatio: number;
   consumedRatio: number;
+  onOpenConsumedSummary?: () => void;
 }
 
 export function NutritionHeader({
@@ -207,6 +252,7 @@ export function NutritionHeader({
   goal,
   waterRatio,
   consumedRatio,
+  onOpenConsumedSummary,
 }: NutritionHeaderProps) {
   return (
     <header
@@ -248,7 +294,12 @@ export function NutritionHeader({
         </div>
 
         {isMobileLayout ? (
-          <MobileSummaryStrip summary={summary} goal={goal} waterRatio={waterRatio} />
+          <MobileSummaryStrip
+            summary={summary}
+            goal={goal}
+            waterRatio={waterRatio}
+            onOpenConsumedSummary={onOpenConsumedSummary}
+          />
         ) : (
           <div className="grid grid-cols-12 gap-[0.7rem]">
             <div className="col-span-3">

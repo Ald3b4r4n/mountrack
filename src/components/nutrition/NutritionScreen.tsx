@@ -181,6 +181,7 @@ export function NutritionScreen() {
   const [activeDiaryView, setActiveDiaryView] = useState<DiaryViewKey>("today");
   const [activeDiaryMeal, setActiveDiaryMeal] = useState<MealType>("breakfast");
   const [diaryPage, setDiaryPage] = useState(1);
+  const [todayMealsSectionOpen, setTodayMealsSectionOpen] = useState(false);
   const [isMobileLayout, setIsMobileLayout] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [isSavingGoal, setIsSavingGoal] = useState(false);
@@ -259,6 +260,7 @@ export function NutritionScreen() {
   const [planningPanelMinHeight, setPlanningPanelMinHeight] = useState(0);
   const activeWorkspaceRef = useRef<HTMLDivElement | null>(null);
   const activePlanningPanelRef = useRef<HTMLDivElement | null>(null);
+  const todayMealsSectionRef = useRef<HTMLElement | null>(null);
 
   function updateGoalInput(key: keyof GoalInputState, value: string) {
     setGoalInputs((current) => ({ ...current, [key]: value }));
@@ -308,6 +310,47 @@ export function NutritionScreen() {
 
   function handleChangeArea(nextArea: NutritionArea) {
     setActiveArea(nextArea);
+  }
+
+  function scrollNutritionViewToTop() {
+    try {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+  }
+
+  function queueNutritionScroll(callback: () => void) {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(callback);
+    });
+  }
+
+  function focusTodayDashboard(options?: { openMealsSummary?: boolean }) {
+    const openMealsSummary = options?.openMealsSummary ?? false;
+
+    handleChangeArea("today");
+    setActiveDiaryView("today");
+    setDiaryPage(1);
+    setTodayMealsSectionOpen(openMealsSummary);
+
+    if (openMealsSummary) {
+      queueNutritionScroll(() => {
+        todayMealsSectionRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+      return;
+    }
+
+    queueNutritionScroll(() => {
+      scrollNutritionViewToTop();
+    });
+  }
+
+  function handleOpenConsumedSummary() {
+    focusTodayDashboard({ openMealsSummary: true });
   }
 
   async function persistMealDefinitions(nextMealDefinitions: MealDefinition[], failureMessage: string): Promise<boolean> {
@@ -603,8 +646,7 @@ export function NutritionScreen() {
         if (browserDashboard) hydrateDashboard(browserDashboard);
         if (browserHistory) hydrateHistory(browserHistory);
 
-        handleChangeArea("today");
-        setActiveDiaryView("today");
+        focusTodayDashboard();
         setActiveDiaryMeal(mealType);
         setHistoryPage(1);
         setMessage(`${getFoodLabel(selectedFood)} adicionado em ${activeMealDefinition.label}.`);
@@ -630,8 +672,7 @@ export function NutritionScreen() {
         return;
       }
 
-      handleChangeArea("today");
-      setActiveDiaryView("today");
+      focusTodayDashboard();
       setActiveDiaryMeal(mealType);
       setHistoryPage(1);
       setMessage(`${getFoodLabel(selectedFood)} adicionado em ${activeMealDefinition.label}.`);
@@ -1080,6 +1121,9 @@ export function NutritionScreen() {
       mealDefinitions={mealDefinitions}
       mealSummary={summary.meals}
       embedded={!isMobileLayout}
+      mealsSectionOpen={isMobileLayout ? todayMealsSectionOpen : undefined}
+      onMealsSectionOpenChange={isMobileLayout ? setTodayMealsSectionOpen : undefined}
+      mealsSectionRef={isMobileLayout ? todayMealsSectionRef : undefined}
       onOpenMeal={(meal) => {
         handleChangeArea("today");
         setActiveDiaryView("today");
@@ -1329,6 +1373,7 @@ export function NutritionScreen() {
         goal={goal}
         waterRatio={waterRatio}
         consumedRatio={consumedRatio}
+        onOpenConsumedSummary={isMobileLayout ? handleOpenConsumedSummary : undefined}
       />
 
       <NutritionWorkspaceNav
