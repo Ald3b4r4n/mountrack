@@ -196,7 +196,7 @@ export function NutritionScreen() {
   const hydrationHook = useHydration();
 
   const { state: dState, setters: dSetters, actions: dActions } = dashboardHook;
-  const { state: sState, setters: sSetters, actions: sActions } = searchHook;
+  const { state: sState, actions: sActions } = searchHook;
   const { state: hState, setters: hSetters, actions: hActions } = hydrationHook;
 
   const {
@@ -215,9 +215,29 @@ export function NutritionScreen() {
   const { setSummary, setMealPlan, setGoal, setDiaryMealDefinitions, setHistoryPage } = dSetters;
   const { resolveRequestError, loadDashboard, loadBrowserDashboard, hydrateDashboard, loadHistory, loadBrowserHistory, hydrateHistory } = dActions;
 
-  const { isSearching, isEnrichingExternal, searchResults, resultsVisible, searchQuery, barcodeQuery, selectedFood, lastSearchSource, message: searchMessage } = sState;
-  const { setSelectedFood } = sSetters;
-  const { handleSearchQueryChange, handleBarcodeQueryChange, handleSearch, handleBarcodeLookup, resetSearchComposer, applyFoodSelection, reopenSearchResults } = sActions;
+  const {
+    isSearching,
+    isEnrichingExternal,
+    searchResults,
+    resultsVisible,
+    searchQuery,
+    barcodeQuery,
+    selectedFood,
+    isComposerOpen,
+    lastSearchSource,
+    message: searchMessage,
+  } = sState;
+  const {
+    handleSearchQueryChange,
+    handleBarcodeQueryChange,
+    handleSearch,
+    handleBarcodeLookup,
+    resetSearchComposer,
+    applyFoodSelection,
+    openSelectedFoodComposer,
+    closeSelectedFoodComposer,
+    reopenSearchResults,
+  } = sActions;
 
   const { waterDraft, isUpdatingWater, hydrationMode } = hState;
   const { setWaterDraft, setIsUpdatingWater } = hSetters;
@@ -1125,7 +1145,10 @@ export function NutritionScreen() {
         setMessage(null);
       }}
       selectedFood={selectedFood}
+      isComposerOpen={isComposerOpen}
       selectedFoodTotals={selectedFoodTotals}
+      onOpenComposer={openSelectedFoodComposer}
+      onCloseComposer={closeSelectedFoodComposer}
       onReopenSearchResults={reopenSearchResults}
       quantity={quantity}
       onQuantityChange={setQuantity}
@@ -1290,7 +1313,7 @@ export function NutritionScreen() {
         onCreated={(food) => {
           setCustomFoodOpen(false);
           setMessage(`Alimento ${food.name} cadastrado.`);
-          setSelectedFood(food);
+          applyFoodSelection(food);
         }}
       />
 

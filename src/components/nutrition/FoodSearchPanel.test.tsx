@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { within } from "@testing-library/dom";
 import { FoodSearchPanel } from "@/components/nutrition/FoodSearchPanel";
 import type { FoodItem, MealDefinition } from "@/modules/nutrition/domain/types";
 
@@ -24,8 +26,10 @@ const selectedFood: FoodItem = {
   mealCategories: ["snack"],
 };
 
-function renderPanel() {
-  return render(
+function ClosedComposerPanel() {
+  const [composerOpen, setComposerOpen] = useState(false);
+
+  return (
     <FoodSearchPanel
       storageMode="database"
       isMobileLayout
@@ -47,7 +51,10 @@ function renderPanel() {
       onCustomFoodOpen={jest.fn()}
       onClearSearch={jest.fn()}
       selectedFood={selectedFood}
+      isComposerOpen={composerOpen}
       selectedFoodTotals={{ protein: 33.33, carbs: 31.67, fat: 15 }}
+      onOpenComposer={() => setComposerOpen(true)}
+      onCloseComposer={() => setComposerOpen(false)}
       onReopenSearchResults={jest.fn()}
       quantity="100"
       onQuantityChange={jest.fn()}
@@ -58,7 +65,50 @@ function renderPanel() {
       onMealTypeChange={jest.fn()}
       onAddDiaryItem={jest.fn()}
       searchCatalogBadge="Catalogo sincronizado"
-    />,
+    />
+  );
+}
+
+function OpenComposerPanel() {
+  const [composerOpen, setComposerOpen] = useState(true);
+
+  return (
+    <FoodSearchPanel
+      storageMode="database"
+      isMobileLayout
+      searchQuery=""
+      onSearchQueryChange={jest.fn()}
+      onSearch={jest.fn()}
+      isSearching={false}
+      isEnrichingExternal={false}
+      barcodeQuery="7893596226205"
+      onBarcodeQueryChange={jest.fn()}
+      onBarcodeLookup={jest.fn()}
+      onOpenScanner={jest.fn()}
+      searchSourceLabel="Catalogo do app"
+      searchFeedback="Item encontrado"
+      resultsVisible={false}
+      searchResults={[selectedFood]}
+      resultState={{ title: "Selecao pronta", text: "Item pronto para registro." }}
+      onApplyFoodSelection={jest.fn()}
+      onCustomFoodOpen={jest.fn()}
+      onClearSearch={jest.fn()}
+      selectedFood={selectedFood}
+      isComposerOpen={composerOpen}
+      selectedFoodTotals={{ protein: 33.33, carbs: 31.67, fat: 15 }}
+      onOpenComposer={() => setComposerOpen(true)}
+      onCloseComposer={() => setComposerOpen(false)}
+      onReopenSearchResults={jest.fn()}
+      quantity="100"
+      onQuantityChange={jest.fn()}
+      unit="g"
+      onUnitChange={jest.fn()}
+      mealOptions={mealOptions}
+      mealType="breakfast"
+      onMealTypeChange={jest.fn()}
+      onAddDiaryItem={jest.fn()}
+      searchCatalogBadge="Catalogo sincronizado"
+    />
   );
 }
 
@@ -68,17 +118,30 @@ describe("FoodSearchPanel", () => {
   });
 
   it("renders the mobile composer as a full dialog for the selected food", () => {
-    renderPanel();
+    const { container } = render(<OpenComposerPanel />);
 
     expect(screen.getByRole("dialog", { name: /Registrar no diario/i })).toBeInTheDocument();
     expect(screen.getByText(/Barra de Proteina - Sabor Trufa/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Adicionar ao diario/i })).toBeInTheDocument();
     expect(screen.queryByText(/Pronto para registrar/i)).not.toBeInTheDocument();
+    expect(within(container).queryByRole("dialog", { name: /Registrar no diario/i })).not.toBeInTheDocument();
+  });
+
+  it("keeps the selected item as a ready card until the user opens the composer", async () => {
+    const user = userEvent.setup();
+    render(<ClosedComposerPanel />);
+
+    expect(screen.queryByRole("dialog", { name: /Registrar no diario/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/Pronto para registrar/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Registrar/i }));
+
+    expect(screen.getByRole("dialog", { name: /Registrar no diario/i })).toBeInTheDocument();
   });
 
   it("falls back to the ready card after closing the mobile composer", async () => {
     const user = userEvent.setup();
-    renderPanel();
+    render(<OpenComposerPanel />);
 
     await user.click(screen.getByRole("button", { name: /^Fechar$/i }));
 

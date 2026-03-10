@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Html5Qrcode } from "html5-qrcode";
 
 interface BarcodeScannerDialogProps {
@@ -38,6 +39,7 @@ export function BarcodeScannerDialog({
   const previousOverflowRef = useRef("");
   const shouldRestoreFocusRef = useRef(true);
   const [error, setError] = useState<string | null>(null);
+  const portalTarget = typeof document !== "undefined" ? document.body : null;
 
   useEffect(() => {
     if (!open) return;
@@ -192,9 +194,9 @@ export function BarcodeScannerDialog({
     };
   }, [onClose, open]);
 
-  if (!open) return null;
+  if (!open || !portalTarget) return null;
 
-  return (
+  return createPortal(
     <div
       style={{
         position: "fixed",
@@ -276,6 +278,7 @@ export function BarcodeScannerDialog({
           </p>
         ) : null}
       </div>
-    </div>
+    </div>,
+    portalTarget,
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ScanLine } from "lucide-react";
 import type {
   FoodItem,
@@ -44,7 +45,10 @@ interface FoodSearchPanelProps {
   onCustomFoodOpen: () => void;
   onClearSearch: () => void;
   selectedFood: FoodItem | null;
+  isComposerOpen: boolean;
   selectedFoodTotals: { protein: number; carbs: number; fat: number } | null;
+  onOpenComposer: () => void;
+  onCloseComposer: () => void;
   onReopenSearchResults: () => void;
   quantity: string;
   onQuantityChange: (val: string) => void;
@@ -206,7 +210,10 @@ export function FoodSearchPanel({
   onCustomFoodOpen,
   onClearSearch,
   selectedFood,
+  isComposerOpen,
   selectedFoodTotals,
+  onOpenComposer,
+  onCloseComposer,
   onReopenSearchResults,
   quantity,
   onQuantityChange,
@@ -218,13 +225,8 @@ export function FoodSearchPanel({
   searchCatalogBadge,
 }: FoodSearchPanelProps) {
   const [searchMode, setSearchMode] = useState<SearchMode>("name");
-  const [dismissedComposerFoodId, setDismissedComposerFoodId] = useState<string | null>(null);
   const composerScrollRef = useRef<HTMLDivElement | null>(null);
-
-  const isComposerOpen =
-    isMobileLayout &&
-    selectedFood != null &&
-    dismissedComposerFoodId !== selectedFood.id;
+  const portalTarget = typeof document !== "undefined" ? document.body : null;
 
   useEffect(() => {
     if (!isMobileLayout || !isComposerOpen) return;
@@ -311,9 +313,104 @@ export function FoodSearchPanel({
   );
 
   function handleSelectFood(food: FoodItem) {
-    setDismissedComposerFoodId(null);
     onApplyFoodSelection(food);
   }
+
+  const mobileComposer =
+    isMobileLayout && selectedFood && isComposerOpen && portalTarget
+      ? createPortal(
+          <div className="fixed inset-0 z-[80]">
+            <button
+              className="absolute inset-0 bg-[#01060e]/92"
+              onClick={onCloseComposer}
+              aria-label="Fechar registro do alimento"
+            />
+
+            <div
+              className="relative flex h-full flex-col px-3"
+              style={{
+                paddingTop: "calc(0.75rem + env(safe-area-inset-top, 0px))",
+                paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))",
+              }}
+            >
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="nutrition-mobile-composer-title"
+                className="glass-panel static-panel relative flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#03111f]/98 shadow-[0_24px_80px_rgba(0,0,0,0.52)]"
+              >
+                <div className="border-b border-white/8 bg-[#03111f]/98 px-4 py-4">
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <span className="badge badge-success">Registro rapido</span>
+                      <strong
+                        id="nutrition-mobile-composer-title"
+                        className="mt-3 block text-[1.12rem] leading-tight"
+                      >
+                        Registrar no diario
+                      </strong>
+                      <p className="mt-1 text-[0.88rem] text-[var(--text-secondary)]">
+                        Revise o item encontrado, ajuste a porcao e confirme o consumo sem depender do fundo da tela.
+                      </p>
+                    </div>
+                    <button
+                      onClick={onCloseComposer}
+                      className="btn-outline min-w-auto px-3 py-2"
+                    >
+                      Fechar
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => {
+                        onReopenSearchResults();
+                      }}
+                      className="btn-outline min-w-auto px-3 py-2"
+                    >
+                      Trocar alimento
+                    </button>
+                    <span className="badge badge-success max-w-full truncate">
+                      {selectedFood.barcode ? `Codigo ${selectedFood.barcode}` : "Selecionado para registro"}
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  ref={composerScrollRef}
+                  className="flex-1 overflow-y-auto px-4 py-4 [overscroll-behavior:contain]"
+                >
+                  <ComposerBody
+                    selectedFood={selectedFood}
+                    selectedFoodTotals={selectedFoodTotals}
+                    quantity={quantity}
+                    onQuantityChange={onQuantityChange}
+                    unit={unit}
+                    onUnitChange={onUnitChange}
+                    mealOptions={mealOptions}
+                    mealType={mealType}
+                    onMealTypeChange={onMealTypeChange}
+                    onAddDiaryItem={onAddDiaryItem}
+                    showActionButton={false}
+                  />
+                </div>
+
+                <div className="border-t border-white/8 bg-[#03111f]/98 px-4 py-3 backdrop-blur">
+                  <div className="grid gap-2">
+                    <button onClick={onAddDiaryItem} className="btn-primary min-h-[3.35rem] w-full">
+                      Adicionar ao diario
+                    </button>
+                    <p className="text-center text-[0.78rem] text-[var(--text-muted)]">
+                      O registro sera salvo no bloco de refeicao escolhido acima.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>,
+          portalTarget,
+        )
+      : null;
 
   return (
     <>
@@ -476,16 +573,12 @@ export function FoodSearchPanel({
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setDismissedComposerFoodId(null)}
-                  className="btn-primary min-w-auto px-3 py-2"
-                >
+                <button onClick={onOpenComposer} className="btn-primary min-w-auto px-3 py-2">
                   Registrar
                 </button>
                 <button
                   onClick={() => {
                     onReopenSearchResults();
-                    setDismissedComposerFoodId(selectedFood.id);
                   }}
                   className="btn-outline min-w-auto px-3 py-2"
                 >
@@ -526,10 +619,7 @@ export function FoodSearchPanel({
                   </button>
                   {searchResults.length || selectedFood ? (
                     <button
-                      onClick={() => {
-                        setDismissedComposerFoodId(null);
-                        onClearSearch();
-                      }}
+                      onClick={onClearSearch}
                       className="btn-outline min-w-auto px-3 py-1.5"
                     >
                       Limpar
@@ -604,98 +694,7 @@ export function FoodSearchPanel({
         ) : null}
       </section>
 
-      {isMobileLayout && selectedFood && isComposerOpen ? (
-        <div className="fixed inset-0 z-50">
-          <button
-            className="absolute inset-0 bg-[#01060e]/92"
-            onClick={() => setDismissedComposerFoodId(selectedFood.id)}
-            aria-label="Fechar registro do alimento"
-          />
-
-          <div
-            className="relative flex h-full flex-col px-3"
-            style={{
-              paddingTop: "calc(0.75rem + env(safe-area-inset-top, 0px))",
-              paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))",
-            }}
-          >
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="nutrition-mobile-composer-title"
-              className="glass-panel static-panel flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#03111f]/98 shadow-[0_24px_80px_rgba(0,0,0,0.52)]"
-            >
-              <div className="border-b border-white/8 bg-[#03111f]/98 px-4 py-4">
-                <div className="mb-3 flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <span className="badge badge-success">Registro rapido</span>
-                    <strong
-                      id="nutrition-mobile-composer-title"
-                      className="mt-3 block text-[1.12rem] leading-tight"
-                    >
-                      Registrar no diario
-                    </strong>
-                    <p className="mt-1 text-[0.88rem] text-[var(--text-secondary)]">
-                      Revise o item encontrado, ajuste a porcao e confirme o consumo sem depender do fundo da tela.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setDismissedComposerFoodId(selectedFood.id)}
-                    className="btn-outline min-w-auto px-3 py-2"
-                  >
-                    Fechar
-                  </button>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => {
-                      onReopenSearchResults();
-                      setDismissedComposerFoodId(selectedFood.id);
-                    }}
-                    className="btn-outline min-w-auto px-3 py-2"
-                  >
-                    Trocar alimento
-                  </button>
-                  <span className="badge badge-success max-w-full truncate">
-                    {selectedFood.barcode ? `Codigo ${selectedFood.barcode}` : "Selecionado para registro"}
-                  </span>
-                </div>
-              </div>
-
-              <div
-                ref={composerScrollRef}
-                className="flex-1 overflow-y-auto px-4 py-4 [overscroll-behavior:contain]"
-              >
-                <ComposerBody
-                  selectedFood={selectedFood}
-                  selectedFoodTotals={selectedFoodTotals}
-                  quantity={quantity}
-                  onQuantityChange={onQuantityChange}
-                  unit={unit}
-                  onUnitChange={onUnitChange}
-                  mealOptions={mealOptions}
-                  mealType={mealType}
-                  onMealTypeChange={onMealTypeChange}
-                  onAddDiaryItem={onAddDiaryItem}
-                  showActionButton={false}
-                />
-              </div>
-
-              <div className="border-t border-white/8 bg-[#03111f]/98 px-4 py-3 backdrop-blur">
-                <div className="grid gap-2">
-                  <button onClick={onAddDiaryItem} className="btn-primary min-h-[3.35rem] w-full">
-                    Adicionar ao diario
-                  </button>
-                  <p className="text-center text-[0.78rem] text-[var(--text-muted)]">
-                    O registro sera salvo no bloco de refeicao escolhido acima.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {mobileComposer}
     </>
   );
 }
