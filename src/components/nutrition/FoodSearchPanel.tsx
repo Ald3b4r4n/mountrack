@@ -292,6 +292,7 @@ export function FoodSearchPanel({
       : null;
 
   const hasVisibleResults = resultsVisible && searchResults.length > 0;
+  const activeMealLabel = mealOptions.find((option) => option.key === mealType)?.label ?? String(mealType);
   const hasSearchSession =
     isSearching ||
     searchSourceLabel !== null ||
@@ -381,7 +382,7 @@ export function FoodSearchPanel({
                         Registrar no diario
                       </strong>
                       <p className="mt-1 text-[0.88rem] leading-relaxed text-[var(--text-secondary)]">
-                        Ajuste a porcao, confirme a refeicao e volte para o resumo do dia logo depois do registro.
+                        Ajuste a porcao, confirme <strong className="font-medium text-[var(--text-primary)]">{activeMealLabel}</strong> e volte para o resumo do dia logo depois do registro.
                       </p>
                     </div>
                   </div>
@@ -398,6 +399,9 @@ export function FoodSearchPanel({
                     </button>
                     <span className="badge badge-success max-w-full truncate">
                       {selectedFood.barcode ? `Codigo ${selectedFood.barcode}` : "Selecionado para registro"}
+                    </span>
+                    <span className="badge badge-success max-w-full truncate">
+                      Refeicao {activeMealLabel}
                     </span>
                   </div>
                 </div>
@@ -430,10 +434,10 @@ export function FoodSearchPanel({
                       onClick={handleMobileComposerSubmit}
                       className="btn-primary min-h-[3.35rem] w-full shadow-[0_18px_40px_rgba(52,211,153,0.18)]"
                     >
-                      Adicionar ao diario
+                      Adicionar ao diario em {activeMealLabel}
                     </button>
                     <p className="text-center text-[0.78rem] text-[var(--text-muted)]">
-                      Depois do registro, voce volta para o painel do dia com o consumo atualizado.
+                      Depois do registro, voce volta para Hoje com {activeMealLabel.toLowerCase()} em foco.
                     </p>
                   </div>
                 </div>
@@ -453,7 +457,11 @@ export function FoodSearchPanel({
               <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
                 <PanelHeader
                   title="Buscar e registrar"
-                  subtitle="Encontre um alimento, revise o resultado e registre o consumo sem perder o contexto do dia."
+                  subtitle={
+                    isMobileLayout
+                      ? `Encontre um alimento e registre direto em ${activeMealLabel.toLowerCase()} sem perder o contexto do dia.`
+                      : "Encontre um alimento, revise o resultado e registre o consumo sem perder o contexto do dia."
+                  }
                 />
                 <span className="badge badge-success self-start">{searchCatalogBadge}</span>
               </div>
@@ -464,6 +472,20 @@ export function FoodSearchPanel({
                   <p className="text-[0.82rem] text-[var(--accent-primary)]">{searchActivitySummary}</p>
                 ) : null}
               </div>
+              {isMobileLayout ? (
+                <div className="mb-4 flex items-start justify-between gap-3 rounded-[1rem] border border-[#34d399]/14 bg-[#06162d]/62 p-3">
+                  <div className="min-w-0">
+                    <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                      Refeicao de destino
+                    </span>
+                    <strong className="mt-1 block text-[0.98rem] text-[var(--text-primary)]">{activeMealLabel}</strong>
+                    <p className="mt-1 text-[0.82rem] text-[var(--text-secondary)]">
+                      O alimento selecionado volta para esse bloco quando o registro terminar.
+                    </p>
+                  </div>
+                  <span className="badge badge-success shrink-0">Em foco</span>
+                </div>
+              ) : null}
             </>
           ) : (
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -604,12 +626,12 @@ export function FoodSearchPanel({
                 </span>
                 <strong className="mt-1 block">{getFoodLabel(selectedFood)}</strong>
                 <p className="mt-1 text-[0.84rem] text-[var(--text-secondary)]">
-                  Abra o registro para definir quantidade, unidade e refeicao.
+                  Abra o registro para definir quantidade e confirmar {activeMealLabel.toLowerCase()}.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button type="button" onClick={onOpenComposer} className="btn-primary min-w-auto px-3 py-2">
-                  Registrar
+                  Registrar em {activeMealLabel}
                 </button>
                 <button
                   type="button"

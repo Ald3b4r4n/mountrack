@@ -12,6 +12,7 @@ interface TodayWorkspaceProps {
   mealDefinitions: MealDefinition[];
   mealSummary: Record<string, number>;
   embedded?: boolean;
+  isMobileLayout?: boolean;
   mealsSectionOpen?: boolean;
   onMealsSectionOpenChange?: (open: boolean) => void;
   mealsSectionRef?: React.Ref<HTMLElement>;
@@ -31,6 +32,7 @@ function MealQuickCard({
   onSelect,
   onAdd,
   onManage,
+  isMobileLayout = false,
 }: {
   meal: MealDefinition;
   active: boolean;
@@ -40,11 +42,13 @@ function MealQuickCard({
   onSelect: () => void;
   onAdd: () => void;
   onManage?: () => void;
+  isMobileLayout?: boolean;
 }) {
   return (
     <article
       className={[
         "glass-panel static-panel rounded-[1.15rem] p-3.5 transition-all duration-200",
+        isMobileLayout ? "w-[min(82vw,19rem)] shrink-0 snap-start border border-white/7" : "",
         active
           ? "border-[#34d399]/30 bg-[linear-gradient(135deg,rgba(52,211,153,0.12),rgba(6,182,212,0.06))] shadow-[0_14px_34px_rgba(4,20,38,0.28)]"
           : "bg-[#06162d]/60 hover:border-[#34d399]/16 hover:bg-[#07192f]/76 hover:shadow-[0_14px_34px_rgba(4,20,38,0.24)]",
@@ -57,7 +61,11 @@ function MealQuickCard({
       >
         <div className="flex items-start justify-between gap-3">
           <span className="block text-[0.72rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">{label}</span>
-          {meal.isDefault === false ? <span className="badge badge-success">Extra</span> : null}
+          {active ? (
+            <span className="badge badge-success">Ativa</span>
+          ) : meal.isDefault === false ? (
+            <span className="badge badge-success">Extra</span>
+          ) : null}
         </div>
         <strong className="mt-2 block font-['Outfit',sans-serif] text-[1.15rem] text-[var(--text-primary)]">
           {formatCalories(calories)}
@@ -83,12 +91,15 @@ function MealQuickCard({
   );
 }
 
-function AddMealCard({ onAddMeal }: { onAddMeal: () => void }) {
+function AddMealCard({ onAddMeal, isMobileLayout = false }: { onAddMeal: () => void; isMobileLayout?: boolean }) {
   return (
     <button
       type="button"
       onClick={onAddMeal}
-      className="glass-panel static-panel flex min-h-[10.75rem] w-full flex-col items-start justify-between rounded-[1.15rem] border border-dashed border-[#34d399]/20 bg-[#051427]/55 p-3.5 text-left transition-all duration-200 hover:border-[#34d399]/34 hover:bg-[#082037]/72 hover:shadow-[0_14px_34px_rgba(4,20,38,0.24)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#34d399]/35 active:scale-[0.985]"
+      className={[
+        "glass-panel static-panel flex min-h-[10.75rem] w-full flex-col items-start justify-between rounded-[1.15rem] border border-dashed border-[#34d399]/20 bg-[#051427]/55 p-3.5 text-left transition-all duration-200 hover:border-[#34d399]/34 hover:bg-[#082037]/72 hover:shadow-[0_14px_34px_rgba(4,20,38,0.24)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#34d399]/35 active:scale-[0.985]",
+        isMobileLayout ? "w-[min(72vw,16rem)] shrink-0 snap-start" : "",
+      ].join(" ")}
     >
       <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#34d399]/20 bg-[#34d399]/12 text-[var(--accent-primary)]">
         <Plus size={18} />
@@ -111,6 +122,7 @@ export function TodayWorkspace({
   mealDefinitions,
   mealSummary,
   embedded = false,
+  isMobileLayout = false,
   mealsSectionOpen,
   onMealsSectionOpenChange,
   mealsSectionRef,
@@ -130,22 +142,64 @@ export function TodayWorkspace({
         onOpenChange={onMealsSectionOpenChange}
         sectionRef={mealsSectionRef}
       >
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          {mealDefinitions.map((meal) => (
-            <MealQuickCard
-              key={meal.key}
-              meal={meal}
-              active={activeDiaryMeal === meal.key}
-              label={meal.label}
-              calories={mealSummary[meal.key] ?? 0}
-              count={groupedDiaryItems[meal.key]?.length ?? 0}
-              onSelect={() => onOpenMeal(meal.key)}
-              onAdd={() => onOpenSearchForMeal(meal.key)}
-              onManage={meal.isDefault === false ? () => onManageMeal?.(meal) : undefined}
-            />
-          ))}
-          <AddMealCard onAddMeal={onAddMeal} />
-        </div>
+        {isMobileLayout ? (
+          <div className="grid gap-3">
+            <div className="-mx-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex snap-x snap-mandatory gap-3 px-1">
+                {mealDefinitions.map((meal) => (
+                  <MealQuickCard
+                    key={meal.key}
+                    meal={meal}
+                    active={activeDiaryMeal === meal.key}
+                    label={meal.label}
+                    calories={mealSummary[meal.key] ?? 0}
+                    count={groupedDiaryItems[meal.key]?.length ?? 0}
+                    onSelect={() => onOpenMeal(meal.key)}
+                    onAdd={() => onOpenSearchForMeal(meal.key)}
+                    onManage={meal.isDefault === false ? () => onManageMeal?.(meal) : undefined}
+                    isMobileLayout
+                  />
+                ))}
+                <AddMealCard onAddMeal={onAddMeal} isMobileLayout />
+              </div>
+            </div>
+            <div className="rounded-[1rem] border border-white/7 bg-[#071223]/72 p-3">
+              <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                Refeicao em foco
+              </span>
+              <div className="mt-2 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <strong className="block text-[1rem] text-[var(--text-primary)]">
+                    {mealDefinitions.find((meal) => meal.key === activeDiaryMeal)?.label ?? activeDiaryMeal}
+                  </strong>
+                  <span className="mt-1 block text-[0.82rem] text-[var(--text-secondary)]">
+                    {groupedDiaryItems[activeDiaryMeal]?.length ?? 0} item(ns) registrados neste bloco.
+                  </span>
+                </div>
+                <span className="badge badge-success whitespace-nowrap">
+                  {formatCalories(mealSummary[activeDiaryMeal] ?? 0)}
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            {mealDefinitions.map((meal) => (
+              <MealQuickCard
+                key={meal.key}
+                meal={meal}
+                active={activeDiaryMeal === meal.key}
+                label={meal.label}
+                calories={mealSummary[meal.key] ?? 0}
+                count={groupedDiaryItems[meal.key]?.length ?? 0}
+                onSelect={() => onOpenMeal(meal.key)}
+                onAdd={() => onOpenSearchForMeal(meal.key)}
+                onManage={meal.isDefault === false ? () => onManageMeal?.(meal) : undefined}
+              />
+            ))}
+            <AddMealCard onAddMeal={onAddMeal} />
+          </div>
+        )}
       </CollapsibleSection>
 
       {children}

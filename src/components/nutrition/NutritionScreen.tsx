@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CheckCircle2 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { BarcodeScannerDialog } from "@/components/nutrition/BarcodeScannerDialog";
 import { SegmentButton } from "@/components/nutrition/CommonUI";
@@ -54,7 +55,7 @@ import {
 } from "@/modules/nutrition/meal-helpers";
 import { createDiaryItemSnapshot } from "@/modules/nutrition/services/daily-calories.service";
 import { calculateNutritionForQuantity } from "@/modules/nutrition/services/nutrition-calc.service";
-import { getFoodLabel } from "@/modules/nutrition/ui-helpers";
+import { formatCalories, getFoodLabel } from "@/modules/nutrition/ui-helpers";
 import { getTodayLocalDate } from "@/modules/expenses/utils";
 import { downloadMealPlanPdf } from "@/components/nutrition/meal-plan-pdf";
 
@@ -72,6 +73,12 @@ const DEFAULT_GOAL: NutritionGoal = {
 };
 
 type DiaryViewKey = "today" | "history";
+interface DiarySuccessFeedback {
+  foodLabel: string;
+  mealLabel: string;
+  mealType: MealType;
+}
+
 const previewAuthUser = {
   uid: "preview-demo-user",
   getIdToken: async () => "",
@@ -182,6 +189,7 @@ export function NutritionScreen() {
   const [activeDiaryMeal, setActiveDiaryMeal] = useState<MealType>("breakfast");
   const [diaryPage, setDiaryPage] = useState(1);
   const [todayMealsSectionOpen, setTodayMealsSectionOpen] = useState(false);
+  const [todayDiarySectionOpen, setTodayDiarySectionOpen] = useState(false);
   const [isMobileLayout, setIsMobileLayout] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [isSavingGoal, setIsSavingGoal] = useState(false);
@@ -245,6 +253,7 @@ export function NutritionScreen() {
   const { handleSelectHydrationMode, handleAdjustWater } = hActions;
 
   const [message, setMessage] = useState<string | null>(null);
+  const [diarySuccessFeedback, setDiarySuccessFeedback] = useState<DiarySuccessFeedback | null>(null);
   const [goalInputs, setGoalInputs] = useState<GoalInputState>({
     targetCalories: "2000",
     targetWaterMl: "2200",
@@ -261,6 +270,7 @@ export function NutritionScreen() {
   const activeWorkspaceRef = useRef<HTMLDivElement | null>(null);
   const activePlanningPanelRef = useRef<HTMLDivElement | null>(null);
   const todayMealsSectionRef = useRef<HTMLElement | null>(null);
+  const todayDiarySectionRef = useRef<HTMLElement | null>(null);
 
   function updateGoalInput(key: keyof GoalInputState, value: string) {
     setGoalInputs((current) => ({ ...current, [key]: value }));
@@ -286,6 +296,7 @@ export function NutritionScreen() {
       setMealType(nextMealType);
       setActiveDiaryMeal(nextMealType);
     }
+    setDiarySuccessFeedback(null);
     handleChangeArea("search");
   }
 
@@ -309,6 +320,9 @@ export function NutritionScreen() {
   }
 
   function handleChangeArea(nextArea: NutritionArea) {
+    if (nextArea !== "today") {
+      setDiarySuccessFeedback(null);
+    }
     setActiveArea(nextArea);
   }
 
@@ -326,17 +340,29 @@ export function NutritionScreen() {
     });
   }
 
-  function focusTodayDashboard(options?: { openMealsSummary?: boolean }) {
+  function focusTodayDashboard(options?: { openMealsSummary?: boolean; openDiaryPanel?: boolean }) {
     const openMealsSummary = options?.openMealsSummary ?? false;
+    const openDiaryPanel = options?.openDiaryPanel ?? false;
 
     handleChangeArea("today");
     setActiveDiaryView("today");
     setDiaryPage(1);
     setTodayMealsSectionOpen(openMealsSummary);
+    setTodayDiarySectionOpen(openDiaryPanel);
 
     if (openMealsSummary) {
       queueNutritionScroll(() => {
         todayMealsSectionRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+      return;
+    }
+
+    if (openDiaryPanel) {
+      queueNutritionScroll(() => {
+        todayDiarySectionRef.current?.scrollIntoView({
           behavior: "smooth",
           block: "start",
         });
@@ -349,8 +375,36 @@ export function NutritionScreen() {
     });
   }
 
+  function handleTodayMealsSectionOpenChange(open: boolean) {
+    setTodayMealsSectionOpen(open);
+    if (open) {
+      setTodayDiarySectionOpen(false);
+    }
+  }
+
+  function handleTodayDiarySectionOpenChange(open: boolean) {
+    setTodayDiarySectionOpen(open);
+    if (open) {
+      setTodayMealsSectionOpen(false);
+    }
+  }
+
   function handleOpenConsumedSummary() {
+    focusTodayDashboard({ openDiaryPanel: true });
+  }
+
+  function handleOpenMealChooser() {
+    setDiarySuccessFeedback(null);
     focusTodayDashboard({ openMealsSummary: true });
+  }
+
+  function announceDiarySuccess(foodLabel: string, mealDefinition: MealDefinition) {
+    setMessage(null);
+    setDiarySuccessFeedback({
+      foodLabel,
+      mealLabel: mealDefinition.label,
+      mealType: mealDefinition.key,
+    });
   }
 
   async function persistMealDefinitions(nextMealDefinitions: MealDefinition[], failureMessage: string): Promise<boolean> {
@@ -607,6 +661,20 @@ export function NutritionScreen() {
     };
   }, [activeArea, planningTab, isMobileLayout]);
 
+  useEffect(() => {
+    if (!diarySuccessFeedback) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setDiarySuccessFeedback(null);
+    }, 4200);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [diarySuccessFeedback]);
+
   async function handleAddDiaryItem() {
     if (!activeUser || !selectedFood) return;
     const activeMealDefinition = getActiveMealDefinition(mealType);
@@ -649,7 +717,7 @@ export function NutritionScreen() {
         focusTodayDashboard();
         setActiveDiaryMeal(mealType);
         setHistoryPage(1);
-        setMessage(`${getFoodLabel(selectedFood)} adicionado em ${activeMealDefinition.label}.`);
+        announceDiarySuccess(getFoodLabel(selectedFood), activeMealDefinition);
         resetSearchComposer(true);
         return;
       }
@@ -675,7 +743,7 @@ export function NutritionScreen() {
       focusTodayDashboard();
       setActiveDiaryMeal(mealType);
       setHistoryPage(1);
-      setMessage(`${getFoodLabel(selectedFood)} adicionado em ${activeMealDefinition.label}.`);
+      announceDiarySuccess(getFoodLabel(selectedFood), activeMealDefinition);
       resetSearchComposer(true);
       await Promise.all([loadDashboard(), loadHistory(1)]);
     } catch {
@@ -1054,6 +1122,12 @@ export function NutritionScreen() {
   }, [diaryItems, mealDefinitions]);
 
   const activeDiaryItems = useMemo(() => groupedDiaryItems[activeDiaryMeal] ?? [], [groupedDiaryItems, activeDiaryMeal]);
+  const activeDiaryMealDefinition =
+    mealDefinitions.find((meal) => meal.key === activeDiaryMeal) ?? {
+      key: activeDiaryMeal,
+      label: String(activeDiaryMeal),
+      isDefault: true,
+    };
   const diaryTotalPages = Math.max(1, Math.ceil(activeDiaryItems.length / DIARY_PAGE_SIZE));
   const pagedDiaryItems = useMemo(() => {
     const offset = (diaryPage - 1) * DIARY_PAGE_SIZE;
@@ -1070,6 +1144,18 @@ export function NutritionScreen() {
   const planTotals = useMemo(() => (displayedMealPlan ? summarizeMealPlan(displayedMealPlan) : null), [displayedMealPlan]);
   const requestedPlanCalories = parseInputNumber(planCalories) ?? goal.targetCalories;
   const planDelta = displayedMealPlan ? roundValue(displayedMealPlan.totalCalories - requestedPlanCalories) : 0;
+  const successMealDefinition = diarySuccessFeedback
+    ? mealDefinitions.find((meal) => meal.key === diarySuccessFeedback.mealType) ?? null
+    : null;
+  const successMealLabel = successMealDefinition?.label ?? diarySuccessFeedback?.mealLabel ?? null;
+  const successMealItemsCount = diarySuccessFeedback
+    ? (groupedDiaryItems[diarySuccessFeedback.mealType]?.length ?? 0)
+    : 0;
+  const successMealCalories = diarySuccessFeedback
+    ? (summary.meals[diarySuccessFeedback.mealType] ?? 0)
+    : 0;
+  const activeMealRecentlyLoggedFoodLabel =
+    diarySuccessFeedback?.mealType === activeDiaryMeal ? diarySuccessFeedback.foodLabel : null;
   const searchCatalogBadge =
     storageMode === "database"
       ? "Catalogo sincronizado"
@@ -1121,13 +1207,18 @@ export function NutritionScreen() {
       mealDefinitions={mealDefinitions}
       mealSummary={summary.meals}
       embedded={!isMobileLayout}
+      isMobileLayout={isMobileLayout}
       mealsSectionOpen={isMobileLayout ? todayMealsSectionOpen : undefined}
-      onMealsSectionOpenChange={isMobileLayout ? setTodayMealsSectionOpen : undefined}
+      onMealsSectionOpenChange={isMobileLayout ? handleTodayMealsSectionOpenChange : undefined}
       mealsSectionRef={isMobileLayout ? todayMealsSectionRef : undefined}
       onOpenMeal={(meal) => {
+        setActiveDiaryMeal(meal);
+        if (isMobileLayout) {
+          focusTodayDashboard({ openDiaryPanel: true });
+          return;
+        }
         handleChangeArea("today");
         setActiveDiaryView("today");
-        setActiveDiaryMeal(meal);
         setDiaryPage(1);
       }}
       onOpenSearchForMeal={openSearchForMeal}
@@ -1151,6 +1242,8 @@ export function NutritionScreen() {
         mealDefinitions={mealDefinitions}
         activeDiaryMeal={activeDiaryMeal}
         setActiveDiaryMeal={setActiveDiaryMeal}
+        onOpenSearchForMeal={openSearchForMeal}
+        onOpenMealChooser={handleOpenMealChooser}
         groupedDiaryItems={groupedDiaryItems}
         activeDiaryItems={activeDiaryItems}
         diaryPage={diaryPage}
@@ -1164,6 +1257,9 @@ export function NutritionScreen() {
         historyTotalPages={historyTotalPages}
         loadHistory={(page) => void loadHistory(page)}
         onManageMeal={openManageMealDialog}
+        open={isMobileLayout ? todayDiarySectionOpen : undefined}
+        onOpenChange={isMobileLayout ? handleTodayDiarySectionOpenChange : undefined}
+        sectionRef={isMobileLayout ? todayDiarySectionRef : undefined}
       />
     </TodayWorkspace>
   );
@@ -1361,6 +1457,7 @@ export function NutritionScreen() {
         onClose={() => setCustomFoodOpen(false)}
         onCreated={(food) => {
           setCustomFoodOpen(false);
+          setDiarySuccessFeedback(null);
           setMessage(`Alimento ${food.name} cadastrado.`);
           applyFoodSelection(food);
         }}
@@ -1373,7 +1470,20 @@ export function NutritionScreen() {
         goal={goal}
         waterRatio={waterRatio}
         consumedRatio={consumedRatio}
+        activeMealLabel={activeDiaryMealDefinition.label}
+        activeMealCalories={summary.meals[activeDiaryMeal] ?? 0}
+        activeMealItemsCount={activeDiaryItems.length}
+        recentlyLoggedFoodLabel={
+          activeArea === "today" && isMobileLayout ? activeMealRecentlyLoggedFoodLabel : null
+        }
         onOpenConsumedSummary={isMobileLayout ? handleOpenConsumedSummary : undefined}
+        onAddToActiveMeal={
+          isMobileLayout
+            ? () => {
+                openSearchForMeal(activeDiaryMeal);
+              }
+            : undefined
+        }
       />
 
       <NutritionWorkspaceNav
@@ -1385,6 +1495,53 @@ export function NutritionScreen() {
       {message ? (
         <div className="glass-panel static-panel anim-enter mb-4 border-[#34d399]/20 p-[0.9rem_1rem]">
           <p className="text-[var(--text-secondary)]">{message}</p>
+        </div>
+      ) : null}
+
+      {!isMobileLayout && activeArea === "today" && diarySuccessFeedback ? (
+        <div className="glass-panel static-panel anim-enter mb-4 overflow-hidden border-[#34d399]/22 bg-[linear-gradient(135deg,rgba(6,28,27,0.96),rgba(5,20,38,0.9))] p-[0.95rem_1rem]">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-[#86efac]">
+                <CheckCircle2 size={16} />
+                Registrado no diario
+              </div>
+              <p className="mt-2 text-[0.94rem] text-[var(--text-primary)]">
+                <strong>{diarySuccessFeedback.foodLabel}</strong> entrou em{" "}
+                <strong>{successMealLabel ?? diarySuccessFeedback.mealLabel}</strong>.
+              </p>
+              <p className="mt-1 text-[0.84rem] text-[var(--text-secondary)]">
+                Voce voltou para Hoje com esse bloco em foco. Abra o registro ou continue adicionando itens no mesmo ritmo.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {successMealLabel ? <span className="badge badge-success">{successMealLabel}</span> : null}
+                <span className="badge badge-success">{successMealItemsCount} item(ns)</span>
+                <span className="badge badge-success">{formatCalories(successMealCalories)}</span>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveDiaryMeal(diarySuccessFeedback.mealType);
+                  focusTodayDashboard({ openDiaryPanel: true });
+                  setDiarySuccessFeedback(null);
+                }}
+                className="btn-primary min-w-auto px-3 py-2 text-[0.82rem]"
+              >
+                {successMealLabel ? `Abrir ${successMealLabel}` : "Abrir registro"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  openSearchForMeal(diarySuccessFeedback.mealType);
+                }}
+                className="btn-outline min-w-auto px-3 py-2 text-[0.82rem]"
+              >
+                Registrar mais
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
 

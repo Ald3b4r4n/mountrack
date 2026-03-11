@@ -94,15 +94,23 @@ function MobileSummaryTile({
   accentClass,
   hint,
   onClick,
+  tone = "default",
 }: {
   label: string;
   value: string;
   accentClass: string;
   hint?: string;
   onClick?: () => void;
+  tone?: "default" | "accent" | "calm";
 }) {
+  const toneClassName =
+    tone === "accent"
+      ? "border-[#34d399]/18 bg-[linear-gradient(180deg,rgba(5,26,36,0.96),rgba(6,18,31,0.78))] shadow-[0_18px_36px_rgba(4,20,38,0.24),inset_0_1px_0_rgba(255,255,255,0.04)]"
+      : tone === "calm"
+        ? "border-[#38bdf8]/12 bg-[linear-gradient(180deg,rgba(8,20,36,0.92),rgba(6,17,30,0.72))] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
+        : "border-white/7 bg-[linear-gradient(180deg,rgba(7,18,35,0.92),rgba(6,17,30,0.72))] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]";
   const tileClassName = [
-    "rounded-[1rem] border border-white/7 bg-[linear-gradient(180deg,rgba(7,18,35,0.92),rgba(6,17,30,0.72))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]",
+    `rounded-[1rem] border p-3 ${toneClassName}`,
     onClick
       ? "w-full text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#34d399]/35 active:scale-[0.985]"
       : "",
@@ -133,6 +141,67 @@ function MobileSummaryTile({
 
   return (
     <article className={tileClassName}>{content}</article>
+  );
+}
+
+function MobileActiveMealCard({
+  mealLabel,
+  mealCalories,
+  mealItemsCount,
+  onOpenMeal,
+  onAddToMeal,
+  recentlyLoggedFoodLabel,
+}: {
+  mealLabel: string;
+  mealCalories: number;
+  mealItemsCount: number;
+  onOpenMeal?: () => void;
+  onAddToMeal?: () => void;
+  recentlyLoggedFoodLabel?: string | null;
+}) {
+  return (
+    <article
+      className={`rounded-[1rem] border bg-[linear-gradient(145deg,rgba(6,21,39,0.92),rgba(4,16,30,0.82))] p-3.5 shadow-[0_18px_36px_rgba(4,20,38,0.18)] ${
+        recentlyLoggedFoodLabel ? "border-[#34d399]/26 shadow-[0_18px_40px_rgba(8,64,52,0.22)]" : "border-[#34d399]/14"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[0.7rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Bloco em foco</p>
+          <strong className="mt-1 block text-[1rem] text-[var(--text-primary)]">{mealLabel}</strong>
+          <p className="mt-1 text-[0.82rem] text-[var(--text-secondary)]">
+            {mealItemsCount > 0
+              ? `${mealItemsCount} item(ns) registrados neste bloco agora.`
+              : "Nenhum item registrado neste bloco ainda."}
+          </p>
+        </div>
+        <span className="badge badge-success shrink-0 whitespace-nowrap">{formatCalories(mealCalories)}</span>
+      </div>
+      {recentlyLoggedFoodLabel ? (
+        <div className="mt-3 rounded-[0.9rem] border border-[#34d399]/16 bg-[#062032]/82 p-2.5">
+          <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[#86efac]">Ultimo registro</span>
+          <p className="mt-1 text-[0.82rem] text-[var(--text-secondary)]">
+            <strong className="text-[var(--text-primary)]">{recentlyLoggedFoodLabel}</strong> entrou neste bloco agora.
+          </p>
+        </div>
+      ) : null}
+      <div className={`mt-3 grid gap-2 ${onOpenMeal && onAddToMeal ? "grid-cols-2" : "grid-cols-1"}`}>
+        {onOpenMeal ? (
+          <button type="button" onClick={onOpenMeal} className="btn-outline min-h-[2.85rem] w-full">
+            Abrir registro
+          </button>
+        ) : null}
+        {onAddToMeal ? (
+          <button type="button" onClick={onAddToMeal} className="btn-primary min-h-[2.85rem] w-full">
+            {recentlyLoggedFoodLabel
+              ? "Adicionar mais"
+              : mealItemsCount > 0
+                ? "Adicionar ao bloco"
+                : "Registrar primeiro item"}
+          </button>
+        ) : null}
+      </div>
+    </article>
   );
 }
 
@@ -174,12 +243,24 @@ function MobileSummaryStrip({
   summary,
   goal,
   waterRatio,
+  consumedRatio,
+  activeMealLabel,
+  activeMealCalories,
+  activeMealItemsCount,
   onOpenConsumedSummary,
+  onAddToActiveMeal,
+  recentlyLoggedFoodLabel,
 }: {
   summary: DailySummary;
   goal: NutritionGoal;
   waterRatio: number;
+  consumedRatio: number;
+  activeMealLabel: string;
+  activeMealCalories: number;
+  activeMealItemsCount: number;
   onOpenConsumedSummary?: () => void;
+  onAddToActiveMeal?: () => void;
+  recentlyLoggedFoodLabel?: string | null;
 }) {
   return (
     <div className="grid gap-2.5">
@@ -188,22 +269,37 @@ function MobileSummaryStrip({
           label="Consumido"
           value={formatCalories(summary.consumedCalories)}
           accentClass="text-[var(--text-primary)]"
-          hint={onOpenConsumedSummary ? "Ver refeicoes" : undefined}
+          hint={
+            onOpenConsumedSummary
+              ? `${activeMealLabel} · ${Math.round(consumedRatio)}% da meta`
+              : undefined
+          }
           onClick={onOpenConsumedSummary}
+          tone="accent"
         />
         <MobileSummaryTile
           label="Restante"
           value={formatCalories(summary.remainingCalories)}
           accentClass="text-[var(--text-primary)]"
+          hint={summary.remainingCalories > 0 ? "Espaco disponivel no dia" : "Meta diaria atingida"}
+          tone="calm"
         />
       </div>
+      <MobileActiveMealCard
+        mealLabel={activeMealLabel}
+        mealCalories={activeMealCalories}
+        mealItemsCount={activeMealItemsCount}
+        onOpenMeal={onOpenConsumedSummary}
+        onAddToMeal={onAddToActiveMeal}
+        recentlyLoggedFoodLabel={recentlyLoggedFoodLabel}
+      />
       <div className="glass-panel static-panel rounded-[1rem] border-[#34d399]/14 bg-[linear-gradient(145deg,rgba(5,20,38,0.9),rgba(6,22,45,0.7))] p-3.5">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
-            <p className="text-[0.7rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Hoje</p>
+            <p className="text-[0.7rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Base do dia</p>
             <strong className="block text-[1rem] text-[var(--text-primary)]">Hidratacao e macros</strong>
             <p className="mt-1 text-[0.82rem] text-[var(--text-secondary)]">
-              Veja o alvo de agua e como os macros estao distribuindo o dia.
+              Enquanto voce registra {activeMealLabel.toLowerCase()}, acompanhe agua e distribuicao nutricional daqui.
             </p>
           </div>
           <span className="badge badge-success whitespace-nowrap">
@@ -242,7 +338,12 @@ interface NutritionHeaderProps {
   goal: NutritionGoal;
   waterRatio: number;
   consumedRatio: number;
+  activeMealLabel: string;
+  activeMealCalories: number;
+  activeMealItemsCount: number;
   onOpenConsumedSummary?: () => void;
+  onAddToActiveMeal?: () => void;
+  recentlyLoggedFoodLabel?: string | null;
 }
 
 export function NutritionHeader({
@@ -252,7 +353,12 @@ export function NutritionHeader({
   goal,
   waterRatio,
   consumedRatio,
+  activeMealLabel,
+  activeMealCalories,
+  activeMealItemsCount,
   onOpenConsumedSummary,
+  onAddToActiveMeal,
+  recentlyLoggedFoodLabel,
 }: NutritionHeaderProps) {
   return (
     <header
@@ -298,7 +404,13 @@ export function NutritionHeader({
             summary={summary}
             goal={goal}
             waterRatio={waterRatio}
+            consumedRatio={consumedRatio}
+            activeMealLabel={activeMealLabel}
+            activeMealCalories={activeMealCalories}
+            activeMealItemsCount={activeMealItemsCount}
             onOpenConsumedSummary={onOpenConsumedSummary}
+            onAddToActiveMeal={onAddToActiveMeal}
+            recentlyLoggedFoodLabel={recentlyLoggedFoodLabel}
           />
         ) : (
           <div className="grid grid-cols-12 gap-[0.7rem]">

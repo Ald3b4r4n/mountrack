@@ -187,7 +187,8 @@ describe("FoodSearchPanel", () => {
 
     expect(screen.getByRole("dialog", { name: /Registrar no diario/i })).toBeInTheDocument();
     expect(screen.getByText(/Barra de Proteina - Sabor Trufa/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Adicionar ao diario/i })).toBeInTheDocument();
+    expect(screen.getByText(/Refeicao Cafe da manha/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Adicionar ao diario em Cafe da manha/i })).toBeInTheDocument();
     expect(screen.queryByText(/Pronto para registrar/i)).not.toBeInTheDocument();
     expect(within(container).queryByRole("dialog", { name: /Registrar no diario/i })).not.toBeInTheDocument();
   });
@@ -197,9 +198,11 @@ describe("FoodSearchPanel", () => {
     render(<ClosedComposerPanel />);
 
     expect(screen.queryByRole("dialog", { name: /Registrar no diario/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/Refeicao de destino/i)).toBeInTheDocument();
     expect(screen.getByText(/Pronto para registrar/i)).toBeInTheDocument();
+    expect(screen.getByText(/confirmar cafe da manha/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Registrar/i }));
+    await user.click(screen.getByRole("button", { name: /Registrar em Cafe da manha/i }));
 
     expect(screen.getByRole("dialog", { name: /Registrar no diario/i })).toBeInTheDocument();
   });
