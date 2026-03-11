@@ -13,6 +13,7 @@ import {
   buildGoogleCalendarLink,
   calculateDoseCountdown,
   calculateJourneyDoseStats,
+  calculateWeightGoalProgress,
   formatChartDateLabel,
   generateAreaFillPath,
   generateSmoothSvgPath,
@@ -25,6 +26,19 @@ interface ChartPoint {
   weight: number;
   date: string;
   type?: string;
+}
+
+function formatAmpouleDate(date: string | null): string | null {
+  if (!date) {
+    return null;
+  }
+
+  const [year, month, day] = date.split('-').map(Number);
+  return new Date(year, (month || 1) - 1, day || 1).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
 }
 
 export default function Home() {
@@ -50,6 +64,9 @@ export default function Home() {
   const [logSummaries, setLogSummaries] = useState<DashboardLogSummary[]>([]);
   const [dosesPerAmpoule, setDosesPerAmpoule] = useState(DEFAULT_DOSES_PER_AMPOULE);
   const [previousDoseApplications, setPreviousDoseApplications] = useState(0);
+  const [activeAmpouleOpenedOn, setActiveAmpouleOpenedOn] = useState<string | null>(null);
+  const [activeAmpouleStartDoseApplications, setActiveAmpouleStartDoseApplications] = useState<number | null>(null);
+  const [completedAmpoulesCount, setCompletedAmpoulesCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const currentDose = currentDoseState as number;
   const weeklyChange = weeklyChangeState as number;
@@ -65,6 +82,9 @@ export default function Home() {
         setTargetWeight(target || null);
         setDosesPerAmpoule(ampouleSettings.dosesPerAmpoule);
         setPreviousDoseApplications(ampouleSettings.previousDoseApplications);
+        setActiveAmpouleOpenedOn(ampouleSettings.activeAmpouleOpenedOn);
+        setActiveAmpouleStartDoseApplications(ampouleSettings.activeAmpouleStartDoseApplications);
+        setCompletedAmpoulesCount(ampouleSettings.completedAmpoulesCount);
 
         const logsRef = collection(db, 'users', user.uid, 'logs');
         const snapshot = await getDocs(query(logsRef, orderBy('date', 'desc')));
@@ -110,14 +130,9 @@ export default function Home() {
 
         if (points.length > 0) {
           const latest = points[0];
+          const weightGoalProgress = calculateWeightGoalProgress(points, target || null);
           setCurrentWeight(latest.weight);
-          if (target > 0 && latest.weight > target) {
-            setProgressPercent(Number(Math.max(0, Math.min(100, (target / latest.weight) * 100)).toFixed(1)));
-          } else if (target > 0 && latest.weight <= target) {
-            setProgressPercent(100);
-          } else {
-            setProgressPercent(0);
-          }
+          setProgressPercent(weightGoalProgress.progressPercent);
         } else {
           setCurrentWeight(null);
           setProgressPercent(0);
@@ -195,12 +210,24 @@ export default function Home() {
       new Date(),
       dosesPerAmpoule,
       previousDoseApplications,
+      {
+        activeAmpouleOpenedOn,
+        activeAmpouleStartDoseApplications,
+        completedAmpoulesCount,
+      },
     );
 
     setJourneyDays(stats.journeyDays);
     setAmpoulesUsed(stats.ampoulesUsed);
     setDosesUsedFromCurrentAmpoule(stats.dosesUsedFromCurrentAmpoule);
-  }, [dosesPerAmpoule, logSummaries, previousDoseApplications]);
+  }, [
+    activeAmpouleOpenedOn,
+    activeAmpouleStartDoseApplications,
+    completedAmpoulesCount,
+    dosesPerAmpoule,
+    logSummaries,
+    previousDoseApplications,
+  ]);
 
   const SVG_W = 600;
   const SVG_H = 260;
@@ -210,12 +237,14 @@ export default function Home() {
   const overdueDays = daysSince !== null ? Math.max(0, daysSince - 7) : 0;
   const doseUsagePercent = currentDose !== null ? ((currentDose - 2.5) / (15 - 2.5)) * 100 : 0;
   const currentAmpouleProgress =
-    dosesPerAmpoule > 0 ? (dosesUsedFromCurrentAmpoule / dosesPerAmpoule) * 100 : 0;
+    dosesPerAmpoule > 0 ? Math.min((dosesUsedFromCurrentAmpoule / dosesPerAmpoule) * 100, 100) : 0;
   const chartDateLabelIndices = getChartDateLabelIndices(chartPoints.length);
   const chartMaxWeight = chartPoints.length > 0 ? Math.max(...chartPoints.map((point) => point.weight)) : 0;
   const chartMinWeight = chartPoints.length > 0 ? Math.min(...chartPoints.map((point) => point.weight)) : 0;
   const chartWeightRange = chartMaxWeight - chartMinWeight || 1;
   const nextDoseCalendarLink = daysUntil !== null ? buildGoogleCalendarLink({ daysUntil, isDoseOverdue, title: '🩸 Aplicação Mounjaro', details: 'Lembrete de dose semanal! Registre no MounTrack.' }) : '#';
+  const ampouleOpenedLabel = formatAmpouleDate(activeAmpouleOpenedOn);
+  const hasActiveAmpoule = Boolean(activeAmpouleOpenedOn && activeAmpouleStartDoseApplications !== null);
   return (
     <ProtectedRoute>
       <main className="container" style={{ position: 'relative' }}>
@@ -440,14 +469,18 @@ export default function Home() {
                   {ampoulesUsed}
                   <span className="stat-unit">ampolas</span>
                 </div>
-                <p style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>Ajustado pela sua configuracao atual de ampola.</p>
+                <p style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                  {hasActiveAmpoule && ampouleOpenedLabel
+                    ? `Ampola atual aberta em ${ampouleOpenedLabel}.`
+                    : 'Sem ampola ativa. Inicie ou finalize em Ampolas.'}
+                </p>
               </article>
 
               <article className="glass-panel anim-enter anim-delay-4" style={{ padding: '1.75rem' }}>
                 <p className="stat-label">Ampola Atual</p>
                 <div className="stat-number" style={{ color: 'var(--accent-secondary)' }}>
-                  {dosesUsedFromCurrentAmpoule}
-                  <span className="stat-unit">de {dosesPerAmpoule} doses</span>
+                  {hasActiveAmpoule ? dosesUsedFromCurrentAmpoule : '—'}
+                  <span className="stat-unit">{hasActiveAmpoule ? `de ${dosesPerAmpoule} doses` : ''}</span>
                 </div>
                 <div className="progress-track" style={{ marginTop: '1rem' }}>
                   <div className="progress-fill" style={{ width: `${currentAmpouleProgress}%` }}></div>
@@ -502,13 +535,6 @@ export default function Home() {
           </>
         )}
 
-        <style>{`
-
-          .ampoules-used-card > p:last-of-type {
-            display: none;
-          }
-
-        `}</style>
       </main>
     </ProtectedRoute>
   );
