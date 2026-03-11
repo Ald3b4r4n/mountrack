@@ -152,7 +152,7 @@ export default function AmpoulesPage() {
 
         setLogSummaries(logs);
       } catch (error) {
-        console.error('Erro ao carregar configuracao de ampola', error);
+        console.error('Erro ao carregar configuração de ampola', error);
       } finally {
         setLoading(false);
       }
@@ -258,7 +258,7 @@ export default function AmpoulesPage() {
       setSaved(true);
       window.setTimeout(() => setSaved(false), 1800);
     } catch (error) {
-      console.error('Erro ao salvar configuracao de ampola', error);
+      console.error('Erro ao salvar configuração de ampola', error);
       alert('Não foi possível salvar a configuração da ampola.');
     } finally {
       setSaving(false);
@@ -368,7 +368,7 @@ export default function AmpoulesPage() {
       resetHistoryEditor();
       setFeedback(`Histórico da ampola #${entry.sequenceNumber} corrigido.`);
     } catch (error) {
-      console.error('Erro ao corrigir historico da ampola', error);
+      console.error('Erro ao corrigir histórico da ampola', error);
       alert('Não foi possível corrigir o histórico da ampola.');
     } finally {
       setSaving(false);
@@ -409,7 +409,7 @@ export default function AmpoulesPage() {
       resetHistoryEditor();
       setFeedback(`Ampola #${entry.sequenceNumber} reaberta para correção.`);
     } catch (error) {
-      console.error('Erro ao reabrir ampola do historico', error);
+      console.error('Erro ao reabrir ampola do histórico', error);
       alert('Não foi possível reabrir essa ampola.');
     } finally {
       setSaving(false);
@@ -457,8 +457,8 @@ export default function AmpoulesPage() {
             <div style={{ marginBottom: '1.5rem' }}>
               <p className="stat-label" style={{ marginBottom: '0.7rem' }}>Configuração da ampola</p>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>
-                Defina quantas doses cabem na sua ampola atual. Se você já aplicava antes de usar o app,
-                informe esse volume para manter os cards coerentes.
+                Defina quantas doses cabem em cada ampola. Se você já aplicava antes de usar o app,
+                informe esse total para manter o painel correto.
               </p>
             </div>
 
@@ -510,8 +510,8 @@ export default function AmpoulesPage() {
                 <p style={{ marginTop: '0.45rem', color: 'var(--text-muted)', fontSize: '0.84rem', lineHeight: 1.55 }}>
                   {hasActiveAmpoule
                     ? stats.isCurrentAmpouleComplete
-                      ? 'O limite de aplicações foi atingido. Você pode finalizar a ampola manualmente quando quiser.'
-                      : 'A ampola atual continua aberta e o painel passa a refletir essa abertura.'
+                      ? 'O limite de aplicações foi atingido. Você pode encerrar a ampola quando quiser.'
+                      : 'A ampola atual segue aberta e esse ciclo já entra nos cálculos do painel.'
                     : activationState.helperText}
                 </p>
                 {hasActiveAmpoule && currentAmpouleSequence ? (
@@ -592,13 +592,13 @@ export default function AmpoulesPage() {
             </div>
 
             <div className="glass-panel" style={{ padding: '1.5rem' }}>
-              <p className="stat-label" style={{ marginBottom: '0.7rem' }}>Leitura atual</p>
+              <p className="stat-label" style={{ marginBottom: '0.7rem' }}>Resumo atual</p>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>
                 {hasActiveAmpoule
                   ? activeAmpouleOpenedLabel
                     ? `A ampola atual está aberta desde ${activeAmpouleOpenedLabel} e sincronizada no seu perfil.`
                     : 'A ampola atual está aberta e sincronizada no seu perfil.'
-                  : 'Nenhuma ampola está aberta agora. Quando você iniciar a próxima, o painel vai usar essa abertura.'}
+                  : 'Nenhuma ampola está aberta agora. Quando você iniciar a próxima, o painel passará a considerar esse ciclo.'}
               </p>
               <p style={{ marginTop: '0.75rem', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.55 }}>
                 Cada ampola fica registrada com a data de abertura e, quando houver, a data de encerramento.
@@ -614,7 +614,7 @@ export default function AmpoulesPage() {
               <p className="stat-label" style={{ marginBottom: '0.7rem' }}>Histórico por ampola</p>
               {historyEntries.length === 0 ? (
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>
-                  Ainda não há ampolas com trilha detalhada. Assim que você iniciar a próxima, ela aparece aqui.
+                  Quando você iniciar a próxima ampola, ela aparecerá aqui com abertura e encerramento.
                 </p>
               ) : (
                 <div style={{ display: 'grid', gap: '0.85rem' }}>

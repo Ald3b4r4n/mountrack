@@ -80,7 +80,7 @@ function MealQuickCard({
         </div>
         {isMobileLayout ? (
           <span className="mt-2 block text-[0.78rem] text-[var(--text-secondary)]">
-            {active ? "Toque para revisar esta refeição." : "Toque para abrir esta refeição."}
+            {active ? "Toque para ver esta refeição." : "Toque para abrir esta refeição."}
           </span>
         ) : null}
       </button>

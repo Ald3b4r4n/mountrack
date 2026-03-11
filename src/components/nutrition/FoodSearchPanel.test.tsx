@@ -367,7 +367,7 @@ describe("FoodSearchPanel", () => {
     await user.click(screen.getByRole("button", { name: /Barra de Proteína - Sabor Trufa/i }));
 
     expect(onApplyFoodSelection).toHaveBeenCalledWith(selectedFood, undefined);
-    expect(screen.getByText(/Use o compositor ao lado para finalizar o lançamento/i)).toBeInTheDocument();
+    expect(screen.getByText(/Use o painel ao lado para concluir o registro/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Adicionar ao diário/i })).toBeInTheDocument();
   });
 });

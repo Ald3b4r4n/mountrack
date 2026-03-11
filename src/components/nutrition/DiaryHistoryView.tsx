@@ -25,7 +25,7 @@ export function DiaryHistoryView({
         <div className="rounded-[1rem] border border-white/7 bg-[#071223]/72 p-3">
           <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Revisão</span>
           <strong className="mt-1 block text-[0.96rem] text-[var(--text-primary)]">Dias fechados</strong>
-          <span className="mt-1 block text-[0.82rem] text-[var(--text-secondary)]">Revise só o que já ficou para trás.</span>
+          <span className="mt-1 block text-[0.82rem] text-[var(--text-secondary)]">Consulte só os dias já concluídos.</span>
         </div>
       ) : null}
       {isHistoryLoading ? (
@@ -33,7 +33,7 @@ export function DiaryHistoryView({
           <MobileStatusCard
             eyebrow="Sincronizando"
             title="Atualizando histórico"
-            text="Os dias fechados aparecem aqui em instantes."
+            text="Os dias anteriores aparecem aqui em instantes."
           />
         ) : (
           <p className="text-[var(--text-secondary)]">Carregando histórico...</p>
@@ -44,8 +44,8 @@ export function DiaryHistoryView({
           title={isMobileLayout ? "Nenhum dia fechado ainda" : "Sem histórico ainda"}
           text={
             isMobileLayout
-              ? "Quando houver revisão para fazer, os dias entram aqui."
-              : "Os dias registrados aparecerão aqui, com paginação pronta para navegação."
+              ? "Os dias concluídos aparecem aqui quando houver registros anteriores."
+              : "Os dias registrados aparecem aqui para consulta."
           }
           compact
         />

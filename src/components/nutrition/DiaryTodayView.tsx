@@ -228,11 +228,11 @@ export function DiaryTodayView({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                Refeição ativa
+                Refeição atual
               </span>
               <strong className="mt-1 block text-[1rem] text-[var(--text-primary)]">{activeMealLabel}</strong>
               <span className="mt-1 block text-[0.82rem] text-[var(--text-secondary)]">
-                {activeDiaryItems.length} item(ns) hoje.
+                {activeDiaryItems.length} item(ns) nesta refeição.
               </span>
             </div>
             <span className="badge badge-success whitespace-nowrap">{formatCalories(activeMealCalories)}</span>
@@ -325,7 +325,7 @@ export function DiaryTodayView({
 
       {isLoading ? (
         isMobileLayout ? (
-          <MobileStatusCard eyebrow="Sincronizando" title="Atualizando refeição" text="Seus itens aparecem aqui em instantes." />
+          <MobileStatusCard eyebrow="Sincronizando" title="Atualizando registros" text="Os itens desta refeição aparecem aqui em instantes." />
         ) : (
           <p className="text-[var(--text-secondary)]">Carregando diário...</p>
         )

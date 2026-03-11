@@ -72,7 +72,7 @@ export function FoodSearchSetupPanel({
                 </span>
                 <strong className="mt-1 block text-[0.98rem] text-[var(--text-primary)]">{activeMealLabel}</strong>
                 <p className="mt-1 text-[0.82rem] text-[var(--text-secondary)]">
-                  O alimento selecionado volta para esta refeição quando o registro terminar.
+                  Quando você concluir o registro, o item entra nesta refeição.
                 </p>
               </div>
               <span className="badge badge-success shrink-0">Em foco</span>
@@ -88,7 +88,7 @@ export function FoodSearchSetupPanel({
             ) : null}
           </div>
           <div className="flex flex-wrap justify-end gap-2">
-            {isEnrichingExternal ? <span className="badge badge-success self-start">Atualização em fila</span> : null}
+            {isEnrichingExternal ? <span className="badge badge-success self-start">Catálogo atualizando</span> : null}
             <span className="badge badge-success self-start">{searchCatalogBadge}</span>
           </div>
         </div>

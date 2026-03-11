@@ -107,8 +107,8 @@ describe("DiaryPanel", () => {
 
     await user.click(screen.getByRole("button", { name: /Registro do dia/i }));
 
-    expect(screen.getByText(/Tudo na refeição atual/i)).toBeInTheDocument();
-    expect(screen.getByText(/^Refeição ativa$/i)).toBeInTheDocument();
+    expect(screen.getByText(/Tudo nesta refeição/i)).toBeInTheDocument();
+    expect(screen.getByText(/^Refeição atual$/i)).toBeInTheDocument();
     expect(screen.getAllByText(/^Ceia$/i).length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByRole("button", { name: /^Almoço$/i })).not.toBeInTheDocument();
 
@@ -202,7 +202,7 @@ describe("DiaryPanel", () => {
     await user.click(screen.getByRole("button", { name: /Histórico do diário/i }));
 
     expect(screen.getByText(/Dias fechados/i)).toBeInTheDocument();
-    expect(screen.getByText(/Revise só o que já ficou para trás./i)).toBeInTheDocument();
+    expect(screen.getByText(/Consulte só os dias já concluídos./i)).toBeInTheDocument();
     expect(screen.getByText(/^3 item\(ns\)$/i)).toBeInTheDocument();
     expect(screen.getByText(/420 kcal/i)).toBeInTheDocument();
   });

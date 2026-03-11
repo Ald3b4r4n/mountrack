@@ -211,7 +211,11 @@ export default function Home() {
             const notesLower = doseLog.notes.toLowerCase();
             const triggerWords = ['enjoo', 'náusea', 'nausea', 'dor ', 'fadiga', 'cansaço', 'cansaco', 'refluxo', 'azia', 'vômit', 'vomit'];
             const found = triggerWords.filter((word) => notesLower.includes(word));
-            setSymptomAlert(found.length > 0 ? `Notei sintomas recentes (${found.join(', ')}). Lembre-se de manter a hidratação alta e refeições leves!` : null);
+            setSymptomAlert(
+              found.length > 0
+                ? `Se houve sintomas recentes (${found.join(', ')}), vale reforçar a hidratação e preferir refeições leves.`
+                : null,
+            );
           } else setSymptomAlert(null);
         } else {
           setCurrentDose(null); setDaysSince(null); setDaysUntil(null); setLastDoseDate(null); setNextDoseTarget(null); setCountdown(null); setSymptomAlert(null);
@@ -519,7 +523,7 @@ export default function Home() {
                 <div className="progress-track" style={{ marginTop: '1rem' }}>
                   <div className="progress-fill" style={{ width: `${currentAmpouleProgress}%` }}></div>
                 </div>
-                <p style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>Doses já usadas da ampola atual.</p>
+                <p style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>Aplicações já registradas nesta ampola.</p>
                 <p style={{ marginTop: '0.45rem', color: 'var(--accent-secondary)', fontSize: '0.78rem' }}>
                   {hasActiveAmpoule && currentAmpouleSequence
                     ? `Ampola #${currentAmpouleSequence}${ampouleOpenedLabel ? ` aberta em ${ampouleOpenedLabel}` : ''}${activeAmpouleAgeLabel ? `, ${activeAmpouleAgeLabel}` : ''}.`

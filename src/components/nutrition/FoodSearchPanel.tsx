@@ -287,14 +287,14 @@ export function FoodSearchPanel({
 
   const storageSummary =
     storageMode === "database"
-      ? "Busque no catálogo salvo e receba novas referências sem travar a tela."
+      ? "Pesquise no catálogo salvo enquanto novas referências são buscadas em segundo plano."
       : storageMode === "checking"
-        ? "Preparando o catálogo e as referências de apoio..."
-        : "Os registros desta área ficam só neste aparelho enquanto a sincronização não estiver disponível.";
+        ? "Preparando o catálogo e as referências de apoio."
+        : "Os registros desta área ficam apenas neste aparelho enquanto a sincronização não estiver disponível.";
   const searchActivitySummary = isSearching
-    ? "Buscando no catálogo do app..."
+    ? "Buscando no catálogo do app."
     : isEnrichingExternal
-      ? "Novas referências serão adicionadas em segundo plano."
+      ? "Buscando referências extras em segundo plano."
       : null;
 
   const hasVisibleResults = resultsVisible && searchResults.length > 0;
@@ -310,8 +310,8 @@ export function FoodSearchPanel({
       ? {
           title: "Alimento selecionado",
           text: isMobileLayout
-            ? "Abra o registro para ajustar quantidade e refeição, ou troque o alimento."
-            : "Use o compositor ao lado para finalizar o lançamento.",
+            ? "Abra o registro para ajustar a quantidade, escolher a refeição ou trocar o alimento."
+            : "Use o painel ao lado para concluir o registro.",
         }
       : resultState;
 
