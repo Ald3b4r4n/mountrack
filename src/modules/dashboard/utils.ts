@@ -29,6 +29,25 @@ export interface JourneyDoseStats {
   dosesUsedFromCurrentAmpoule: number;
   journeyDays: number | null;
   totalDoseApplications: number;
+  hasActiveAmpoule: boolean;
+  currentAmpouleOpenedOn: string | null;
+  isCurrentAmpouleComplete: boolean;
+}
+
+export interface AmpouleTrackingState {
+  activeAmpouleOpenedOn?: string | null;
+  activeAmpouleStartDoseApplications?: number | null;
+  completedAmpoulesCount?: number;
+}
+
+export interface WeightGoalProgress {
+  startingWeight: number | null;
+  currentWeight: number | null;
+  totalRequiredChange: number;
+  completedChange: number;
+  remainingChange: number;
+  progressPercent: number;
+  isGoalReached: boolean;
 }
 
 export const DEFAULT_DOSES_PER_AMPOULE = 4;
@@ -87,6 +106,7 @@ export function calculateJourneyDoseStats(
   now = new Date(),
   dosesPerAmpoule = DEFAULT_DOSES_PER_AMPOULE,
   previousDoseApplications = 0,
+  ampouleTracking?: AmpouleTrackingState,
 ): JourneyDoseStats {
   const safeDosesPerAmpoule = Math.max(
     1,
@@ -103,6 +123,9 @@ export function calculateJourneyDoseStats(
       dosesUsedFromCurrentAmpoule: 0,
       journeyDays: null,
       totalDoseApplications: 0,
+      hasActiveAmpoule: false,
+      currentAmpouleOpenedOn: null,
+      isCurrentAmpouleComplete: false,
     };
   }
 
@@ -125,16 +148,144 @@ export function calculateJourneyDoseStats(
     (log) => Boolean(log.dose) || log.type === "dose",
   ).length;
   const totalDoseApplications = loggedDoseApplications + safePreviousDoseApplications;
-  const ampoulesUsed =
+  const safeCompletedAmpoulesCount = Math.max(
+    0,
+    Math.floor(
+      Number.isFinite(ampouleTracking?.completedAmpoulesCount)
+        ? ampouleTracking?.completedAmpoulesCount ?? 0
+        : 0,
+    ),
+  );
+  const rawActiveAmpouleOpenedOn = ampouleTracking?.activeAmpouleOpenedOn;
+  const activeAmpouleOpenedOn =
+    typeof rawActiveAmpouleOpenedOn === "string" && rawActiveAmpouleOpenedOn.trim()
+      ? rawActiveAmpouleOpenedOn
+      : null;
+  const activeAmpouleStartDoseApplications = Number.isFinite(
+    ampouleTracking?.activeAmpouleStartDoseApplications,
+  )
+    ? Math.max(0, Math.floor(ampouleTracking?.activeAmpouleStartDoseApplications ?? 0))
+    : null;
+  const hasActiveAmpoule =
+    activeAmpouleOpenedOn !== null && activeAmpouleStartDoseApplications !== null;
+
+  if (hasActiveAmpoule) {
+    const dosesUsedFromCurrentAmpoule = Math.max(
+      0,
+      totalDoseApplications - activeAmpouleStartDoseApplications,
+    );
+
+    return {
+      ampoulesUsed: safeCompletedAmpoulesCount + 1,
+      dosesUsedFromCurrentAmpoule,
+      journeyDays: differenceInDays !== null ? differenceInDays + 1 : null,
+      totalDoseApplications,
+      hasActiveAmpoule: true,
+      currentAmpouleOpenedOn: activeAmpouleOpenedOn,
+      isCurrentAmpouleComplete: dosesUsedFromCurrentAmpoule >= safeDosesPerAmpoule,
+    };
+  }
+
+  const arithmeticAmpoulesUsed =
     totalDoseApplications > 0 ? Math.ceil(totalDoseApplications / safeDosesPerAmpoule) : 0;
-  const dosesUsedFromCurrentAmpoule =
+  const arithmeticDosesUsedFromCurrentAmpoule =
     totalDoseApplications > 0 ? ((totalDoseApplications - 1) % safeDosesPerAmpoule) + 1 : 0;
 
+  if (safeCompletedAmpoulesCount > 0) {
+    return {
+      ampoulesUsed: Math.max(safeCompletedAmpoulesCount, arithmeticAmpoulesUsed),
+      dosesUsedFromCurrentAmpoule: 0,
+      journeyDays: differenceInDays !== null ? differenceInDays + 1 : null,
+      totalDoseApplications,
+      hasActiveAmpoule: false,
+      currentAmpouleOpenedOn: null,
+      isCurrentAmpouleComplete: false,
+    };
+  }
+
   return {
-    ampoulesUsed,
-    dosesUsedFromCurrentAmpoule,
+    ampoulesUsed: arithmeticAmpoulesUsed,
+    dosesUsedFromCurrentAmpoule: arithmeticDosesUsedFromCurrentAmpoule,
     journeyDays: differenceInDays !== null ? differenceInDays + 1 : null,
     totalDoseApplications,
+    hasActiveAmpoule: false,
+    currentAmpouleOpenedOn: null,
+    isCurrentAmpouleComplete: arithmeticDosesUsedFromCurrentAmpoule >= safeDosesPerAmpoule,
+  };
+}
+
+export function calculateWeightGoalProgress(
+  points: WeightChartPoint[],
+  targetWeight: number | null | undefined,
+): WeightGoalProgress {
+  const safeTargetWeight =
+    Number.isFinite(targetWeight) && (targetWeight ?? 0) > 0 ? Number(targetWeight) : null;
+
+  if (!safeTargetWeight || points.length === 0) {
+    return {
+      startingWeight: null,
+      currentWeight: null,
+      totalRequiredChange: 0,
+      completedChange: 0,
+      remainingChange: 0,
+      progressPercent: 0,
+      isGoalReached: false,
+    };
+  }
+
+  const sortedPoints = [...points].sort(
+    (left, right) => parseLogDate(left.date).getTime() - parseLogDate(right.date).getTime(),
+  );
+  const startingWeight = sortedPoints[0]?.weight ?? null;
+  const currentWeight = sortedPoints.at(-1)?.weight ?? null;
+
+  if (startingWeight === null || currentWeight === null) {
+    return {
+      startingWeight: null,
+      currentWeight: null,
+      totalRequiredChange: 0,
+      completedChange: 0,
+      remainingChange: 0,
+      progressPercent: 0,
+      isGoalReached: false,
+    };
+  }
+
+  const isLossGoal = startingWeight >= safeTargetWeight;
+  const totalRequiredChange = Math.max(0, Math.abs(startingWeight - safeTargetWeight));
+
+  if (totalRequiredChange === 0) {
+    const isGoalReached = currentWeight === safeTargetWeight;
+
+    return {
+      startingWeight,
+      currentWeight,
+      totalRequiredChange: 0,
+      completedChange: isGoalReached ? 0 : 0,
+      remainingChange: isGoalReached ? 0 : 0,
+      progressPercent: isGoalReached ? 100 : 0,
+      isGoalReached,
+    };
+  }
+
+  const rawCompletedChange = isLossGoal
+    ? startingWeight - currentWeight
+    : currentWeight - startingWeight;
+  const completedChange = Math.max(0, Math.min(totalRequiredChange, rawCompletedChange));
+  const remainingChange = Math.max(0, Number((totalRequiredChange - completedChange).toFixed(2)));
+  const isGoalReached = isLossGoal ? currentWeight <= safeTargetWeight : currentWeight >= safeTargetWeight;
+  const progressPercent = isGoalReached
+    ? 100
+    : Number(((completedChange / totalRequiredChange) * 100).toFixed(1));
+
+  return {
+    startingWeight,
+    currentWeight,
+    totalRequiredChange: Number(totalRequiredChange.toFixed(2)),
+    completedChange: Number(completedChange.toFixed(2)),
+    remainingChange,
+    progressPercent,
+    isGoalReached,
   };
 }
 
