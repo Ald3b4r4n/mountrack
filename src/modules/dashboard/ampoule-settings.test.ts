@@ -5,6 +5,7 @@ import {
   loadAmpouleSettings,
   loadAmpouleSettingsWithUserFallback,
   saveAmpouleSettings,
+  updateAmpouleHistoryEntry,
 } from '@/modules/dashboard/ampoule-settings';
 
 jest.mock('@/lib/firebase', () => ({
@@ -324,5 +325,47 @@ describe('ampoule-settings', () => {
         dosesUsed: 4,
       },
     ]);
+  });
+
+  it('updates dates for a closed ampoule history entry', async () => {
+    await updateAmpouleHistoryEntry('user-8', 'ampoule_closed', {
+      openedOn: '2026-02-21',
+      closedOn: '2026-03-14',
+      status: 'closed',
+    });
+
+    expect(setDocMock).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'users/user-8/ampoules/ampoule_closed' }),
+      {
+        kind: 'history',
+        openedOn: '2026-02-21',
+        closedOn: '2026-03-14',
+        status: 'closed',
+        updatedAt: expect.any(Date),
+      },
+      { merge: true },
+    );
+  });
+
+  it('reopens a closed ampoule history entry by clearing closing fields', async () => {
+    await updateAmpouleHistoryEntry('user-9', 'ampoule_last', {
+      status: 'active',
+      closedOn: null,
+      endTotalDoseApplications: null,
+      dosesUsed: null,
+    });
+
+    expect(setDocMock).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'users/user-9/ampoules/ampoule_last' }),
+      {
+        kind: 'history',
+        status: 'active',
+        closedOn: null,
+        endTotalDoseApplications: null,
+        dosesUsed: null,
+        updatedAt: expect.any(Date),
+      },
+      { merge: true },
+    );
   });
 });

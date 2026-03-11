@@ -41,6 +41,37 @@ function formatAmpouleDate(date: string | null): string | null {
   });
 }
 
+function getDateOnlyDifferenceInDays(date: string | null, now = new Date()): number | null {
+  if (!date) {
+    return null;
+  }
+
+  const [year, month, day] = date.split('-').map(Number);
+  const baseDate = new Date(year, (month || 1) - 1, day || 1);
+  baseDate.setHours(0, 0, 0, 0);
+
+  const currentDate = new Date(now);
+  currentDate.setHours(0, 0, 0, 0);
+
+  return Math.max(0, Math.round((currentDate.getTime() - baseDate.getTime()) / (1000 * 60 * 60 * 24)));
+}
+
+function formatAmpouleAgeLabel(daysOpen: number | null): string | null {
+  if (daysOpen === null) {
+    return null;
+  }
+
+  if (daysOpen === 0) {
+    return 'aberta hoje';
+  }
+
+  if (daysOpen === 1) {
+    return 'aberta ha 1 dia';
+  }
+
+  return `aberta ha ${daysOpen} dias`;
+}
+
 export default function Home() {
   const { user, signOut } = useAuth();
   const [daysSince, setDaysSince] = useState<number | null>(null);
@@ -245,6 +276,9 @@ export default function Home() {
   const nextDoseCalendarLink = daysUntil !== null ? buildGoogleCalendarLink({ daysUntil, isDoseOverdue, title: '🩸 Aplicação Mounjaro', details: 'Lembrete de dose semanal! Registre no MounTrack.' }) : '#';
   const ampouleOpenedLabel = formatAmpouleDate(activeAmpouleOpenedOn);
   const hasActiveAmpoule = Boolean(activeAmpouleOpenedOn && activeAmpouleStartDoseApplications !== null);
+  const currentAmpouleSequence = hasActiveAmpoule ? completedAmpoulesCount + 1 : null;
+  const activeAmpouleOpenDays = getDateOnlyDifferenceInDays(activeAmpouleOpenedOn);
+  const activeAmpouleAgeLabel = formatAmpouleAgeLabel(activeAmpouleOpenDays);
   return (
     <ProtectedRoute>
       <main className="container" style={{ position: 'relative' }}>
@@ -470,9 +504,9 @@ export default function Home() {
                   <span className="stat-unit">ampolas</span>
                 </div>
                 <p style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
-                  {hasActiveAmpoule && ampouleOpenedLabel
-                    ? `Ampola atual aberta em ${ampouleOpenedLabel}.`
-                    : 'Sem ampola ativa. Inicie ou finalize em Ampolas.'}
+                  {hasActiveAmpoule && currentAmpouleSequence
+                    ? `${completedAmpoulesCount} fechada(s) + ampola #${currentAmpouleSequence} ativa.`
+                    : `${completedAmpoulesCount} ampola(s) fechada(s) no historico.`}
                 </p>
               </article>
 
@@ -486,6 +520,11 @@ export default function Home() {
                   <div className="progress-fill" style={{ width: `${currentAmpouleProgress}%` }}></div>
                 </div>
                 <p style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>Doses já usadas da ampola atual.</p>
+                <p style={{ marginTop: '0.45rem', color: 'var(--accent-secondary)', fontSize: '0.78rem' }}>
+                  {hasActiveAmpoule && currentAmpouleSequence
+                    ? `Ampola #${currentAmpouleSequence}${ampouleOpenedLabel ? ` aberta em ${ampouleOpenedLabel}` : ''}${activeAmpouleAgeLabel ? `, ${activeAmpouleAgeLabel}` : ''}.`
+                    : 'Sem ampola ativa no momento.'}
+                </p>
               </article>
 
               <article className="glass-panel anim-enter anim-delay-4" style={{ padding: '1.75rem' }}>
