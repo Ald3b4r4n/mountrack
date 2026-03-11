@@ -29,6 +29,16 @@ interface CloseAmpouleHistoryInput {
   dosesUsed: number;
 }
 
+interface UpdateAmpouleHistoryInput {
+  openedOn?: string | null;
+  closedOn?: string | null;
+  status?: 'active' | 'closed';
+  dosesPerAmpoule?: number;
+  startTotalDoseApplications?: number;
+  endTotalDoseApplications?: number | null;
+  dosesUsed?: number | null;
+}
+
 const AMPOULES_COLLECTION = 'ampoules';
 const AMPOULES_SETTINGS_DOC = 'settings';
 
@@ -326,4 +336,49 @@ export async function closeAmpouleHistoryEntry(
     },
     { merge: true },
   );
+}
+
+export async function updateAmpouleHistoryEntry(
+  userId: string,
+  recordId: string,
+  updates: UpdateAmpouleHistoryInput,
+): Promise<void> {
+  const payload: Record<string, unknown> = {
+    kind: 'history',
+    updatedAt: new Date(),
+  };
+
+  if ('openedOn' in updates) {
+    payload.openedOn = normalizeDateOnly(updates.openedOn);
+  }
+
+  if ('closedOn' in updates) {
+    payload.closedOn = normalizeDateOnly(updates.closedOn);
+  }
+
+  if ('status' in updates && updates.status) {
+    payload.status = updates.status;
+  }
+
+  if ('dosesPerAmpoule' in updates && isFiniteNumber(updates.dosesPerAmpoule)) {
+    payload.dosesPerAmpoule = Math.max(1, Math.floor(updates.dosesPerAmpoule));
+  }
+
+  if ('startTotalDoseApplications' in updates && isFiniteNumber(updates.startTotalDoseApplications)) {
+    payload.startTotalDoseApplications = Math.max(0, Math.floor(updates.startTotalDoseApplications));
+  }
+
+  if ('endTotalDoseApplications' in updates) {
+    payload.endTotalDoseApplications = isFiniteNumber(updates.endTotalDoseApplications)
+      ? Math.max(0, Math.floor(updates.endTotalDoseApplications))
+      : null;
+  }
+
+  if ('dosesUsed' in updates) {
+    payload.dosesUsed = isFiniteNumber(updates.dosesUsed)
+      ? Math.max(0, Math.floor(updates.dosesUsed))
+      : null;
+  }
+
+  await setDoc(getAmpouleRecordRef(userId, recordId), payload, { merge: true });
 }

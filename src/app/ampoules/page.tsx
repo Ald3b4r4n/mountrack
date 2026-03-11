@@ -16,6 +16,7 @@ import {
   loadAmpouleHistory,
   loadAmpouleSettingsWithUserFallback,
   saveAmpouleSettings,
+  updateAmpouleHistoryEntry,
   type AmpouleHistoryEntry,
 } from '@/modules/dashboard/ampoule-settings';
 import type { DashboardLogSummary } from '@/modules/dashboard/utils';
@@ -39,6 +40,37 @@ function formatAmpouleDate(date: string | null) {
     month: '2-digit',
     year: 'numeric',
   });
+}
+
+function getDateOnlyDifferenceInDays(date: string | null, now = new Date()) {
+  if (!date) {
+    return null;
+  }
+
+  const [year, month, day] = date.split('-').map(Number);
+  const baseDate = new Date(year, (month || 1) - 1, day || 1);
+  baseDate.setHours(0, 0, 0, 0);
+
+  const currentDate = new Date(now);
+  currentDate.setHours(0, 0, 0, 0);
+
+  return Math.max(0, Math.round((currentDate.getTime() - baseDate.getTime()) / (1000 * 60 * 60 * 24)));
+}
+
+function formatAmpouleAgeLabel(daysOpen: number | null) {
+  if (daysOpen === null) {
+    return null;
+  }
+
+  if (daysOpen === 0) {
+    return 'aberta hoje';
+  }
+
+  if (daysOpen === 1) {
+    return 'aberta ha 1 dia';
+  }
+
+  return `aberta ha ${daysOpen} dias`;
 }
 
 function buildAmpouleActivationState(totalDoseApplications: number, dosesPerAmpoule: number) {
@@ -88,6 +120,9 @@ export default function AmpoulesPage() {
   const [completedAmpoulesCount, setCompletedAmpoulesCount] = useState(0);
   const [historyEntries, setHistoryEntries] = useState<AmpouleHistoryEntry[]>([]);
   const [logSummaries, setLogSummaries] = useState<DashboardLogSummary[]>([]);
+  const [editingHistoryId, setEditingHistoryId] = useState<string | null>(null);
+  const [editingOpenedOn, setEditingOpenedOn] = useState('');
+  const [editingClosedOn, setEditingClosedOn] = useState('');
 
   useEffect(() => {
     async function loadSettings() {
@@ -156,6 +191,9 @@ export default function AmpoulesPage() {
   const activationState = buildAmpouleActivationState(stats.totalDoseApplications, dosesPerAmpoule);
   const hasActiveAmpoule = Boolean(activeAmpouleOpenedOn && activeAmpouleStartDoseApplications !== null);
   const activeAmpouleOpenedLabel = formatAmpouleDate(activeAmpouleOpenedOn);
+  const activeAmpouleOpenDays = getDateOnlyDifferenceInDays(activeAmpouleOpenedOn);
+  const activeAmpouleAgeLabel = formatAmpouleAgeLabel(activeAmpouleOpenDays);
+  const currentAmpouleSequence = hasActiveAmpoule ? completedAmpoulesCount + 1 : null;
   const currentAmpouleProgress =
     dosesPerAmpoule > 0 ? Math.min((stats.dosesUsedFromCurrentAmpoule / dosesPerAmpoule) * 100, 100) : 0;
   const representedClosedAmpoules = historyEntries.filter((entry) => entry.status === 'closed').length;
@@ -170,6 +208,18 @@ export default function AmpoulesPage() {
     if (typeof nextActiveRecordId !== 'undefined') {
       setActiveAmpouleRecordId(nextActiveRecordId);
     }
+  }
+
+  function resetHistoryEditor() {
+    setEditingHistoryId(null);
+    setEditingOpenedOn('');
+    setEditingClosedOn('');
+  }
+
+  function startHistoryCorrection(entry: AmpouleHistoryEntry) {
+    setEditingHistoryId(entry.id);
+    setEditingOpenedOn(entry.openedOn);
+    setEditingClosedOn(entry.closedOn ?? '');
   }
 
   const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -289,6 +339,83 @@ export default function AmpoulesPage() {
     }
   };
 
+  const handleSaveHistoryCorrection = async (entry: AmpouleHistoryEntry) => {
+    if (!user || entry.status !== 'closed') return;
+
+    const nextOpenedOn = editingOpenedOn || entry.openedOn;
+    const nextClosedOn = editingClosedOn || entry.closedOn;
+
+    if (!nextOpenedOn || !nextClosedOn) {
+      alert('Preencha as datas de abertura e fechamento para corrigir o historico.');
+      return;
+    }
+
+    if (nextClosedOn < nextOpenedOn) {
+      alert('A data de fechamento nao pode ser anterior a data de abertura.');
+      return;
+    }
+
+    setSaving(true);
+    setSaved(false);
+    setFeedback(null);
+    try {
+      await updateAmpouleHistoryEntry(user.uid, entry.id, {
+        openedOn: nextOpenedOn,
+        closedOn: nextClosedOn,
+        status: 'closed',
+      });
+      await refreshHistory();
+      resetHistoryEditor();
+      setFeedback(`Historico da ampola #${entry.sequenceNumber} corrigido.`);
+    } catch (error) {
+      console.error('Erro ao corrigir historico da ampola', error);
+      alert('Nao foi possivel corrigir o historico da ampola.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReopenHistoryEntry = async (entry: AmpouleHistoryEntry) => {
+    if (!user || hasActiveAmpoule || entry.status !== 'closed') return;
+
+    setSaving(true);
+    setSaved(false);
+    setFeedback(null);
+    try {
+      await updateAmpouleHistoryEntry(user.uid, entry.id, {
+        status: 'active',
+        closedOn: null,
+        endTotalDoseApplications: null,
+        dosesUsed: null,
+      });
+
+      const savedSettings = await saveAmpouleSettings(user.uid, {
+        dosesPerAmpoule: entry.dosesPerAmpoule,
+        previousDoseApplications,
+        activeAmpouleOpenedOn: entry.openedOn,
+        activeAmpouleStartDoseApplications: entry.startTotalDoseApplications,
+        activeAmpouleRecordId: entry.id,
+        completedAmpoulesCount: Math.max(0, entry.sequenceNumber - 1),
+      });
+
+      setDosesPerAmpoule(savedSettings.dosesPerAmpoule);
+      setPreviousDoseApplications(savedSettings.previousDoseApplications);
+      setActiveAmpouleOpenedOn(savedSettings.activeAmpouleOpenedOn);
+      setActiveAmpouleStartDoseApplications(savedSettings.activeAmpouleStartDoseApplications);
+      setActiveAmpouleRecordId(savedSettings.activeAmpouleRecordId);
+      setCompletedAmpoulesCount(savedSettings.completedAmpoulesCount);
+      setAmpouleOpenedOnInput(savedSettings.activeAmpouleOpenedOn ?? getTodayDateInputValue());
+      await refreshHistory(savedSettings.activeAmpouleRecordId);
+      resetHistoryEditor();
+      setFeedback(`Ampola #${entry.sequenceNumber} reaberta para correcao.`);
+    } catch (error) {
+      console.error('Erro ao reabrir ampola do historico', error);
+      alert('Nao foi possivel reabrir essa ampola.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <ProtectedRoute>
       <main className="container" style={{ maxWidth: '1080px', paddingTop: '3rem', paddingBottom: '4rem' }}>
@@ -387,6 +514,11 @@ export default function AmpoulesPage() {
                       : 'A ampola atual continua aberta e o dashboard passa a respeitar essa abertura.'
                     : activationState.helperText}
                 </p>
+                {hasActiveAmpoule && currentAmpouleSequence ? (
+                  <p style={{ marginTop: '0.45rem', color: 'var(--accent-secondary)', fontSize: '0.8rem' }}>
+                    Ampola #{currentAmpouleSequence}{activeAmpouleAgeLabel ? `, ${activeAmpouleAgeLabel}` : ''}.
+                  </p>
+                ) : null}
               </div>
 
               <div
@@ -438,12 +570,20 @@ export default function AmpoulesPage() {
                 <div>
                   <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>Ampolas contabilizadas</span>
                   <strong style={{ fontSize: '1.7rem', color: 'var(--text-primary)' }}>{stats.ampoulesUsed}</strong>
+                  <p style={{ marginTop: '0.35rem', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                    {completedAmpoulesCount} fechada(s){hasActiveAmpoule && currentAmpouleSequence ? ` + ampola #${currentAmpouleSequence} ativa` : ''}.
+                  </p>
                 </div>
                 <div>
                   <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>Ampola em foco</span>
                   <strong style={{ fontSize: '1.7rem', color: 'var(--accent-secondary)' }}>
                     {hasActiveAmpoule ? `${stats.dosesUsedFromCurrentAmpoule}/${Math.max(1, dosesPerAmpoule)}` : 'Fechada'}
                   </strong>
+                  <p style={{ marginTop: '0.35rem', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                    {hasActiveAmpoule && currentAmpouleSequence
+                      ? `Ampola #${currentAmpouleSequence}${activeAmpouleAgeLabel ? `, ${activeAmpouleAgeLabel}` : ''}.`
+                      : 'Nenhuma ampola ativa agora.'}
+                  </p>
                 </div>
                 <div className="progress-track" style={{ marginTop: '0.35rem' }}>
                   <div className="progress-fill" style={{ width: `${currentAmpouleProgress}%` }}></div>
@@ -480,6 +620,9 @@ export default function AmpoulesPage() {
                 <div style={{ display: 'grid', gap: '0.85rem' }}>
                   {historyEntries.map((entry) => {
                     const isActiveEntry = entry.status === 'active' && entry.id === activeAmpouleRecordId;
+                    const isEditingEntry = editingHistoryId === entry.id;
+                    const isLatestClosedEntry =
+                      entry.status === 'closed' && historyEntries[0]?.id === entry.id;
                     const usedLabel = isActiveEntry
                       ? `${stats.dosesUsedFromCurrentAmpoule}/${entry.dosesPerAmpoule} doses`
                       : entry.dosesUsed !== null
@@ -507,6 +650,68 @@ export default function AmpoulesPage() {
                         <p style={{ marginTop: '0.35rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
                           Uso registrado: {usedLabel}
                         </p>
+                        {entry.status === 'active' ? (
+                          <p style={{ marginTop: '0.45rem', color: 'var(--accent-secondary)', fontSize: '0.78rem' }}>
+                            Corrija a data da ampola ativa no bloco superior.
+                          </p>
+                        ) : null}
+                        {entry.status === 'closed' ? (
+                          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
+                            <button
+                              type="button"
+                              className="btn-outline"
+                              style={{ padding: '0.55rem 0.85rem', fontSize: '0.78rem' }}
+                              onClick={() => (isEditingEntry ? resetHistoryEditor() : startHistoryCorrection(entry))}
+                              disabled={saving}
+                            >
+                              {isEditingEntry ? 'Cancelar correcao' : 'Corrigir datas'}
+                            </button>
+                            {!hasActiveAmpoule && isLatestClosedEntry ? (
+                              <button
+                                type="button"
+                                className="btn-outline"
+                                style={{ padding: '0.55rem 0.85rem', fontSize: '0.78rem' }}
+                                onClick={() => void handleReopenHistoryEntry(entry)}
+                                disabled={saving}
+                              >
+                                Reabrir ampola
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        {isEditingEntry ? (
+                          <div style={{ display: 'grid', gap: '0.7rem', marginTop: '0.85rem' }}>
+                            <label style={{ display: 'grid', gap: '0.35rem' }}>
+                              <span className="label">Data de abertura</span>
+                              <input
+                                type="date"
+                                value={editingOpenedOn}
+                                onChange={(event) => setEditingOpenedOn(event.target.value)}
+                                className="input-field"
+                                disabled={saving}
+                              />
+                            </label>
+                            <label style={{ display: 'grid', gap: '0.35rem' }}>
+                              <span className="label">Data de fechamento</span>
+                              <input
+                                type="date"
+                                value={editingClosedOn}
+                                onChange={(event) => setEditingClosedOn(event.target.value)}
+                                className="input-field"
+                                disabled={saving}
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              className="btn-primary"
+                              style={{ width: 'fit-content', padding: '0.7rem 1rem', fontSize: '0.82rem' }}
+                              onClick={() => void handleSaveHistoryCorrection(entry)}
+                              disabled={saving}
+                            >
+                              {saving ? 'Salvando...' : 'Salvar correcao'}
+                            </button>
+                          </div>
+                        ) : null}
                       </article>
                     );
                   })}
