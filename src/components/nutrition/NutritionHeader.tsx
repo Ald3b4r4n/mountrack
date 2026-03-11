@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronRight } from "lucide-react";
 import type { DailySummary, NutritionGoal } from "@/modules/nutrition/domain/types";
 import { formatCalories, formatGrams, formatMilliliters } from "@/modules/nutrition/ui-helpers";
 
@@ -93,6 +93,7 @@ function MobileSummaryTile({
   value,
   accentClass,
   hint,
+  meta,
   onClick,
   tone = "default",
 }: {
@@ -100,6 +101,7 @@ function MobileSummaryTile({
   value: string;
   accentClass: string;
   hint?: string;
+  meta?: string;
   onClick?: () => void;
   tone?: "default" | "accent" | "calm";
 }) {
@@ -120,7 +122,14 @@ function MobileSummaryTile({
 
   const content = (
     <>
-      <span className="block text-[0.66rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">{label}</span>
+      <div className="flex items-start justify-between gap-2">
+        <span className="block text-[0.66rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">{label}</span>
+        {meta ? (
+          <span className="rounded-full border border-white/8 bg-white/4 px-2 py-0.5 text-[0.68rem] text-[var(--text-secondary)]">
+            {meta}
+          </span>
+        ) : null}
+      </div>
       <strong className={`mt-1.5 block text-[1rem] leading-none ${accentClass}`}>{value}</strong>
       {hint ? (
         <span className="mt-2 flex items-center gap-1 text-[0.76rem] text-[var(--text-secondary)]">
@@ -161,43 +170,49 @@ function MobileActiveMealCard({
 }) {
   return (
     <article
-      className={`rounded-[1rem] border bg-[linear-gradient(145deg,rgba(6,21,39,0.92),rgba(4,16,30,0.82))] p-3.5 shadow-[0_18px_36px_rgba(4,20,38,0.18)] ${
+      className={`rounded-[1rem] border bg-[linear-gradient(145deg,rgba(6,21,39,0.92),rgba(4,16,30,0.82))] p-3 shadow-[0_18px_36px_rgba(4,20,38,0.18)] ${
         recentlyLoggedFoodLabel ? "border-[#34d399]/26 shadow-[0_18px_40px_rgba(8,64,52,0.22)]" : "border-[#34d399]/14"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[0.7rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Bloco em foco</p>
+          <p className="text-[0.7rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Agora</p>
           <strong className="mt-1 block text-[1rem] text-[var(--text-primary)]">{mealLabel}</strong>
-          <p className="mt-1 text-[0.82rem] text-[var(--text-secondary)]">
-            {mealItemsCount > 0
-              ? `${mealItemsCount} item(ns) registrados neste bloco agora.`
-              : "Nenhum item registrado neste bloco ainda."}
-          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <span className="rounded-full border border-white/8 bg-white/4 px-2.5 py-1 text-[0.74rem] text-[var(--text-secondary)]">
+              {mealItemsCount > 0 ? `${mealItemsCount} item(ns)` : "Sem itens"}
+            </span>
+            {recentlyLoggedFoodLabel ? (
+              <span className="rounded-full border border-[#34d399]/18 bg-[#34d399]/10 px-2.5 py-1 text-[0.74rem] text-[#86efac]">
+                Atualizado
+              </span>
+            ) : null}
+          </div>
         </div>
         <span className="badge badge-success shrink-0 whitespace-nowrap">{formatCalories(mealCalories)}</span>
       </div>
       {recentlyLoggedFoodLabel ? (
-        <div className="mt-3 rounded-[0.9rem] border border-[#34d399]/16 bg-[#062032]/82 p-2.5">
-          <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[#86efac]">Ultimo registro</span>
-          <p className="mt-1 text-[0.82rem] text-[var(--text-secondary)]">
-            <strong className="text-[var(--text-primary)]">{recentlyLoggedFoodLabel}</strong> entrou neste bloco agora.
-          </p>
+        <div className="mt-3 flex items-center gap-2.5 rounded-[0.9rem] border border-[#34d399]/18 bg-[#062032]/88 px-3 py-2">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#34d399]/12 text-[#86efac]">
+            <CheckCircle2 size={15} />
+          </span>
+          <div className="min-w-0">
+            <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[#86efac]">Registrado agora</span>
+            <strong className="mt-0.5 block truncate text-[0.9rem] text-[var(--text-primary)]">
+              {recentlyLoggedFoodLabel}
+            </strong>
+          </div>
         </div>
       ) : null}
       <div className={`mt-3 grid gap-2 ${onOpenMeal && onAddToMeal ? "grid-cols-2" : "grid-cols-1"}`}>
         {onOpenMeal ? (
           <button type="button" onClick={onOpenMeal} className="btn-outline min-h-[2.85rem] w-full">
-            Abrir registro
+            Ver bloco
           </button>
         ) : null}
         {onAddToMeal ? (
           <button type="button" onClick={onAddToMeal} className="btn-primary min-h-[2.85rem] w-full">
-            {recentlyLoggedFoodLabel
-              ? "Adicionar mais"
-              : mealItemsCount > 0
-                ? "Adicionar ao bloco"
-                : "Registrar primeiro item"}
+            Adicionar
           </button>
         ) : null}
       </div>
@@ -216,17 +231,26 @@ function MobileMacroRail({
   target: number;
   accent: string;
 }) {
+  const hasTarget = target > 0;
   const ratio = target > 0 ? Math.min((current / target) * 100, 100) : 0;
 
   return (
-    <article className="rounded-[0.95rem] border border-white/7 bg-[#071223]/76 p-3">
-      <div className="mb-2 flex items-center justify-between gap-3">
+    <article className="rounded-[0.95rem] border border-white/7 bg-[linear-gradient(180deg,rgba(7,18,35,0.92),rgba(6,17,30,0.72))] p-3">
+      <div className="flex items-center justify-between gap-3">
         <span className="text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">{label}</span>
-        <strong className="text-[0.88rem] leading-none" style={{ color: accent }}>
-          {formatGrams(current)} / {formatGrams(target)}
-        </strong>
+        <span className="rounded-full border border-white/8 bg-white/4 px-2 py-0.5 text-[0.68rem] text-[var(--text-secondary)]">
+          {hasTarget ? `${Math.round(ratio)}%` : "Livre"}
+        </span>
       </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-white/6">
+      <div className="mt-2 flex items-end justify-between gap-3">
+        <strong className="text-[0.98rem] leading-none" style={{ color: accent }}>
+          {formatGrams(current)}
+        </strong>
+        <span className="text-[0.76rem] text-[var(--text-secondary)]">
+          {hasTarget ? `Meta ${formatGrams(target)}` : "Sem alvo"}
+        </span>
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/6">
         <div
           className="h-full rounded-full"
           style={{
@@ -269,11 +293,8 @@ function MobileSummaryStrip({
           label="Consumido"
           value={formatCalories(summary.consumedCalories)}
           accentClass="text-[var(--text-primary)]"
-          hint={
-            onOpenConsumedSummary
-              ? `${activeMealLabel} · ${Math.round(consumedRatio)}% da meta`
-              : undefined
-          }
+          hint={activeMealLabel}
+          meta={`${Math.round(consumedRatio)}%`}
           onClick={onOpenConsumedSummary}
           tone="accent"
         />
@@ -281,7 +302,8 @@ function MobileSummaryStrip({
           label="Restante"
           value={formatCalories(summary.remainingCalories)}
           accentClass="text-[var(--text-primary)]"
-          hint={summary.remainingCalories > 0 ? "Espaco disponivel no dia" : "Meta diaria atingida"}
+          hint={summary.remainingCalories > 0 ? "Hoje" : "Fechado"}
+          meta={summary.remainingCalories > 0 ? "Livre" : "Meta"}
           tone="calm"
         />
       </div>
@@ -296,30 +318,50 @@ function MobileSummaryStrip({
       <div className="glass-panel static-panel rounded-[1rem] border-[#34d399]/14 bg-[linear-gradient(145deg,rgba(5,20,38,0.9),rgba(6,22,45,0.7))] p-3.5">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
-            <p className="text-[0.7rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Base do dia</p>
-            <strong className="block text-[1rem] text-[var(--text-primary)]">Hidratacao e macros</strong>
-            <p className="mt-1 text-[0.82rem] text-[var(--text-secondary)]">
-              Enquanto voce registra {activeMealLabel.toLowerCase()}, acompanhe agua e distribuicao nutricional daqui.
-            </p>
+            <p className="text-[0.7rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Hoje</p>
+            <strong className="block text-[1rem] text-[var(--text-primary)]">Agua + metas</strong>
+            <span className="mt-1.5 inline-flex items-center rounded-full border border-white/8 bg-white/4 px-2.5 py-1 text-[0.74rem] text-[var(--text-secondary)]">
+              {activeMealLabel} em foco
+            </span>
           </div>
-          <span className="badge badge-success whitespace-nowrap">
-            {formatMilliliters(summary.waterIntakeMl)} / {formatMilliliters(summary.targetWaterMl)}
-          </span>
-        </div>
-        <div className="mb-3">
-          <div className="progress-track mb-1.5 h-[0.42rem]">
-            <div
-              className="progress-fill bg-gradient-to-br from-[#38bdf8] to-[#22d3ee]"
-              style={{ width: `${waterRatio}%` }}
-            />
+          <div className="flex flex-col items-end gap-1.5">
+            <span className="rounded-full border border-[#38bdf8]/18 bg-[#38bdf8]/10 px-2.5 py-1 text-[0.72rem] text-sky-200">
+              Agua {Math.round(waterRatio)}%
+            </span>
+            <span className="rounded-full border border-[#34d399]/18 bg-[#34d399]/10 px-2.5 py-1 text-[0.72rem] text-[#86efac]">
+              Kcal {Math.round(consumedRatio)}%
+            </span>
           </div>
-          <span className="text-[0.8rem] text-[var(--text-secondary)]">
-            {Math.round(waterRatio)}% da meta de agua
-          </span>
         </div>
-        <div className="grid grid-cols-2 gap-2.5">
-          <MobileSummaryTile label="Meta kcal" value={formatCalories(summary.targetCalories)} accentClass="text-[var(--text-primary)]" />
-          <MobileSummaryTile label="Agua alvo" value={formatMilliliters(summary.targetWaterMl)} accentClass="text-sky-300" />
+        <div className="grid grid-cols-[minmax(0,1.25fr)_minmax(0,0.95fr)] gap-2.5">
+          <div className="rounded-[0.95rem] border border-white/7 bg-[linear-gradient(180deg,rgba(7,18,35,0.92),rgba(6,17,30,0.72))] p-3">
+            <div className="mb-1.5 flex items-center justify-between gap-3 text-[0.78rem] text-[var(--text-secondary)]">
+              <span>Agua</span>
+              <span>
+                {formatMilliliters(summary.waterIntakeMl)} / {formatMilliliters(summary.targetWaterMl)}
+              </span>
+            </div>
+            <div className="progress-track h-[0.42rem]">
+              <div
+                className="progress-fill bg-gradient-to-br from-[#38bdf8] to-[#22d3ee]"
+                style={{ width: `${waterRatio}%` }}
+              />
+            </div>
+            <span className="mt-2 block text-[0.78rem] text-[var(--text-secondary)]">
+              {summary.waterIntakeMl >= summary.targetWaterMl
+                ? "Meta batida"
+                : `Faltam ${formatMilliliters(Math.max(summary.targetWaterMl - summary.waterIntakeMl, 0))}`}
+            </span>
+          </div>
+          <div className="rounded-[0.95rem] border border-white/7 bg-[linear-gradient(180deg,rgba(7,18,35,0.92),rgba(6,17,30,0.72))] p-3">
+            <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Alvo kcal</span>
+            <strong className="mt-2 block text-[1rem] text-[var(--text-primary)]">
+              {formatCalories(summary.targetCalories)}
+            </strong>
+            <span className="mt-2 block text-[0.78rem] text-[var(--text-secondary)]">
+              {summary.remainingCalories > 0 ? `${formatCalories(summary.remainingCalories)} livres` : "Meta fechada"}
+            </span>
+          </div>
         </div>
         <div className="mt-2.5 grid gap-2">
           <MobileMacroRail label="Proteina" current={summary.protein} target={goal.targetProtein ?? 0} accent="#6ee7b7" />
@@ -377,13 +419,21 @@ export function NutritionHeader({
       <div className="relative grid gap-4">
         <div className={`flex flex-wrap justify-between ${isMobileLayout ? "gap-3" : "gap-4"}`}>
           <div className={isMobileLayout ? "max-w-none" : "max-w-[42rem]"}>
-            <span className={`badge badge-success ${isMobileLayout ? "mb-2" : "mb-3"}`}>Nutricao</span>
-            <h1 className={`glow-text mb-1 ${isMobileLayout ? "text-[clamp(1.7rem,7vw,2.05rem)]" : "text-[clamp(2rem,4vw,3rem)]"}`}>
-              Diario Nutricional
+            <div className={`flex flex-wrap items-center justify-between gap-2 ${isMobileLayout ? "mb-2" : "mb-3"}`}>
+              <span className="badge badge-success">Nutricao</span>
+              {isMobileLayout ? (
+                <Link href="/" className="inline-flex items-center gap-1 rounded-full border border-white/8 bg-white/4 px-2.5 py-1 text-[0.76rem] text-[var(--text-secondary)] transition-colors duration-200 hover:border-[#34d399]/18 hover:text-[var(--text-primary)]">
+                  <ArrowLeft size={13} />
+                  Dashboard
+                </Link>
+              ) : null}
+            </div>
+            <h1 className={`glow-text mb-1 ${isMobileLayout ? "text-[clamp(1.55rem,6.2vw,1.85rem)]" : "text-[clamp(2rem,4vw,3rem)]"}`}>
+              {isMobileLayout ? "Hoje" : "Diario Nutricional"}
             </h1>
             <p className={`page-subtitle ${isMobileLayout ? "max-w-[30ch] text-[0.92rem]" : "max-w-[58ch]"}`}>
               {isMobileLayout
-                ? "Acompanhe o dia, registre refeicoes e ajuste sua rotina com clareza."
+                ? "Diario, agua e metas no mesmo fluxo."
                 : "Registre refeicoes, acompanhe agua, ajuste metas e organize seu plano alimentar."}
             </p>
             {!isMobileLayout && isPreview ? (
@@ -392,11 +442,13 @@ export function NutritionHeader({
               </p>
             ) : null}
           </div>
-          <div className={`flex flex-wrap gap-2.5 self-start ${isMobileLayout ? "w-full" : "w-auto"}`}>
-            <Link href="/" className={`nav-pill justify-center ${isMobileLayout ? "flex-1" : ""}`}>
-              Dashboard
-            </Link>
-          </div>
+          {!isMobileLayout ? (
+            <div className="flex flex-wrap gap-2.5 self-start">
+              <Link href="/" className="nav-pill justify-center">
+                Dashboard
+              </Link>
+            </div>
+          ) : null}
         </div>
 
         {isMobileLayout ? (

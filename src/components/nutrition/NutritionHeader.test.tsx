@@ -57,16 +57,29 @@ describe("NutritionHeader", () => {
       />,
     );
 
+    expect(screen.getByRole("heading", { name: /^Hoje$/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Dashboard/i })).toBeInTheDocument();
+    expect(screen.getByText(/Diario, agua e metas no mesmo fluxo./i)).toBeInTheDocument();
+
     await user.click(screen.getByRole("button", { name: /Consumido/i }));
 
     expect(onOpenConsumedSummary).toHaveBeenCalledTimes(1);
-    expect(screen.getByText(/Abrir registro/i)).toBeInTheDocument();
-    expect(screen.getByText(/Bloco em foco/i)).toBeInTheDocument();
-    expect(screen.getByText(/2 item\(ns\) registrados/i)).toBeInTheDocument();
-    expect(screen.getByText(/Ultimo registro/i)).toBeInTheDocument();
+    expect(screen.getByText(/Ver bloco/i)).toBeInTheDocument();
+    expect(screen.getByText(/^Agora$/i)).toBeInTheDocument();
+    expect(screen.getByText(/2 item\(ns\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Atualizado/i)).toBeInTheDocument();
+    expect(screen.getByText(/Registrado agora/i)).toBeInTheDocument();
     expect(screen.getByText(/Iogurte natural/i)).toBeInTheDocument();
+    expect(screen.getByText(/^26%$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^Livre$/i)).toBeInTheDocument();
+    expect(screen.getByText(/Agua \+ metas/i)).toBeInTheDocument();
+    expect(screen.getByText(/Cafe da manha em foco/i)).toBeInTheDocument();
+    expect(screen.getByText(/Agua 0%/i)).toBeInTheDocument();
+    expect(screen.getByText(/Kcal 26%/i)).toBeInTheDocument();
+    expect(screen.getByText(/1482 kcal livres/i)).toBeInTheDocument();
+    expect(screen.getByText(/Meta 140 g/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Adicionar mais/i }));
+    await user.click(screen.getByRole("button", { name: /^Adicionar$/i }));
 
     expect(onAddToActiveMeal).toHaveBeenCalledTimes(1);
   });

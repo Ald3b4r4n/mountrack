@@ -40,9 +40,9 @@ describe("TodayWorkspace", () => {
       </TodayWorkspace>,
     );
 
-    expect(screen.getByText(/Refeicao em foco/i)).toBeInTheDocument();
+    expect(screen.getByText(/Em foco/i)).toBeInTheDocument();
     expect(screen.getAllByText(/^Almoco$/i)).toHaveLength(2);
-    expect(screen.getByText(/2 item\(ns\) registrados/i)).toBeInTheDocument();
+    expect(screen.getByText(/2 item\(ns\) neste bloco/i)).toBeInTheDocument();
     expect(screen.getAllByText(/333 kcal/i)).toHaveLength(2);
     expect(screen.getByText(/^Ativa$/i)).toBeInTheDocument();
 
