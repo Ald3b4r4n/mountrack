@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Logo from '@/components/Logo';
@@ -50,21 +50,13 @@ export default function Expenses() {
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
     return d.toISOString().slice(0, 10);
   };
-  const [date, setDate] = useState(getToday());
+  const [date, setDate] = useState(() => getToday());
 
   /**
    * Efeito colateral para buscar todos os registros de gastos assim que o componente for montado.
    * Utiliza ordenação pela data de forma decrescente (mais recente primeiro).
    */
-  useEffect(() => {
-    fetchExpenses();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  /**
-   * Função assíncrona que busca os dados no Firestore e atualiza o estado state da aplicação.
-   */
-  async function fetchExpenses() {
+  const fetchExpenses = useCallback(async () => {
     if (!user) return;
     try {
       setLoading(true);
@@ -90,7 +82,11 @@ export default function Expenses() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [user]);
+
+  useEffect(() => {
+    void fetchExpenses();
+  }, [fetchExpenses]);
 
   /**
    * Função responsável por salvar um novo gasto no Firestore.
@@ -102,11 +98,11 @@ export default function Expenses() {
     // Validações básicas de formulário
     const parsedAmount = parseFloat(amount.replace(',', '.'));
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      setMessage({ type: 'error', text: 'Por favor, insira um valor válido.' });
+      setMessage({ type: 'error', text: 'Informe um valor válido.' });
       return;
     }
     if (!title.trim()) {
-      setMessage({ type: 'error', text: 'Por favor, preencha o título/marca.' });
+      setMessage({ type: 'error', text: 'Informe uma descrição para o gasto.' });
       return;
     }
 
@@ -132,7 +128,7 @@ export default function Expenses() {
       setAmount('');
       setType('ampoule');
       setDate(getToday());
-      setMessage({ type: 'success', text: 'Gasto registrado com sucesso!' });
+      setMessage({ type: 'success', text: 'Gasto salvo com sucesso.' });
       
       // Atualizar a lista de gastos na tela
       await fetchExpenses();
@@ -142,7 +138,7 @@ export default function Expenses() {
 
     } catch (err) {
       console.error(err);
-      setMessage({ type: 'error', text: 'Erro ao registrar. Tente novamente.' });
+      setMessage({ type: 'error', text: 'Não foi possível salvar o gasto. Tente novamente.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -154,7 +150,7 @@ export default function Expenses() {
    */
   const handleDelete = async (id: string) => {
     // Confirmação simples para evitar exclusão por cliques acidentais
-    if (!window.confirm("Tem certeza que deseja apagar este registro de gasto?")) return;
+    if (!window.confirm("Tem certeza que deseja excluir este gasto?")) return;
     
     if (!user) return;
     
@@ -206,7 +202,7 @@ export default function Expenses() {
         <header className="anim-enter" style={{ marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', position: 'relative', zIndex: 1 }}>
           <div>
             <Logo size="md" />
-            <p className="page-subtitle" style={{ marginTop: '0.25rem' }}>Controle financeiro do seu emagrecimento.</p>
+            <p className="page-subtitle" style={{ marginTop: '0.25rem' }}>Acompanhe quanto já foi investido na jornada.</p>
           </div>
           <Link href="/" className="nav-pill">
             {/* Ícone chevron esquerdo */}
@@ -257,7 +253,7 @@ export default function Expenses() {
           {/* Lado Esquerdo: Novo formulário de gasto */}
           <section className="glass-panel anim-enter anim-delay-1" style={{ padding: '2rem' }}>
             <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', fontFamily: "'Outfit', sans-serif" }}>
-              Adicionar Novo Gasto
+              Novo gasto
             </h2>
             
             {/* Mensagens de feedback do formulário (Sucesso ou Erro) */}
@@ -278,8 +274,9 @@ export default function Expenses() {
               
               {/* Grupo: Tipo de Gasto */}
               <div className="form-group">
-                <label className="form-label">Categoria</label>
+                <label htmlFor="expense-category" className="form-label">Categoria</label>
                 <select 
+                  id="expense-category"
                   className="input-field" 
                   value={type} 
                   onChange={(e) => setType(e.target.value as ExpenseType)}
@@ -295,11 +292,12 @@ export default function Expenses() {
 
               {/* Grupo: Título / Marca */}
               <div className="form-group">
-                <label className="form-label">Descrição / Marca</label>
+                <label htmlFor="expense-title" className="form-label">Descrição</label>
                 <input 
+                  id="expense-title"
                   type="text" 
                   className="input-field" 
-                  placeholder="Ex: Mounjaro 2.5mg, Dr. João, Whey Protein..."
+                  placeholder="Ex: Mounjaro 2,5 mg, consulta com endocrinologista, whey protein"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   required
@@ -309,8 +307,9 @@ export default function Expenses() {
               {/* Layout para Valor e Data dividindo a mesma linha */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem' }}>
                 <div className="form-group">
-                  <label className="form-label">Valor Gasto (R$)</label>
+                  <label htmlFor="expense-amount" className="form-label">Valor gasto (R$)</label>
                   <input 
+                    id="expense-amount"
                     type="number" 
                     step="0.01"
                     min="0"
@@ -323,8 +322,9 @@ export default function Expenses() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Data do Registro</label>
+                  <label htmlFor="expense-date" className="form-label">Data do registro</label>
                   <input 
+                    id="expense-date"
                     type="date" 
                     className="input-field" 
                     value={date}
@@ -341,7 +341,7 @@ export default function Expenses() {
                 disabled={isSubmitting}
                 style={{ marginTop: '1rem', opacity: isSubmitting ? 0.7 : 1 }}
               >
-                {isSubmitting ? 'Salvando...' : 'Salvar Gasto'}
+                {isSubmitting ? 'Salvando...' : 'Salvar gasto'}
               </button>
             </form>
           </section>
@@ -349,19 +349,19 @@ export default function Expenses() {
           {/* Lado Direito: Listagem Histórica dos Gastos */}
           <section className="glass-panel anim-enter anim-delay-2" style={{ padding: '2rem' }}>
             <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', fontFamily: "'Outfit', sans-serif" }}>
-              Histórico de Lançamentos
+              Lançamentos
             </h2>
 
             {loading ? (
               // Esqueleto (Skeleton) para enquanto carrega do Firebase
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {[1, 2, 3].map(i => <div key={i} className="skeleton-pulse" style={{ height: '70px', borderRadius: '8px' }}></div>)}
+                {[1, 2, 3].map((skeletonId) => <div key={`expense-skeleton-${skeletonId}`} className="skeleton-pulse" style={{ height: '70px', borderRadius: '8px' }}></div>)}
               </div>
             ) : expenses.length === 0 ? (
               // Estado Vazio (Zero itens)
               <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
-                <p>Nenhum gasto registrado ainda.</p>
-                <p style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>Comece a adicionar seus investimentos na saúde para acompanhar tudo.</p>
+                <p>Ainda não há gastos registrados.</p>
+                <p style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>Adicione seus primeiros lançamentos para acompanhar os custos da jornada.</p>
               </div>
             ) : (
               // Lista de Registros formatados
@@ -401,8 +401,8 @@ export default function Expenses() {
                       <button 
                         onClick={() => handleDelete(expense.id)}
                         style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0.25rem' }}
-                        title="Remover Gasto"
-                        aria-label="Deletar Gasto"
+                        title="Excluir gasto"
+                        aria-label="Excluir gasto"
                       >
                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'color 0.2s', ':hover': { color: 'var(--accent-danger)' } } as React.CSSProperties}>
                            <polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>

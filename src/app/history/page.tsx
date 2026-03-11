@@ -133,7 +133,7 @@ export default function History() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <h1 className="glow-text anim-enter" style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>Histórico</h1>
-            <p className="page-subtitle anim-enter anim-delay-1">Todos os seus registros. Toque para editar.</p>
+            <p className="page-subtitle anim-enter anim-delay-1">Todos os registros em ordem do mais recente.</p>
           </div>
           <Link href="/" className="nav-pill anim-enter anim-delay-1">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
@@ -149,7 +149,7 @@ export default function History() {
           </div>
         ) : logs.length === 0 ? (
           <div className="glass-panel anim-enter" style={{ padding: '3rem', textAlign: 'center' }}>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>Nenhum registro encontrado.</p>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>Ainda não há registros por aqui.</p>
             <Link href="/log" className="btn-primary" style={{ textDecoration: 'none' }}>Criar primeiro registro</Link>
           </div>
         ) : (
@@ -184,8 +184,8 @@ export default function History() {
                       ) : null}
                     </div>
                     <div>
-                      <label htmlFor={`history-notes-${log.id}`} className="label" style={{ fontSize: '0.8rem' }}>Notas e relatos</label>
-                      <textarea id={`history-notes-${log.id}`} rows={2} value={editData.notes || ''} onChange={(event) => setEditData((current) => ({ ...current, notes: event.target.value }))} className="input-field" style={{ marginTop: '0.25rem', resize: 'none' }} placeholder="(Opcional) Adicione anotações a este registro..." />
+                      <label htmlFor={`history-notes-${log.id}`} className="label" style={{ fontSize: '0.8rem' }}>Observações</label>
+                      <textarea id={`history-notes-${log.id}`} rows={2} value={editData.notes || ''} onChange={(event) => setEditData((current) => ({ ...current, notes: event.target.value }))} className="input-field" style={{ marginTop: '0.25rem', resize: 'none' }} placeholder="Adicione observações sobre este registro." />
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                       <button onClick={cancelEdit} className="btn-outline">Cancelar</button>
@@ -242,7 +242,7 @@ export default function History() {
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button
                         onClick={() => startEdit(log)}
-                        title="Editar"
+                        title="Editar registro"
                         style={{
                           width: '36px',
                           height: '36px',
@@ -261,7 +261,7 @@ export default function History() {
                       </button>
                       <button
                         onClick={() => deleteLog(log.id)}
-                        title="Excluir"
+                        title="Excluir registro"
                         style={{
                           width: '36px',
                           height: '36px',

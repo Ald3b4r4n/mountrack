@@ -76,7 +76,7 @@ export default function Journal() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <h1 className="glow-text anim-enter" style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>Diário</h1>
-            <p className="page-subtitle anim-enter anim-delay-1">Seus relatos, sintomas e conquistas ao longo da jornada.</p>
+            <p className="page-subtitle anim-enter anim-delay-1">Relatos e observações da jornada.</p>
           </div>
           <Link href="/" className="nav-pill anim-enter anim-delay-1">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
@@ -93,12 +93,12 @@ export default function Journal() {
         ) : logs.length === 0 ? (
           <div className="glass-panel anim-enter" style={{ padding: '4rem 2rem', textAlign: 'center' }}>
             <span style={{ fontSize: '3rem', opacity: 0.5, display: 'block', marginBottom: '1rem' }}>✍️</span>
-            <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Seu diário está em branco</h3>
+            <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Ainda não há relatos salvos</h3>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
-              Use o campo de notas ao registrar uma dose ou pesagem para acompanhar como você está se sentindo.
+              Use o campo de observações ao registrar uma dose, pesagem ou nota livre para acompanhar a jornada.
             </p>
             <Link href="/log" className="btn-primary" style={{ textDecoration: 'none', display: 'inline-block' }}>
-              Escrever primeiro relato
+              Criar primeiro relato
             </Link>
           </div>
         ) : (
@@ -126,19 +126,19 @@ export default function Journal() {
                     </h3>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem' }}>
                       {log.weight !== undefined ? (
-                        <span className="badge" style={{ background: 'rgba(6, 182, 212, 0.15)', color: 'var(--accent-secondary)' }}>⚖️ {log.weight} kg</span>
+                        <span className="badge" style={{ background: 'rgba(6, 182, 212, 0.15)', color: 'var(--accent-secondary)' }}>{log.weight} kg</span>
                       ) : null}
 
                       {log.dose ? (
-                        <span className="badge badge-success">💉 Dose {log.dose} mg</span>
+                        <span className="badge badge-success">Dose {log.dose} mg</span>
                       ) : null}
 
                       {log.type === 'note' ? (
-                        <span className="badge" style={{ background: 'rgba(234, 179, 8, 0.15)', color: 'var(--accent-warning, #eab308)' }}>✍️ Diário</span>
+                        <span className="badge" style={{ background: 'rgba(234, 179, 8, 0.15)', color: 'var(--accent-warning, #eab308)' }}>Diário</span>
                       ) : null}
 
                       {!log.dose && (log.type === 'weight' || log.type === undefined) ? (
-                        <span className="badge badge-warning">⚖️ Pesagem</span>
+                        <span className="badge badge-warning">Pesagem</span>
                       ) : null}
                     </div>
                   </div>
