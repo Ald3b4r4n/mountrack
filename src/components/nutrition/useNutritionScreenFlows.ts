@@ -274,7 +274,7 @@ export function useNutritionScreenFlows({
     const nextMealDefinitions = buildMealDefinitions(diaryItems, [...diaryMealDefinitions, nextDefinition]);
 
     try {
-      const saved = await persistMealDefinitions(nextMealDefinitions, "Nao foi possivel criar a nova refeicao agora.");
+      const saved = await persistMealDefinitions(nextMealDefinitions, "Não foi possível criar a nova refeição agora.");
       if (!saved) {
         return;
       }
@@ -285,7 +285,7 @@ export function useNutritionScreenFlows({
       handleChangeArea("search");
       setMessage(`${nextDefinition.label} pronta para receber itens.`);
     } catch {
-      setMessage((current) => current ?? "Nao foi possivel criar a nova refeicao agora.");
+      setMessage((current) => current ?? "Não foi possível criar a nova refeição agora.");
     }
   }
 
@@ -300,7 +300,7 @@ export function useNutritionScreenFlows({
         definition.label.trim().toLocaleLowerCase("pt-BR") === normalizedLabel.toLocaleLowerCase("pt-BR"),
     );
     if (hasDuplicateLabel) {
-      setMessage("Ja existe uma refeicao com esse nome.");
+      setMessage("Já existe uma refeição com esse nome.");
       return;
     }
 
@@ -309,16 +309,16 @@ export function useNutritionScreenFlows({
     );
 
     try {
-      const saved = await persistMealDefinitions(nextMealDefinitions, "Nao foi possivel renomear a refeicao agora.");
+      const saved = await persistMealDefinitions(nextMealDefinitions, "Não foi possível renomear a refeição agora.");
       if (!saved) {
         return;
       }
 
       setActiveDiaryMeal(targetMeal.key);
       closeCustomMealDialog();
-      setMessage(`Refeicao atualizada para ${normalizedLabel}.`);
+      setMessage(`Refeição atualizada para ${normalizedLabel}.`);
     } catch {
-      setMessage((current) => current ?? "Nao foi possivel renomear a refeicao agora.");
+      setMessage((current) => current ?? "Não foi possível renomear a refeição agora.");
     }
   }
 
@@ -336,7 +336,7 @@ export function useNutritionScreenFlows({
           removeNutritionDiaryItemFromBrowser(activeUser.uid, item.id);
         }
 
-        const saved = await persistMealDefinitions(nextMealDefinitions, "Nao foi possivel excluir a refeicao agora.");
+        const saved = await persistMealDefinitions(nextMealDefinitions, "Não foi possível excluir a refeição agora.");
         if (!saved) {
           return;
         }
@@ -351,12 +351,12 @@ export function useNutritionScreenFlows({
             method: "DELETE",
           });
           if (!response.ok) {
-            await resolveRequestError(response, "Nao foi possivel excluir a refeicao agora.");
+            await resolveRequestError(response, "Não foi possível excluir a refeição agora.");
             return;
           }
         }
 
-        const saved = await persistMealDefinitions(nextMealDefinitions, "Nao foi possivel excluir a refeicao agora.");
+        const saved = await persistMealDefinitions(nextMealDefinitions, "Não foi possível excluir a refeição agora.");
         if (!saved) {
           return;
         }
@@ -374,11 +374,11 @@ export function useNutritionScreenFlows({
       closeCustomMealDialog();
       setMessage(
         targetMealItems.length > 0
-          ? `${targetMeal.label} e ${targetMealItems.length} item(ns) foram removidos do diario de hoje.`
-          : `${targetMeal.label} removida do diario de hoje.`,
+          ? `${targetMeal.label} e ${targetMealItems.length} item(ns) foram removidos do diário de hoje.`
+          : `${targetMeal.label} removida do diário de hoje.`,
       );
     } catch {
-      setMessage((current) => current ?? "Nao foi possivel excluir a refeicao agora.");
+      setMessage((current) => current ?? "Não foi possível excluir a refeição agora.");
     }
   }
 

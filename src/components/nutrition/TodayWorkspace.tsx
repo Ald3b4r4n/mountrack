@@ -48,7 +48,7 @@ function MealQuickCard({
     <article
       className={[
         "glass-panel static-panel rounded-[1.15rem] p-3 transition-all duration-200",
-        isMobileLayout ? "w-[min(82vw,19rem)] shrink-0 snap-start border border-white/7" : "",
+        isMobileLayout ? "border border-white/7" : "",
         active
           ? "border-[#34d399]/30 bg-[linear-gradient(135deg,rgba(52,211,153,0.12),rgba(6,182,212,0.06))] shadow-[0_14px_34px_rgba(4,20,38,0.28)]"
           : "bg-[#06162d]/60 hover:border-[#34d399]/16 hover:bg-[#07192f]/76 hover:shadow-[0_14px_34px_rgba(4,20,38,0.24)]",
@@ -62,7 +62,7 @@ function MealQuickCard({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
-              {active ? "Agora" : meal.isDefault === false ? "Extra" : "Bloco"}
+              {active ? "Agora" : meal.isDefault === false ? "Extra" : "Refeição"}
             </span>
             <strong className="mt-1 block truncate font-['Outfit',sans-serif] text-[1rem] text-[var(--text-primary)]">
               {label}
@@ -80,7 +80,7 @@ function MealQuickCard({
         </div>
         {isMobileLayout ? (
           <span className="mt-2 block text-[0.78rem] text-[var(--text-secondary)]">
-            {active ? "Toque para revisar este bloco." : "Toque para focar este bloco."}
+            {active ? "Toque para revisar esta refeição." : "Toque para abrir esta refeição."}
           </span>
         ) : null}
       </button>
@@ -116,10 +116,10 @@ function AddMealCard({ onAddMeal, isMobileLayout = false }: { onAddMeal: () => v
       </span>
       <span className="block">
         <strong className="block font-['Outfit',sans-serif] text-[1rem] text-[var(--text-primary)]">
-          Adicionar refeicao
+          Adicionar refeição
         </strong>
         <span className="mt-1 block text-[0.82rem] leading-snug text-[var(--text-secondary)]">
-          Crie um bloco extra como Pre treino ou Ceia.
+          Crie uma refeição extra, como Pré-treino ou Ceia.
         </span>
       </span>
     </button>
@@ -145,8 +145,8 @@ export function TodayWorkspace({
   return (
     <section className="grid gap-4">
       <CollapsibleSection
-        title="Refeicoes do dia"
-        subtitle="Troque de bloco e registre."
+        title="Refeições do dia"
+        subtitle="Escolha uma refeição para registrar alimentos."
         badge={!embedded ? <span className="badge badge-success">Hoje</span> : undefined}
         open={mealsSectionOpen}
         onOpenChange={onMealsSectionOpenChange}
@@ -154,41 +154,21 @@ export function TodayWorkspace({
       >
         {isMobileLayout ? (
           <div className="grid gap-3">
-            <div className="-mx-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <div className="flex snap-x snap-mandatory gap-3 px-1">
-                {mealDefinitions.map((meal) => (
-                  <MealQuickCard
-                    key={meal.key}
-                    meal={meal}
-                    active={activeDiaryMeal === meal.key}
-                    label={meal.label}
-                    calories={mealSummary[meal.key] ?? 0}
-                    count={groupedDiaryItems[meal.key]?.length ?? 0}
-                    onSelect={() => onOpenMeal(meal.key)}
-                    onAdd={() => onOpenSearchForMeal(meal.key)}
-                    onManage={meal.isDefault === false ? () => onManageMeal?.(meal) : undefined}
-                    isMobileLayout
-                  />
-                ))}
-                <AddMealCard onAddMeal={onAddMeal} isMobileLayout />
-              </div>
-            </div>
-            <div className="rounded-[1rem] border border-white/7 bg-[#071223]/72 p-3">
-              <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Em foco</span>
-              <div className="mt-2 flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <strong className="block text-[1rem] text-[var(--text-primary)]">
-                    {mealDefinitions.find((meal) => meal.key === activeDiaryMeal)?.label ?? activeDiaryMeal}
-                  </strong>
-                  <span className="mt-1 block text-[0.82rem] text-[var(--text-secondary)]">
-                    {groupedDiaryItems[activeDiaryMeal]?.length ?? 0} item(ns) neste bloco
-                  </span>
-                </div>
-                <span className="badge badge-success whitespace-nowrap">
-                  {formatCalories(mealSummary[activeDiaryMeal] ?? 0)}
-                </span>
-              </div>
-            </div>
+            {mealDefinitions.map((meal) => (
+              <MealQuickCard
+                key={meal.key}
+                meal={meal}
+                active={activeDiaryMeal === meal.key}
+                label={meal.label}
+                calories={mealSummary[meal.key] ?? 0}
+                count={groupedDiaryItems[meal.key]?.length ?? 0}
+                onSelect={() => onOpenMeal(meal.key)}
+                onAdd={() => onOpenSearchForMeal(meal.key)}
+                onManage={meal.isDefault === false ? () => onManageMeal?.(meal) : undefined}
+                isMobileLayout
+              />
+            ))}
+            <AddMealCard onAddMeal={onAddMeal} isMobileLayout />
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">

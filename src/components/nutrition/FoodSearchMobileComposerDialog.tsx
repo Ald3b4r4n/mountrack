@@ -69,15 +69,15 @@ export function FoodSearchMobileComposerDialog({
                 <span>Voltar</span>
               </button>
               <div className="min-w-0 flex-1">
-                <span className="badge badge-success">Registro rapido</span>
+                <span className="badge badge-success">Registro rápido</span>
                 <strong
                   id="nutrition-mobile-composer-title"
                   className="mt-3 block text-[1.18rem] leading-tight text-[var(--text-primary)]"
                 >
-                  Registrar no diario
+                  Registrar no diário
                 </strong>
                 <p className="mt-1 text-[0.88rem] leading-relaxed text-[var(--text-secondary)]">
-                  Ajuste a porcao, confirme{" "}
+                  Ajuste a porção, confirme{" "}
                   <strong className="font-medium text-[var(--text-primary)]">{activeMealLabel}</strong> e volte para o
                   resumo do dia logo depois do registro.
                 </p>
@@ -93,9 +93,9 @@ export function FoodSearchMobileComposerDialog({
                 Trocar alimento
               </button>
               <span className="badge badge-success max-w-full truncate">
-                {selectedFood.barcode ? `Codigo ${selectedFood.barcode}` : "Selecionado para registro"}
+                {selectedFood.barcode ? `Código ${selectedFood.barcode}` : "Selecionado para registro"}
               </span>
-              <span className="badge badge-success max-w-full truncate">Refeicao {activeMealLabel}</span>
+              <span className="badge badge-success max-w-full truncate">Refeição {activeMealLabel}</span>
             </div>
           </div>
 
@@ -115,10 +115,10 @@ export function FoodSearchMobileComposerDialog({
                 onClick={onSubmit}
                 className="btn-primary min-h-[3.35rem] w-full shadow-[0_18px_40px_rgba(52,211,153,0.18)]"
               >
-                Adicionar ao diario em {activeMealLabel}
+                Adicionar ao diário em {activeMealLabel}
               </button>
               <p className="text-center text-[0.78rem] text-[var(--text-muted)]">
-                Depois do registro, voce volta para Hoje com {activeMealLabel.toLowerCase()} em foco.
+                Depois do registro, você volta para Hoje com {activeMealLabel.toLowerCase()} em foco.
               </p>
             </div>
           </div>

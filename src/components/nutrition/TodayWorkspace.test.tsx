@@ -4,13 +4,13 @@ import { TodayWorkspace } from "@/components/nutrition/TodayWorkspace";
 import type { MealDefinition } from "@/modules/nutrition/domain/types";
 
 const mealDefinitions: MealDefinition[] = [
-  { key: "breakfast", label: "Cafe da manha", isDefault: true },
-  { key: "lunch", label: "Almoco", isDefault: true },
-  { key: "custom:pre_treino", label: "Pre treino", isDefault: false },
+  { key: "breakfast", label: "Café da manhã", isDefault: true },
+  { key: "lunch", label: "Almoço", isDefault: true },
+  { key: "custom:pre_treino", label: "Pré-treino", isDefault: false },
 ];
 
 describe("TodayWorkspace", () => {
-  it("renders the mobile meal rail with the active meal summary", async () => {
+  it("renders the mobile meal list without duplicating the active summary card", async () => {
     const user = userEvent.setup();
     const onOpenMeal = jest.fn();
 
@@ -40,13 +40,13 @@ describe("TodayWorkspace", () => {
       </TodayWorkspace>,
     );
 
-    expect(screen.getByText(/Em foco/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/^Almoco$/i)).toHaveLength(2);
-    expect(screen.getByText(/2 item\(ns\) neste bloco/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/333 kcal/i)).toHaveLength(2);
+    expect(screen.getByRole("button", { name: /Café da manhã/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Almoço/i })).toBeInTheDocument();
+    expect(screen.getByText(/Escolha uma refeição para registrar alimentos./i)).toBeInTheDocument();
+    expect(screen.getAllByText(/333 kcal/i)).toHaveLength(1);
     expect(screen.getByText(/^Ativa$/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Cafe da manha/i }));
+    await user.click(screen.getByRole("button", { name: /Café da manhã/i }));
 
     expect(onOpenMeal).toHaveBeenCalledWith("breakfast");
   });

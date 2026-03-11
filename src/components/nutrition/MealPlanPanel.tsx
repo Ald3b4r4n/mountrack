@@ -86,7 +86,7 @@ function MealPlanEditorDisclosure({
         ) : (
           <EmptyState
             title="Sem itens restantes"
-            text="Gere novamente para buscar outra combinacao para essa refeicao."
+            text="Gere novamente para buscar outra combinação para essa refeição."
             compact
           />
         )}
@@ -116,14 +116,14 @@ export function MealPlanPanel({
 }: MealPlanPanelProps) {
   return (
     <CollapsibleSection
-      title="Cardapio diario"
-      subtitle="Gere um cardapio base, ajuste as porcoes e exporte quando estiver pronto."
+      title="Cardápio diário"
+      subtitle="Gere um cardápio base, ajuste as porções e exporte quando estiver pronto."
       badge={
-        displayedMealPlan ? <span className="badge badge-success">{displayedMealPlan.meals.length} refeicoes</span> : undefined
+        displayedMealPlan ? <span className="badge badge-success">{displayedMealPlan.meals.length} refeições</span> : undefined
       }
     >
       <div className={`grid gap-3 ${isMobileLayout ? "grid-cols-1" : "grid-cols-[minmax(0,170px)_minmax(0,1fr)]"}`}>
-        <Field label="Calorias do cardapio">
+        <Field label="Calorias do cardápio">
           <input
             className="input-field"
             type="number"
@@ -134,7 +134,7 @@ export function MealPlanPanel({
 
         <div className="grid grid-cols-2 items-stretch gap-2.5">
           <button onClick={onGenerateMealPlan} className="btn-primary min-h-[3rem] w-full" disabled={isGeneratingPlan}>
-            {isGeneratingPlan ? "Gerando..." : "Gerar cardapio"}
+            {isGeneratingPlan ? "Gerando..." : "Gerar cardápio"}
           </button>
 
           <button onClick={onUseGoalCalories} className="btn-outline min-h-[3rem] w-full">
@@ -176,7 +176,7 @@ export function MealPlanPanel({
               value={formatDeltaCalories(planDelta)}
               accent={Math.abs(planDelta) <= 10 ? "#34d399" : "#fb7185"}
             />
-            <MiniValue label="Proteina" value={formatGrams(planTotals.protein)} accent="#34d399" />
+            <MiniValue label="Proteína" value={formatGrams(planTotals.protein)} accent="#34d399" />
             <MiniValue label="Carbo" value={formatGrams(planTotals.carbs)} accent="#22d3ee" />
             <MiniValue label="Gordura" value={formatGrams(planTotals.fat)} accent="#fb7185" />
           </div>
@@ -197,8 +197,8 @@ export function MealPlanPanel({
       ) : (
         <div className="mt-4">
           <EmptyState
-            title="Nenhum cardapio gerado"
-            text="Defina as calorias desejadas e gere um cardapio para editar ou exportar depois."
+            title="Nenhum cardápio gerado"
+            text="Defina as calorias desejadas e gere um cardápio para editar ou exportar depois."
             compact
           />
         </div>

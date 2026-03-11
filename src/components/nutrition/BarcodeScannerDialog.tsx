@@ -14,14 +14,14 @@ function toScannerErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error ?? "");
 
   if (/notallowed|permission/i.test(message)) {
-    return "Permissao da camera negada. Libere o acesso ou digite o codigo manualmente.";
+    return "Permissão da câmera negada. Libere o acesso ou digite o código manualmente.";
   }
 
   if (/notfound|device|camera/i.test(message)) {
-    return "Nenhuma camera compativel foi encontrada neste dispositivo.";
+    return "Nenhuma câmera compatível foi encontrada neste dispositivo.";
   }
 
-  return "Nao foi possivel acessar a camera. Digite o codigo manualmente.";
+  return "Não foi possível acessar a câmera. Digite o código manualmente.";
 }
 
 export function BarcodeScannerDialog({
@@ -70,12 +70,12 @@ export function BarcodeScannerDialog({
     async function startScanner() {
       try {
         if (!window.isSecureContext) {
-          setError("A camera so funciona em conexao segura. Digite o codigo manualmente.");
+          setError("A câmera só funciona em conexão segura. Digite o código manualmente.");
           return;
         }
 
         if (!navigator.mediaDevices?.getUserMedia) {
-          setError("Este navegador nao liberou a camera aqui. Digite o codigo manualmente.");
+          setError("Este navegador não liberou a câmera aqui. Digite o código manualmente.");
           return;
         }
 
@@ -211,7 +211,7 @@ export function BarcodeScannerDialog({
     >
       <button
         type="button"
-        aria-label="Fechar leitor de codigo de barras"
+        aria-label="Fechar leitor de código de barras"
         onClick={onClose}
         style={{
           position: "absolute",
@@ -241,10 +241,10 @@ export function BarcodeScannerDialog({
         >
           <div>
             <h3 id={titleId} style={{ fontSize: "1.1rem", fontWeight: 600 }}>
-              Leitor de codigo de barras
+              Leitor de código de barras
             </h3>
             <p id={descriptionId} style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-              Aponte a camera para o EAN, GTIN ou QR da embalagem.
+              Aponte a câmera para o EAN, GTIN ou QR da embalagem.
             </p>
           </div>
           <button

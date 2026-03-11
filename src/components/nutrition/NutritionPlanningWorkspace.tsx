@@ -35,10 +35,10 @@ export function NutritionPlanningWorkspace({
                 Planejamento nutricional
               </strong>
               <span className="text-[0.88rem] text-[var(--text-secondary)]">
-                Defina sua meta e monte um cardapio diario para ajustar depois.
+                Defina sua meta e monte um cardápio diário para ajustar depois.
               </span>
             </div>
-            {displayedMealPlan ? <span className="badge badge-success">{displayedMealPlan.meals.length} refeicoes</span> : null}
+            {displayedMealPlan ? <span className="badge badge-success">{displayedMealPlan.meals.length} refeições</span> : null}
           </div>
 
           {planningTabs}

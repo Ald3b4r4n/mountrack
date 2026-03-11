@@ -25,8 +25,8 @@ export function CustomMealDialog({
   onClose,
   onCreate,
   initialLabel = "",
-  title = "Nova refeicao",
-  description = "Nomeie um bloco extra como Pre treino, Ceia ou Sobremesa.",
+  title = "Nova refeição",
+  description = "Nomeie uma refeição extra, como Pré-treino, Ceia ou Sobremesa.",
   confirmLabel = "Continuar",
   deleteAction,
 }: CustomMealDialogProps) {
@@ -61,7 +61,7 @@ export function CustomMealDialog({
     }
 
     if (normalized.length > 40) {
-      setError("Use no maximo 40 caracteres para o nome da refeicao.");
+      setError("Use no máximo 40 caracteres para o nome da refeição.");
       return;
     }
 
@@ -116,7 +116,7 @@ export function CustomMealDialog({
               color: "var(--text-secondary)",
             }}
           >
-            Nome da refeicao
+            Nome da refeição
           </span>
           <input
             ref={inputRef}
@@ -129,7 +129,7 @@ export function CustomMealDialog({
                 handleCreate();
               }
             }}
-            placeholder="Ex.: Pre treino"
+            placeholder="Ex.: Pré-treino"
             style={{ width: "100%" }}
           />
         </label>
@@ -155,7 +155,7 @@ export function CustomMealDialog({
           <div>
             {deleteAction ? (
               <button onClick={deleteAction.onDelete} disabled={deleteAction.disabled} className="btn-outline">
-                {deleteAction.label ?? "Excluir refeicao"}
+                {deleteAction.label ?? "Excluir refeição"}
               </button>
             ) : null}
           </div>

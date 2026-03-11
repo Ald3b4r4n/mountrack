@@ -42,7 +42,7 @@ export function HistoryEntryCard({
       {isMobileLayout ? (
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-[0.9rem] border border-white/7 bg-[#071223]/72 px-3 py-2.5">
-            <span className="block text-[0.66rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Proteina</span>
+            <span className="block text-[0.66rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Proteína</span>
             <strong className="mt-1 block text-[0.94rem] text-[#86efac]">{formatGrams(entry.summary.protein)}</strong>
           </div>
           <div className="rounded-[0.9rem] border border-white/7 bg-[#071223]/72 px-3 py-2.5">
@@ -54,7 +54,7 @@ export function HistoryEntryCard({
             <strong className="mt-1 block text-[0.94rem] text-rose-200">{formatGrams(entry.summary.fat)}</strong>
           </div>
           <div className="rounded-[0.9rem] border border-white/7 bg-[#071223]/72 px-3 py-2.5">
-            <span className="block text-[0.66rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Agua</span>
+            <span className="block text-[0.66rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Água</span>
             <strong className="mt-1 block text-[0.94rem] text-sky-200">
               {formatMilliliters(entry.summary.waterIntakeMl)}
             </strong>
@@ -62,8 +62,8 @@ export function HistoryEntryCard({
         </div>
       ) : (
         <div className="grid grid-cols-[repeat(auto-fit,minmax(110px,1fr))] gap-[0.55rem]">
-          <MiniValue label="Agua" value={formatMilliliters(entry.summary.waterIntakeMl)} accent="#38bdf8" />
-          <MiniValue label="Proteina" value={formatGrams(entry.summary.protein)} accent="#34d399" />
+          <MiniValue label="Água" value={formatMilliliters(entry.summary.waterIntakeMl)} accent="#38bdf8" />
+          <MiniValue label="Proteína" value={formatGrams(entry.summary.protein)} accent="#34d399" />
           <MiniValue label="Carbo" value={formatGrams(entry.summary.carbs)} accent="#22d3ee" />
           <MiniValue label="Gordura" value={formatGrams(entry.summary.fat)} accent="#fb7185" />
         </div>
@@ -108,7 +108,7 @@ export function MobilePaginationControls({
           onClick={() => onPageChange(Math.max(1, page - 1))}
           className="btn-outline min-w-auto rounded-[0.9rem] px-3 py-2"
           disabled={page <= 1}
-          aria-label="Pagina anterior do diario"
+          aria-label="Página anterior do diário"
         >
           Voltar
         </button>
@@ -122,9 +122,9 @@ export function MobilePaginationControls({
           onClick={() => onPageChange(Math.min(totalPages, page + 1))}
           className="btn-outline min-w-auto rounded-[0.9rem] px-3 py-2"
           disabled={page >= totalPages}
-          aria-label="Proxima pagina do diario"
+          aria-label="Próxima página do diário"
         >
-          Avancar
+          Avançar
         </button>
       </div>
     </div>

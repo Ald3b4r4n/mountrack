@@ -68,11 +68,11 @@ export function FoodSearchSetupPanel({
             <div className="mb-4 flex items-start justify-between gap-3 rounded-[1rem] border border-[#34d399]/14 bg-[#06162d]/62 p-3">
               <div className="min-w-0">
                 <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                  Refeicao de destino
+                  Refeição de destino
                 </span>
                 <strong className="mt-1 block text-[0.98rem] text-[var(--text-primary)]">{activeMealLabel}</strong>
                 <p className="mt-1 text-[0.82rem] text-[var(--text-secondary)]">
-                  O alimento selecionado volta para esse bloco quando o registro terminar.
+                  O alimento selecionado volta para esta refeição quando o registro terminar.
                 </p>
               </div>
               <span className="badge badge-success shrink-0">Em foco</span>
@@ -88,7 +88,7 @@ export function FoodSearchSetupPanel({
             ) : null}
           </div>
           <div className="flex flex-wrap justify-end gap-2">
-            {isEnrichingExternal ? <span className="badge badge-success self-start">Atualizacao em fila</span> : null}
+            {isEnrichingExternal ? <span className="badge badge-success self-start">Atualização em fila</span> : null}
             <span className="badge badge-success self-start">{searchCatalogBadge}</span>
           </div>
         </div>
@@ -96,7 +96,7 @@ export function FoodSearchSetupPanel({
 
       <div className="mb-4 flex flex-wrap gap-2">
         <SegmentButton active={searchMode === "name"} label="Nome" onClick={() => onSearchModeChange("name")} />
-        <SegmentButton active={searchMode === "barcode"} label="Codigo" onClick={() => onSearchModeChange("barcode")} />
+        <SegmentButton active={searchMode === "barcode"} label="Código" onClick={() => onSearchModeChange("barcode")} />
         <SegmentButton active={searchMode === "custom"} label="Manual" onClick={() => onSearchModeChange("custom")} />
       </div>
 
@@ -135,10 +135,10 @@ export function FoodSearchSetupPanel({
       ) : null}
 
       {searchMode === "barcode" ? (
-        <Field label="Codigo de barras">
+        <Field label="Código de barras">
           <div className="grid gap-2.5">
             <p className="text-[0.84rem] text-[var(--text-secondary)]">
-              Digite o numero da embalagem ou use a camera para ler o codigo automaticamente.
+              Digite o número da embalagem ou use a câmera para ler o código automaticamente.
             </p>
             <div className={isMobileLayout ? "grid gap-2.5" : "flex flex-wrap gap-2.5"}>
               <input
@@ -155,7 +155,7 @@ export function FoodSearchSetupPanel({
               />
               <div className={`grid gap-2.5 ${isMobileLayout ? "grid-cols-2" : "grid-cols-[auto_auto]"}`}>
                 <button type="button" onClick={() => onBarcodeLookup(barcodeQuery)} className="btn-primary">
-                  Buscar codigo
+                  Buscar código
                 </button>
                 <button
                   type="button"
@@ -176,7 +176,7 @@ export function FoodSearchSetupPanel({
           <div>
             <strong className="block">Criar alimento manualmente</strong>
             <p className="mt-1 text-[0.9rem] text-[var(--text-secondary)]">
-              Salve um alimento seu para reencontrar depois na busca e usar no diario sem depender do catalogo.
+              Salve um alimento seu para reencontrar depois na busca e usar no diário sem depender do catálogo.
             </p>
           </div>
           <div className="flex flex-wrap gap-2.5">

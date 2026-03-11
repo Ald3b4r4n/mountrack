@@ -92,11 +92,11 @@ function ComposerBody({
 }) {
   if (!selectedFood) {
     return (
-      <EmptyState
-        title="Nenhum alimento selecionado"
-        text="Escolha um resultado para ajustar a porcao e registrar no diario."
-        compact
-      />
+        <EmptyState
+          title="Nenhum alimento selecionado"
+          text="Escolha um resultado para ajustar a porção e registrar no diário."
+          compact
+        />
     );
   }
 
@@ -121,7 +121,7 @@ function ComposerBody({
         {selectedFoodTotals ? (
           <div className="grid grid-cols-3 gap-2">
             <MacroValue
-              label="Proteina"
+              label="Proteína"
               value={formatGrams(selectedFoodTotals.protein)}
               accent="#34d399"
               compact
@@ -141,7 +141,7 @@ function ComposerBody({
           </div>
         ) : (
           <p className="text-[0.82rem] text-[var(--text-secondary)]">
-            Ajuste a quantidade para calcular os macros desta porcao.
+            Ajuste a quantidade para calcular os macros desta porção.
           </p>
         )}
       </div>
@@ -163,11 +163,11 @@ function ComposerBody({
           >
             <option value="g">Gramas</option>
             <option value="ml">Mililitros</option>
-            <option value="serving">Porcao</option>
+            <option value="serving">Porção</option>
             <option value="unit">Unidade</option>
           </select>
         </Field>
-        <Field label="Refeicao">
+        <Field label="Refeição">
           <select
             className="input-field"
             value={mealType}
@@ -184,7 +184,7 @@ function ComposerBody({
 
       {showActionButton ? (
         <button type="button" onClick={onAddDiaryItem} className="btn-primary w-full">
-          Adicionar ao diario
+          Adicionar ao diário
         </button>
       ) : null}
     </div>
@@ -287,14 +287,14 @@ export function FoodSearchPanel({
 
   const storageSummary =
     storageMode === "database"
-      ? "Busque no catalogo salvo e receba novas referencias sem travar a tela."
+      ? "Busque no catálogo salvo e receba novas referências sem travar a tela."
       : storageMode === "checking"
-        ? "Preparando o catalogo e as referencias de apoio..."
-        : "Os registros desta area estao ativos so neste aparelho enquanto a sincronizacao nao volta.";
+        ? "Preparando o catálogo e as referências de apoio..."
+        : "Os registros desta área ficam só neste aparelho enquanto a sincronização não estiver disponível.";
   const searchActivitySummary = isSearching
-    ? "Buscando no catalogo do app..."
+    ? "Buscando no catálogo do app..."
     : isEnrichingExternal
-      ? "Novas referencias serao adicionadas em segundo plano."
+      ? "Novas referências serão adicionadas em segundo plano."
       : null;
 
   const hasVisibleResults = resultsVisible && searchResults.length > 0;
@@ -310,8 +310,8 @@ export function FoodSearchPanel({
       ? {
           title: "Alimento selecionado",
           text: isMobileLayout
-            ? "Abra o registro para ajustar quantidade e refeicao, ou troque o alimento."
-            : "Use o compositor ao lado para finalizar o lancamento.",
+            ? "Abra o registro para ajustar quantidade e refeição, ou troque o alimento."
+            : "Use o compositor ao lado para finalizar o lançamento.",
         }
       : resultState;
 

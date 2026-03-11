@@ -465,13 +465,13 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     diarySuccessFeedback?.mealType === activeDiaryMeal ? diarySuccessFeedback.foodLabel : null;
   const searchCatalogBadge =
     storageMode === "database"
-      ? "Catalogo sincronizado"
+      ? "Catálogo sincronizado"
       : storageMode === "checking"
-        ? "Preparando catalogo"
+        ? "Preparando catálogo"
         : "Somente neste aparelho";
   const syncWarningMessage =
     !isPreview && (storageMode === "volatile" || storageMode === "memory")
-      ? "Sincronizacao indisponivel. Os lancamentos da nutricao estao sendo salvos apenas neste aparelho ate a base de dados responder normalmente."
+      ? "Sincronização indisponível. Os lançamentos da nutrição estão sendo salvos apenas neste aparelho até a base de dados responder normalmente."
       : null;
   const searchSourceLabel = formatSearchSourceLabel(lastSearchSource);
   const resultState =
@@ -487,12 +487,12 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
             lastSearchSource === "none"
               ? "Nada encontrado"
               : isSearching
-                ? "Procurando no catalogo"
+                ? "Procurando no catálogo"
                 : "Busque um alimento",
           text:
             isSearching || isEnrichingExternal
-              ? "Estou procurando no catalogo e preparando novas referencias quando fizer sentido."
-              : searchMessage ?? "Digite um nome, use um codigo de barras ou crie um alimento manual para comecar.",
+              ? "Estou procurando no catálogo e preparando novas referências quando fizer sentido."
+              : searchMessage ?? "Digite um nome, use um código de barras ou crie um alimento manual para começar.",
         };
   const planningTabs = (
     <div className="flex flex-wrap gap-[0.55rem]">
@@ -676,10 +676,10 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
         open: customMealOpen,
         onClose: closeCustomMealDialog,
         initialLabel: editingMeal?.label,
-        title: editingMeal ? "Gerenciar refeicao" : "Nova refeicao",
+        title: editingMeal ? "Gerenciar refeição" : "Nova refeição",
         description: editingMeal
-          ? "Atualize o nome do bloco extra ou exclua a refeicao com todos os itens lancados nela."
-          : "Nomeie um bloco extra como Pre treino, Ceia ou Sobremesa.",
+          ? "Atualize o nome da refeição extra ou exclua a refeição com todos os itens lançados nela."
+          : "Nomeie uma refeição extra, como Pré-treino, Ceia ou Sobremesa.",
         confirmLabel: editingMeal ? "Salvar nome" : "Continuar",
         deleteAction: editingMeal
           ? {
@@ -688,12 +688,12 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
               },
               label:
                 (groupedDiaryItems[editingMeal.key]?.length ?? 0) > 0
-                  ? "Excluir refeicao e itens"
-                  : "Excluir refeicao",
+                  ? "Excluir refeição e itens"
+                  : "Excluir refeição",
               hint:
                 (groupedDiaryItems[editingMeal.key]?.length ?? 0) > 0
-                  ? `Excluir tambem remove ${groupedDiaryItems[editingMeal.key]?.length ?? 0} item(ns) registrados nela.`
-                  : "Excluir remove esse bloco extra do diario de hoje.",
+                  ? `Excluir também remove ${groupedDiaryItems[editingMeal.key]?.length ?? 0} item(ns) registrados nela.`
+                  : "Excluir remove essa refeição extra do diário de hoje.",
             }
           : undefined,
         onCreate: (label) => {

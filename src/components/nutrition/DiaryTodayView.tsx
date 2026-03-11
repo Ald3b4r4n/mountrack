@@ -75,7 +75,7 @@ export function DiaryTodayView({
       <div className="glass-panel static-panel bg-[#040f20]/70 p-[0.95rem]">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Agua</span>
+            <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Água</span>
             <strong className="mt-1 block text-[1.08rem] text-[var(--text-primary)]">
               {formatMilliliters(summary.waterIntakeMl)}
             </strong>
@@ -114,7 +114,7 @@ export function DiaryTodayView({
               <span className="mt-2 block text-[0.8rem] text-[var(--text-secondary)]">
                 {hydrationMode === "absolute"
                   ? "Ajuste o total final do dia."
-                  : "Use atalhos rapidos ou lance manualmente."}
+                  : "Use atalhos rápidos ou lance manualmente."}
               </span>
             </div>
             {hydrationMode === "increment" ? (
@@ -153,7 +153,7 @@ export function DiaryTodayView({
                     ? "Salvando..."
                     : hydrationMode === "absolute"
                       ? "Salvar total"
-                      : "Adicionar agua"}
+                      : "Adicionar água"}
                 </button>
               </div>
             </div>
@@ -174,7 +174,7 @@ export function DiaryTodayView({
             </div>
             {hydrationMode === "absolute" ? (
               <p className="mb-[0.7rem] text-[0.8rem] text-[var(--text-secondary)]">
-                Use este modo para corrigir o total do dia quando houver erro no lancamento.
+                Use este modo para corrigir o total do dia quando houver erro no lançamento.
               </p>
             ) : null}
             <div
@@ -215,7 +215,7 @@ export function DiaryTodayView({
                     ? "Salvando..."
                     : hydrationMode === "absolute"
                       ? "Salvar total"
-                      : "Adicionar agua"}
+                      : "Adicionar água"}
                 </button>
               </div>
             </div>
@@ -228,7 +228,7 @@ export function DiaryTodayView({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                Bloco ativo
+                Refeição ativa
               </span>
               <strong className="mt-1 block text-[1rem] text-[var(--text-primary)]">{activeMealLabel}</strong>
               <span className="mt-1 block text-[0.82rem] text-[var(--text-secondary)]">
@@ -256,7 +256,7 @@ export function DiaryTodayView({
               <button
                 onClick={() => onOpenSearchForMeal(activeDiaryMeal)}
                 className="btn-primary min-h-[2.85rem] w-full"
-                aria-label={`Adicionar ao bloco ${activeMealLabel}`}
+                aria-label={`Adicionar à refeição ${activeMealLabel}`}
               >
                 {recentlyLoggedFoodLabel ? "Adicionar mais" : "Adicionar"}
               </button>
@@ -267,7 +267,7 @@ export function DiaryTodayView({
                   <button
                     onClick={onOpenMealChooser}
                     className="btn-outline min-h-[2.85rem] w-full"
-                    aria-label="Trocar bloco"
+                    aria-label="Trocar refeição"
                   >
                     Trocar
                   </button>
@@ -276,7 +276,7 @@ export function DiaryTodayView({
                   <button
                     onClick={() => onManageMeal?.(activeMealDefinition)}
                     className="btn-outline min-h-[2.85rem] w-full"
-                    aria-label={`Gerenciar bloco ${activeMealLabel}`}
+                    aria-label={`Gerenciar refeição ${activeMealLabel}`}
                   >
                     Gerenciar
                   </button>
@@ -312,7 +312,7 @@ export function DiaryTodayView({
             <div className="flex flex-wrap items-center gap-2">
               {canManageActiveMeal ? (
                 <button onClick={() => onManageMeal?.(activeMealDefinition)} className="btn-outline px-3 py-2 text-[0.8rem]">
-                  Gerenciar refeicao
+                  Gerenciar refeição
                 </button>
               ) : null}
               <span className="badge badge-success">
@@ -325,18 +325,18 @@ export function DiaryTodayView({
 
       {isLoading ? (
         isMobileLayout ? (
-          <MobileStatusCard eyebrow="Sincronizando" title="Atualizando bloco" text="Seus itens aparecem aqui em instantes." />
+          <MobileStatusCard eyebrow="Sincronizando" title="Atualizando refeição" text="Seus itens aparecem aqui em instantes." />
         ) : (
-          <p className="text-[var(--text-secondary)]">Carregando diario...</p>
+          <p className="text-[var(--text-secondary)]">Carregando diário...</p>
         )
       ) : null}
       {!isLoading && activeDiaryItems.length === 0 ? (
         <EmptyState
-          title={isMobileLayout ? "Nada neste bloco ainda" : "Sem itens nesta refeicao"}
+          title={isMobileLayout ? "Nada nesta refeição ainda" : "Sem itens nesta refeição"}
           text={
             isMobileLayout
-              ? "Toque em Adicionar para lancar o primeiro item deste bloco."
-              : "Escolha um alimento na coluna ao lado e registre no horario desejado."
+              ? "Toque em Adicionar para lançar o primeiro item desta refeição."
+              : "Escolha um alimento na coluna ao lado e registre no horário desejado."
           }
           compact
         />

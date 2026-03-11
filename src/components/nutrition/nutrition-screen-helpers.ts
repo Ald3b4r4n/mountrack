@@ -76,15 +76,15 @@ export function scaleMealPlanItem(item: MealPlanItem, ratio: number, quantity: n
 export function formatSearchSourceLabel(source: NutritionSearchSource): string | null {
   switch (source) {
     case "catalog":
-      return "Catalogo do app";
+      return "Catálogo do app";
     case "custom":
       return "Meus alimentos";
     case "external":
-      return "Novas referencias";
+      return "Novas referências";
     case "fallback":
       return "Sugestoes do app";
     case "openfoodfacts":
-      return "Catalogo aberto";
+      return "Catálogo aberto";
     case "none":
       return "Sem resultado";
     default:

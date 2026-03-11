@@ -97,14 +97,14 @@ export function DiaryPanel({
   const panelTitle = isMobileLayout
     ? activeDiaryView === "today"
       ? "Registro do dia"
-      : "Historico do diario"
-    : "Historico e diario";
+      : "Histórico do diário"
+    : "Histórico e diário";
   const panelSubtitle = isMobileLayout
     ? activeDiaryView === "today"
-      ? "Bloco ativo, agua e historico sob demanda."
-      : "Dias anteriores sem sair de hoje."
-    : "Revise aqui todos os consumos e registros de agua do seu dia.";
-  const panelBadgeLabel = activeDiaryView === "today" ? (isMobileLayout ? activeMealLabel : "Hoje") : "Historico";
+      ? "Refeição ativa, água e histórico sob demanda."
+      : "Dias anteriores sem sair de Hoje."
+    : "Revise aqui todos os consumos e registros de água do seu dia.";
+  const panelBadgeLabel = activeDiaryView === "today" ? (isMobileLayout ? activeMealLabel : "Hoje") : "Histórico";
 
   return (
     <CollapsibleSection
@@ -123,9 +123,9 @@ export function DiaryPanel({
                 <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
                   Agora
                 </span>
-                <strong className="block text-[0.96rem] text-[var(--text-primary)]">Tudo no bloco atual</strong>
+                <strong className="block text-[0.96rem] text-[var(--text-primary)]">Tudo na refeição atual</strong>
                 <span className="mt-1 block text-[0.8rem] text-[var(--text-secondary)]">
-                  Historico so quando precisar revisar.
+                  Histórico só quando precisar revisar.
                 </span>
               </div>
               <button
@@ -136,7 +136,7 @@ export function DiaryPanel({
                 }}
                 className="btn-outline min-w-auto shrink-0 px-3 py-2 text-[0.8rem]"
               >
-                Historico
+                Histórico
               </button>
             </div>
           ) : (
@@ -163,7 +163,7 @@ export function DiaryPanel({
             />
             <SegmentButton
               active={activeDiaryView === "history"}
-              label="Historico"
+              label="Histórico"
               onClick={() => {
                 setActiveDiaryView("history");
                 setDiaryPage(1);

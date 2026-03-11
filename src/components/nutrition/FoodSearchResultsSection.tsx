@@ -149,7 +149,7 @@ export function FoodSearchResultsSection({
           <div className="glass-panel static-panel bg-[#06162d]/60 p-4">
             <div className="mb-3 flex flex-wrap justify-between gap-3">
               <div>
-                <strong className="block">Compositor</strong>
+                <strong className="block">Registro</strong>
                 <span className="text-[0.84rem] text-[var(--text-secondary)]">
                   Selecione, ajuste e registre sem sair da busca.
                 </span>

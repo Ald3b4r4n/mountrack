@@ -29,17 +29,17 @@ export function formatFoodSourceLabel(source: FoodSource, options?: { compact?: 
 
   switch (source) {
     case "internal":
-      return compact ? "App" : "Catalogo do app";
+      return compact ? "App" : "Catálogo do app";
     case "tbca":
       return compact ? "Brasil" : "Tabela brasileira";
     case "custom":
       return compact ? "Meu" : "Meu alimento";
     case "openfoodfacts":
-      return compact ? "Aberto" : "Catalogo aberto";
+      return compact ? "Aberto" : "Catálogo aberto";
     case "usda":
       return compact ? "USDA" : "Base USDA";
     default:
-      return compact ? "Catalogo" : "Catalogo";
+      return compact ? "Catálogo" : "Catálogo";
   }
 }
 

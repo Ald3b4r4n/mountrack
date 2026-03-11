@@ -30,7 +30,7 @@ export async function POST(request: Request) {
 
     if (!hasItems) {
       return NextResponse.json(
-        { error: "Nao foi possivel montar um cardapio com as escolhas atuais." },
+        { error: "Não foi possível montar um cardápio com as escolhas atuais." },
         { status: 422, headers: getNutritionStorageHeaders() },
       );
     }

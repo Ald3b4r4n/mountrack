@@ -6,15 +6,15 @@ import { FoodSearchPanel } from "@/components/nutrition/FoodSearchPanel";
 import type { FoodItem, MealDefinition } from "@/modules/nutrition/domain/types";
 
 const mealOptions: MealDefinition[] = [
-  { key: "breakfast", label: "Cafe da manha", isDefault: true },
-  { key: "lunch", label: "Almoco", isDefault: true },
+  { key: "breakfast", label: "Café da manhã", isDefault: true },
+  { key: "lunch", label: "Almoço", isDefault: true },
 ];
 
 const selectedFood: FoodItem = {
   id: "barcode-food",
   source: "internal",
-  name: "Barra de Proteina Trufa",
-  displayName: "Barra de Proteina - Sabor Trufa",
+  name: "Barra de Proteína Trufa",
+  displayName: "Barra de Proteína - Sabor Trufa",
   brand: "BOLD Snacks",
   barcode: "7893596226205",
   baseUnit: "g",
@@ -29,8 +29,8 @@ const selectedFood: FoodItem = {
 const nextScannedFood: FoodItem = {
   ...selectedFood,
   id: "barcode-food-2",
-  name: "Pao de Forma Artesano Integral",
-  displayName: "Pao de Forma Artesano Integral - Pullman",
+  name: "Pão de Forma Artesano Integral",
+  displayName: "Pão de Forma Artesano Integral - Pullman",
   brand: "Pullman",
   barcode: "7896002303460",
   caloriesPer100: 256,
@@ -55,7 +55,7 @@ function ClosedComposerPanel({ onAddDiaryItem = jest.fn() }: { onAddDiaryItem?: 
       onBarcodeQueryChange={jest.fn()}
       onBarcodeLookup={jest.fn()}
       onOpenScanner={jest.fn()}
-      searchSourceLabel="Catalogo do app"
+      searchSourceLabel="Catálogo do app"
       searchFeedback="Item encontrado"
       resultsVisible={false}
       searchResults={[selectedFood]}
@@ -78,7 +78,7 @@ function ClosedComposerPanel({ onAddDiaryItem = jest.fn() }: { onAddDiaryItem?: 
       mealType="breakfast"
       onMealTypeChange={jest.fn()}
       onAddDiaryItem={onAddDiaryItem}
-      searchCatalogBadge="Catalogo sincronizado"
+      searchCatalogBadge="Catálogo sincronizado"
     />
   );
 }
@@ -99,7 +99,7 @@ function OpenComposerPanel({ onAddDiaryItem = jest.fn() }: { onAddDiaryItem?: ()
       onBarcodeQueryChange={jest.fn()}
       onBarcodeLookup={jest.fn()}
       onOpenScanner={jest.fn()}
-      searchSourceLabel="Catalogo do app"
+      searchSourceLabel="Catálogo do app"
       searchFeedback="Item encontrado"
       resultsVisible={false}
       searchResults={[selectedFood]}
@@ -122,7 +122,7 @@ function OpenComposerPanel({ onAddDiaryItem = jest.fn() }: { onAddDiaryItem?: ()
       mealType="breakfast"
       onMealTypeChange={jest.fn()}
       onAddDiaryItem={onAddDiaryItem}
-      searchCatalogBadge="Catalogo sincronizado"
+      searchCatalogBadge="Catálogo sincronizado"
     />
   );
 }
@@ -147,7 +147,7 @@ function OpenComposerWithFoodSwap() {
         onBarcodeQueryChange={jest.fn()}
         onBarcodeLookup={jest.fn()}
         onOpenScanner={jest.fn()}
-        searchSourceLabel="Catalogo do app"
+        searchSourceLabel="Catálogo do app"
         searchFeedback="Item encontrado"
         resultsVisible={false}
         searchResults={[food]}
@@ -174,7 +174,7 @@ function OpenComposerWithFoodSwap() {
         mealType="breakfast"
         onMealTypeChange={jest.fn()}
         onAddDiaryItem={jest.fn()}
-        searchCatalogBadge="Catalogo sincronizado"
+        searchCatalogBadge="Catálogo sincronizado"
       />
     </>
   );
@@ -223,7 +223,7 @@ function SearchResultSelectionPanel({
       onBarcodeQueryChange={jest.fn()}
       onBarcodeLookup={jest.fn()}
       onOpenScanner={jest.fn()}
-      searchSourceLabel="Catalogo do app"
+      searchSourceLabel="Catálogo do app"
       searchFeedback="Resultados prontos"
       resultsVisible={resultsVisible}
       searchResults={[selectedFood]}
@@ -249,7 +249,7 @@ function SearchResultSelectionPanel({
       mealType="breakfast"
       onMealTypeChange={jest.fn()}
       onAddDiaryItem={jest.fn()}
-      searchCatalogBadge="Catalogo sincronizado"
+      searchCatalogBadge="Catálogo sincronizado"
     />
   );
 }
@@ -262,26 +262,26 @@ describe("FoodSearchPanel", () => {
   it("renders the mobile composer as a full dialog for the selected food", () => {
     const { container } = render(<OpenComposerPanel />);
 
-    expect(screen.getByRole("dialog", { name: /Registrar no diario/i })).toBeInTheDocument();
-    expect(screen.getByText(/Barra de Proteina - Sabor Trufa/i)).toBeInTheDocument();
-    expect(screen.getByText(/Refeicao Cafe da manha/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Adicionar ao diario em Cafe da manha/i })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /Registrar no diário/i })).toBeInTheDocument();
+    expect(screen.getByText(/Barra de Proteína - Sabor Trufa/i)).toBeInTheDocument();
+    expect(screen.getByText(/Refeição Café da manhã/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Adicionar ao diário em Café da manhã/i })).toBeInTheDocument();
     expect(screen.queryByText(/Pronto para registrar/i)).not.toBeInTheDocument();
-    expect(within(container).queryByRole("dialog", { name: /Registrar no diario/i })).not.toBeInTheDocument();
+    expect(within(container).queryByRole("dialog", { name: /Registrar no diário/i })).not.toBeInTheDocument();
   });
 
   it("keeps the selected item as a ready card until the user opens the composer", async () => {
     const user = userEvent.setup();
     render(<ClosedComposerPanel />);
 
-    expect(screen.queryByRole("dialog", { name: /Registrar no diario/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/Refeicao de destino/i)).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: /Registrar no diário/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/Refeição de destino/i)).toBeInTheDocument();
     expect(screen.getByText(/Pronto para registrar/i)).toBeInTheDocument();
-    expect(screen.getByText(/confirmar cafe da manha/i)).toBeInTheDocument();
+    expect(screen.getByText(/confirmar café da manhã/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Registrar em Cafe da manha/i }));
+    await user.click(screen.getByRole("button", { name: /Registrar em Café da manhã/i }));
 
-    expect(screen.getByRole("dialog", { name: /Registrar no diario/i })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /Registrar no diário/i })).toBeInTheDocument();
   });
 
   it("falls back to the ready card after closing the mobile composer", async () => {
@@ -291,7 +291,7 @@ describe("FoodSearchPanel", () => {
     await user.click(screen.getByRole("button", { name: /^Voltar$/i }));
 
     await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: /Registrar no diario/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog", { name: /Registrar no diário/i })).not.toBeInTheDocument();
     });
 
     expect(screen.getByText(/Pronto para registrar/i)).toBeInTheDocument();
@@ -303,7 +303,7 @@ describe("FoodSearchPanel", () => {
     const onAddDiaryItem = jest.fn();
     render(<OpenComposerPanel onAddDiaryItem={onAddDiaryItem} />);
 
-    await user.click(screen.getByRole("button", { name: /Adicionar ao diario/i }));
+    await user.click(screen.getByRole("button", { name: /Adicionar ao diário/i }));
 
     expect(onAddDiaryItem).toHaveBeenCalledTimes(1);
   });
@@ -321,7 +321,7 @@ describe("FoodSearchPanel", () => {
       expect(scrollArea.scrollTop).toBe(0);
     });
 
-    expect(screen.getByText(/Pao de Forma Artesano Integral - Pullman/i)).toBeInTheDocument();
+    expect(screen.getByText(/Pão de Forma Artesano Integral - Pullman/i)).toBeInTheDocument();
   });
 
   it("keeps mobile result selection in the ready card flow until the user confirms registration", async () => {
@@ -329,18 +329,18 @@ describe("FoodSearchPanel", () => {
     const onApplyFoodSelection = jest.fn();
     render(<SearchResultSelectionPanel onApplyFoodSelection={onApplyFoodSelection} />);
 
-    await user.click(screen.getByRole("button", { name: /Barra de Proteina - Sabor Trufa/i }));
+    await user.click(screen.getByRole("button", { name: /Barra de Proteína - Sabor Trufa/i }));
 
     expect(onApplyFoodSelection).toHaveBeenCalledWith(selectedFood, {
       openComposer: false,
       hideResults: true,
     });
-    expect(screen.queryByRole("dialog", { name: /Registrar no diario/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: /Registrar no diário/i })).not.toBeInTheDocument();
     expect(screen.getByText(/Pronto para registrar/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Registrar em Cafe da manha/i }));
+    await user.click(screen.getByRole("button", { name: /Registrar em Café da manhã/i }));
 
-    expect(screen.getByRole("dialog", { name: /Registrar no diario/i })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /Registrar no diário/i })).toBeInTheDocument();
   });
 
   it("clears the mobile selection when the user chooses to swap foods", async () => {
@@ -348,15 +348,15 @@ describe("FoodSearchPanel", () => {
     const onSwapFoodSelection = jest.fn();
     render(<SearchResultSelectionPanel onSwapFoodSelection={onSwapFoodSelection} />);
 
-    await user.click(screen.getByRole("button", { name: /Barra de Proteina - Sabor Trufa/i }));
+    await user.click(screen.getByRole("button", { name: /Barra de Proteína - Sabor Trufa/i }));
     expect(screen.getByText(/Pronto para registrar/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Trocar alimento/i }));
 
     expect(onSwapFoodSelection).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(/Pronto para registrar/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Barra de Proteina - Sabor Trufa/i })).toBeInTheDocument();
-    expect(screen.queryByRole("dialog", { name: /Registrar no diario/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Barra de Proteína - Sabor Trufa/i })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: /Registrar no diário/i })).not.toBeInTheDocument();
   });
 
   it("keeps desktop result selection opening the composer directly", async () => {
@@ -364,10 +364,10 @@ describe("FoodSearchPanel", () => {
     const onApplyFoodSelection = jest.fn();
     render(<SearchResultSelectionPanel isMobileLayout={false} onApplyFoodSelection={onApplyFoodSelection} />);
 
-    await user.click(screen.getByRole("button", { name: /Barra de Proteina - Sabor Trufa/i }));
+    await user.click(screen.getByRole("button", { name: /Barra de Proteína - Sabor Trufa/i }));
 
     expect(onApplyFoodSelection).toHaveBeenCalledWith(selectedFood, undefined);
-    expect(screen.getByText(/Use o compositor ao lado para finalizar o lancamento/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Adicionar ao diario/i })).toBeInTheDocument();
+    expect(screen.getByText(/Use o compositor ao lado para finalizar o lançamento/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Adicionar ao diário/i })).toBeInTheDocument();
   });
 });

@@ -225,7 +225,7 @@ export function useNutritionScreenActions({
         }),
       });
       if (!response.ok) {
-        await resolveRequestError(response, "Nao foi possivel registrar esse alimento.");
+        await resolveRequestError(response, "Não foi possível registrar esse alimento.");
         return;
       }
 
@@ -236,7 +236,7 @@ export function useNutritionScreenActions({
       resetSearchComposer(true);
       await Promise.all([loadDashboard(), loadHistory(1)]);
     } catch {
-      setMessage((current) => current ?? "Nao foi possivel registrar esse alimento.");
+      setMessage((current) => current ?? "Não foi possível registrar esse alimento.");
     }
   }
 
@@ -257,13 +257,13 @@ export function useNutritionScreenActions({
         method: "DELETE",
       });
       if (!response.ok) {
-        await resolveRequestError(response, "Nao foi possivel remover esse item do diario.");
+        await resolveRequestError(response, "Não foi possível remover esse item do diário.");
         return;
       }
 
       await Promise.all([loadDashboard(), loadHistory(historyPage)]);
     } catch {
-      setMessage((current) => current ?? "Nao foi possivel remover esse item do diario.");
+      setMessage((current) => current ?? "Não foi possível remover esse item do diário.");
     }
   }
 
@@ -304,7 +304,7 @@ export function useNutritionScreenActions({
         }),
       });
       if (!response.ok) {
-        await resolveRequestError(response, "Nao foi possivel atualizar a meta nutricional.");
+        await resolveRequestError(response, "Não foi possível atualizar a meta nutricional.");
         return;
       }
 
@@ -329,7 +329,7 @@ export function useNutritionScreenActions({
       setMessage("Meta nutricional atualizada.");
       await Promise.all([loadDashboard(), loadHistory(historyPage)]);
     } catch {
-      setMessage((current) => current ?? "Nao foi possivel atualizar a meta nutricional.");
+      setMessage((current) => current ?? "Não foi possível atualizar a meta nutricional.");
     } finally {
       setIsSavingGoal(false);
     }
@@ -342,7 +342,7 @@ export function useNutritionScreenActions({
     if (nextWaterIntake == null) {
       setMessage(
         hydrationMode === "absolute"
-          ? "Informe o total correto de agua antes de salvar."
+          ? "Informe o total correto de água antes de salvar."
           : "Informe quantos ml deseja adicionar antes de salvar.",
       );
       return;
@@ -368,7 +368,7 @@ export function useNutritionScreenActions({
         if (browserDashboard) hydrateDashboard(browserDashboard);
         if (browserHistory) hydrateHistory(browserHistory);
         setWaterDraft(hydrationMode === "absolute" ? String(Math.round(nextWaterIntake)) : "");
-        setMessage(hydrationMode === "absolute" ? "Total de agua corrigido." : "Ingestao de agua atualizada.");
+        setMessage(hydrationMode === "absolute" ? "Total de água corrigido." : "Ingestão de água atualizada.");
         return;
       }
 
@@ -377,17 +377,17 @@ export function useNutritionScreenActions({
         body: JSON.stringify({ waterIntakeMl: nextWaterIntake }),
       });
       if (!response.ok) {
-        await resolveRequestError(response, "Nao foi possivel atualizar a agua do dia.");
+        await resolveRequestError(response, "Não foi possível atualizar a água do dia.");
         return;
       }
 
       const payload = (await response.json()) as Partial<NutritionDashboardSnapshot>;
       hydrateDashboard(payload);
       setWaterDraft(hydrationMode === "absolute" ? String(Math.round(nextWaterIntake)) : "");
-      setMessage(hydrationMode === "absolute" ? "Total de agua corrigido." : "Ingestao de agua atualizada.");
+      setMessage(hydrationMode === "absolute" ? "Total de água corrigido." : "Ingestão de água atualizada.");
       await loadHistory(historyPage);
     } catch {
-      setMessage((current) => current ?? "Nao foi possivel atualizar a agua do dia.");
+      setMessage((current) => current ?? "Não foi possível atualizar a água do dia.");
     } finally {
       setIsUpdatingWater(false);
     }
@@ -410,7 +410,7 @@ export function useNutritionScreenActions({
         method: "DELETE",
       });
       if (!response.ok) {
-        await resolveRequestError(response, "Nao foi possivel descartar o plano agora.");
+        await resolveRequestError(response, "Não foi possível descartar o plano agora.");
         return;
       }
 
@@ -419,7 +419,7 @@ export function useNutritionScreenActions({
       setPlanRejectedFoods([]);
       setMessage("Plano alimentar descartado.");
     } catch {
-      setMessage((current) => current ?? "Nao foi possivel descartar o plano agora.");
+      setMessage((current) => current ?? "Não foi possível descartar o plano agora.");
     }
   }
 
@@ -428,7 +428,7 @@ export function useNutritionScreenActions({
 
     const requestedCalories = parseInputNumber(planCalories);
     if (!requestedCalories || requestedCalories < 500 || requestedCalories > 10000) {
-      setMessage("Informe uma meta calorica valida (500 a 10000).");
+      setMessage("Informe uma meta calórica válida (500 a 10000).");
       return;
     }
 
@@ -448,14 +448,14 @@ export function useNutritionScreenActions({
       });
 
       if (!response.ok) {
-        await resolveRequestError(response, "Nao foi possivel gerar opcoes de plano agora.");
+        await resolveRequestError(response, "Não foi possível gerar opções de plano agora.");
         return;
       }
 
       const payload = (await response.json()) as { plan?: MealPlan; mealPlan?: MealPlan };
       const generatedPlan = payload.plan ?? payload.mealPlan;
       if (!generatedPlan || !generatedPlan.meals.some((meal) => meal.items.length > 0)) {
-        setMessage("Nao foi possivel montar um cardapio com as escolhas atuais. Ajuste a meta ou limpe as rejeicoes.");
+        setMessage("Não foi possível montar um cardápio com as escolhas atuais. Ajuste a meta ou limpe as rejeições.");
         return;
       }
 
@@ -469,7 +469,7 @@ export function useNutritionScreenActions({
         if (browserDashboard) hydrateDashboard(browserDashboard);
       }
     } catch {
-      setMessage((current) => current ?? "Nao foi possivel gerar opcoes de plano agora.");
+      setMessage((current) => current ?? "Não foi possível gerar opções de plano agora.");
     } finally {
       setIsGeneratingPlan(false);
     }
@@ -554,7 +554,7 @@ export function useNutritionScreenActions({
       });
       setMessage("PDF gerado com sucesso.");
     } catch {
-      setMessage("Nao foi possivel gerar o PDF agora.");
+      setMessage("Não foi possível gerar o PDF agora.");
     } finally {
       setIsExportingPdf(false);
     }

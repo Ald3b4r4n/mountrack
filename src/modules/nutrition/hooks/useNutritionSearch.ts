@@ -137,7 +137,7 @@ export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowse
       }
 
       if (!response.ok) {
-        await resolveRequestError(response, "Nao consegui buscar alimentos agora. Tente novamente em instantes.");
+        await resolveRequestError(response, "Não consegui buscar alimentos agora. Tente novamente em instantes.");
         return;
       }
 
@@ -152,15 +152,15 @@ export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowse
       } else if (payload.externalPending) {
         setIsEnrichingExternal(true);
         if (!results.length) {
-          setMessage("Ainda nao achei esse item no catalogo. Vou complementar as referencias em segundo plano.");
+          setMessage("Ainda não achei esse item no catálogo. Vou complementar as referências em segundo plano.");
         } else {
-          setMessage("Resultados prontos. Se faltar algo, novas referencias entram em segundo plano.");
+          setMessage("Resultados prontos. Se faltar algo, novas referências entram em segundo plano.");
         }
       } else if (!results.length) {
-        setMessage("Nao encontrei esse alimento por enquanto.");
+        setMessage("Não encontrei esse alimento por enquanto.");
       }
     } catch {
-      setMessage((current) => current ?? "Nao consegui buscar alimentos agora. Tente novamente em instantes.");
+      setMessage((current) => current ?? "Não consegui buscar alimentos agora. Tente novamente em instantes.");
     } finally {
       if (searchRequestIdRef.current === requestId) {
         setIsSearching(false);
@@ -185,7 +185,7 @@ export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowse
         `/api/nutrition/foods/barcode/${encodeURIComponent(code)}`,
       );
       if (!response.ok) {
-        await resolveRequestError(response, "Nao consegui consultar esse codigo de barras agora.");
+        await resolveRequestError(response, "Não consegui consultar esse código de barras agora.");
         return;
       }
       setStorageMode(resolveUiStorageMode(response, canUseBrowserPersistence));
@@ -198,13 +198,13 @@ export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowse
         setSelectedFood(foundItem);
         setResultsVisible(false);
         setIsComposerOpen(true);
-        setMessage(`${foundItem.displayName ?? foundItem.name} encontrado pelo codigo de barras.`);
+        setMessage(`${foundItem.displayName ?? foundItem.name} encontrado pelo código de barras.`);
       } else {
         setLastSearchSource(payload.source ?? "none");
-        setMessage("Nao encontrei esse codigo de barras no catalogo.");
+        setMessage("Não encontrei esse código de barras no catálogo.");
       }
     } catch {
-      setMessage((current) => current ?? "Nao consegui consultar esse codigo de barras agora.");
+      setMessage((current) => current ?? "Não consegui consultar esse código de barras agora.");
     } finally {
       if (searchRequestIdRef.current === requestId) {
         setIsSearching(false);

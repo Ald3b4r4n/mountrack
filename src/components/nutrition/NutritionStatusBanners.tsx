@@ -41,14 +41,14 @@ export function NutritionStatusBanners({
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-[#86efac]">
                 <CheckCircle2 size={16} />
-                Registrado no diario
+                Registrado no diário
               </div>
               <p className="mt-2 text-[0.94rem] text-[var(--text-primary)]">
                 <strong>{successFeedback.foodLabel}</strong> entrou em{" "}
                 <strong>{successMealLabel ?? successFeedback.mealLabel}</strong>.
               </p>
               <p className="mt-1 text-[0.84rem] text-[var(--text-secondary)]">
-                Voce voltou para Hoje com esse bloco em foco. Abra o registro ou continue adicionando itens no mesmo ritmo.
+                Abra a refeição para revisar o lançamento ou continue adicionando itens.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {successMealLabel ? <span className="badge badge-success">{successMealLabel}</span> : null}
@@ -70,7 +70,7 @@ export function NutritionStatusBanners({
 
       {syncWarningMessage ? (
         <div className="glass-panel static-panel anim-enter mb-4 border-[#f59e0b]/26 bg-[#2a1806]/45 p-[0.95rem_1rem]">
-          <strong className="block text-[0.95rem] text-[#fcd34d]">Sincronizacao entre dispositivos desativada</strong>
+          <strong className="block text-[0.95rem] text-[#fcd34d]">Sincronização entre dispositivos desativada</strong>
           <p className="mt-1 text-[0.88rem] text-[var(--text-secondary)]">{syncWarningMessage}</p>
         </div>
       ) : null}

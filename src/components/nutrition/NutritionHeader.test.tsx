@@ -48,7 +48,7 @@ describe("NutritionHeader", () => {
         goal={goal}
         waterRatio={0}
         consumedRatio={26}
-        activeMealLabel="Cafe da manha"
+        activeMealLabel="Café da manhã"
         activeMealCalories={185}
         activeMealItemsCount={2}
         recentlyLoggedFoodLabel="Iogurte natural"
@@ -58,13 +58,13 @@ describe("NutritionHeader", () => {
     );
 
     expect(screen.getByRole("heading", { name: /^Hoje$/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Dashboard/i })).toBeInTheDocument();
-    expect(screen.getByText(/Diario, agua e metas no mesmo fluxo./i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Painel/i })).toBeInTheDocument();
+    expect(screen.getByText(/Diário, água e metas no mesmo fluxo./i)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Consumido/i }));
 
     expect(onOpenConsumedSummary).toHaveBeenCalledTimes(1);
-    expect(screen.getByText(/Ver bloco/i)).toBeInTheDocument();
+    expect(screen.getByText(/Ver refeição/i)).toBeInTheDocument();
     expect(screen.getByText(/^Agora$/i)).toBeInTheDocument();
     expect(screen.getByText(/2 item\(ns\)/i)).toBeInTheDocument();
     expect(screen.getByText(/Atualizado/i)).toBeInTheDocument();
@@ -72,9 +72,9 @@ describe("NutritionHeader", () => {
     expect(screen.getByText(/Iogurte natural/i)).toBeInTheDocument();
     expect(screen.getByText(/^26%$/i)).toBeInTheDocument();
     expect(screen.getByText(/^Livre$/i)).toBeInTheDocument();
-    expect(screen.getByText(/Agua \+ metas/i)).toBeInTheDocument();
-    expect(screen.getByText(/Cafe da manha em foco/i)).toBeInTheDocument();
-    expect(screen.getByText(/Agua 0%/i)).toBeInTheDocument();
+    expect(screen.getByText(/^Água e metas$/i)).toBeInTheDocument();
+    expect(screen.getByText(/Café da manhã em foco/i)).toBeInTheDocument();
+    expect(screen.getByText(/Água 0%/i)).toBeInTheDocument();
     expect(screen.getByText(/Kcal 26%/i)).toBeInTheDocument();
     expect(screen.getByText(/1482 kcal livres/i)).toBeInTheDocument();
     expect(screen.getByText(/Meta 140 g/i)).toBeInTheDocument();

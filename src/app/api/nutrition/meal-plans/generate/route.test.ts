@@ -56,7 +56,7 @@ describe("POST /api/nutrition/meal-plans/generate", () => {
       totalCalories: 2100,
       meals: [
         {
-          name: "Cafe da manha",
+          name: "Café da manhã",
           mealType: "breakfast",
           targetCalories: 500,
           totalCalories: 480,
@@ -100,7 +100,7 @@ describe("POST /api/nutrition/meal-plans/generate", () => {
       totalCalories: 2100,
       meals: [
         {
-          name: "Cafe da manha",
+          name: "Café da manhã",
           mealType: "breakfast",
           targetCalories: 500,
           totalCalories: 0,

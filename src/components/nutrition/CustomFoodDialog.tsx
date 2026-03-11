@@ -91,7 +91,7 @@ export function CustomFoodDialog({
 
   async function handleSave() {
     if (!authUser) {
-      setError("Sua sessao da nutricao nao foi validada. Entre novamente e tente de novo.");
+      setError("Sua sessão da nutrição não foi validada. Entre novamente e tente de novo.");
       return;
     }
 
@@ -121,7 +121,7 @@ export function CustomFoodDialog({
 
       if (!response.ok) {
         throw new Error(
-          await getNutritionErrorMessage(response, "Nao consegui salvar esse alimento agora."),
+          await getNutritionErrorMessage(response, "Não consegui salvar esse alimento agora."),
         );
       }
 
@@ -131,10 +131,10 @@ export function CustomFoodDialog({
         return;
       }
 
-      throw new Error("Nao consegui salvar esse alimento agora.");
+      throw new Error("Não consegui salvar esse alimento agora.");
     } catch (saveError) {
       setError(
-        saveError instanceof Error ? saveError.message : "Nao consegui salvar esse alimento agora.",
+        saveError instanceof Error ? saveError.message : "Não consegui salvar esse alimento agora.",
       );
     } finally {
       setIsSaving(false);
@@ -190,7 +190,7 @@ export function CustomFoodDialog({
             Criar alimento manual
           </h3>
           <p id={descriptionId} style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-            Salve um alimento seu para reencontrar depois na busca e registrar no diario mais rapido.
+            Salve um alimento próprio para reencontrar depois na busca e registrar no diário com mais rapidez.
           </p>
         </div>
 
@@ -215,7 +215,7 @@ export function CustomFoodDialog({
               className="input-field"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Ex.: Pao de queijo da casa"
+              placeholder="Ex.: Pão de queijo da casa"
               style={{ width: "100%" }}
             />
           </label>
@@ -235,7 +235,7 @@ export function CustomFoodDialog({
               className="input-field"
               value={brand}
               onChange={(event) => setBrand(event.target.value)}
-              placeholder="Ex.: Padaria do Joao"
+              placeholder="Ex.: Padaria do João"
               style={{ width: "100%" }}
             />
           </label>
@@ -271,7 +271,7 @@ export function CustomFoodDialog({
                   marginBottom: "0.25rem",
                 }}
               >
-                Porcao base (g ou ml)
+                Porção base (g ou ml)
               </span>
               <input
                 inputMode="decimal"
@@ -313,7 +313,7 @@ export function CustomFoodDialog({
                   marginBottom: "0.25rem",
                 }}
               >
-                Proteinas (g)
+                Proteínas (g)
               </span>
               <input
                 inputMode="decimal"
