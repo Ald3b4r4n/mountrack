@@ -12,7 +12,7 @@ const AREA_ITEMS: Array<{
     key: "today",
     label: "Hoje",
     icon: CalendarDays,
-    description: "Diario, agua e historico recente",
+    description: "Diário, água e histórico recente",
   },
   {
     key: "search",

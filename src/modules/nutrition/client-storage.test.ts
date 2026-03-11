@@ -73,7 +73,7 @@ describe("nutrition client storage", () => {
       totalCalories: 1502,
       meals: [
         {
-          name: "Cafe da manha",
+          name: "Café da manhã",
           mealType: "breakfast",
           targetCalories: 400,
           totalCalories: 406,

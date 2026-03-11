@@ -37,7 +37,7 @@ export function GoalPanel({
   return (
     <CollapsibleSection
       title="Meta nutricional"
-      subtitle="Defina calorias, agua e macros para orientar seu dia e o cardapio."
+      subtitle="Defina calorias, água e macros para orientar seu dia e o cardápio."
       badge={<span className="badge badge-success">{OBJECTIVE_LABELS[goalObjectiveDraft]}</span>}
     >
       <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-3">
@@ -50,7 +50,7 @@ export function GoalPanel({
           />
         </Field>
 
-        <Field label="Agua (ml)">
+        <Field label="Água (ml)">
           <input
             className="input-field"
             inputMode="numeric"
@@ -59,7 +59,7 @@ export function GoalPanel({
           />
         </Field>
 
-        <Field label="Proteina">
+        <Field label="Proteína">
           <input
             className="input-field"
             inputMode="decimal"
@@ -93,7 +93,7 @@ export function GoalPanel({
             onChange={(e) => onChangeObjective(e.target.value as NutritionObjective)}
           >
             <option value="lose">Emagrecimento</option>
-            <option value="maintain">Manutencao</option>
+            <option value="maintain">Manutenção</option>
             <option value="gain">Ganho de peso</option>
           </select>
         </Field>
@@ -102,12 +102,12 @@ export function GoalPanel({
       <div className="my-4 grid grid-cols-[repeat(auto-fit,minmax(110px,1fr))] gap-2.5">
         <MiniValue label="Meta" value={formatCalories(goal.targetCalories)} accent="var(--accent-secondary)" />
         <MiniValue
-          label="Agua"
+          label="Água"
           value={formatMilliliters(goal.targetWaterMl ?? defaultWaterTarget)}
           accent="#38bdf8"
         />
         <MiniValue label="Hoje" value={formatCalories(summary.consumedCalories)} accent="var(--accent-primary)" />
-        <MiniValue label="Proteina" value={formatGrams(summary.protein)} accent="#34d399" />
+        <MiniValue label="Proteína" value={formatGrams(summary.protein)} accent="#34d399" />
         <MiniValue label="Carbo" value={formatGrams(summary.carbs)} accent="#22d3ee" />
         <MiniValue label="Gordura" value={formatGrams(summary.fat)} accent="#fb7185" />
       </div>

@@ -74,8 +74,8 @@ describe("diary by date route", () => {
       waterIntakeMl: 600,
       items: [],
       mealDefinitions: [
-        { key: "breakfast", label: "Cafe da manha", isDefault: true },
-        { key: "lunch", label: "Almoco", isDefault: true },
+        { key: "breakfast", label: "Café da manhã", isDefault: true },
+        { key: "lunch", label: "Almoço", isDefault: true },
         { key: "snack", label: "Lanche", isDefault: true },
         { key: "dinner", label: "Jantar", isDefault: true },
       ],

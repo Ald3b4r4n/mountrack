@@ -67,10 +67,10 @@ function formatAmpouleAgeLabel(daysOpen: number | null) {
   }
 
   if (daysOpen === 1) {
-    return 'aberta ha 1 dia';
+    return 'aberta há 1 dia';
   }
 
-  return `aberta ha ${daysOpen} dias`;
+  return `aberta há ${daysOpen} dias`;
 }
 
 function buildAmpouleActivationState(totalDoseApplications: number, dosesPerAmpoule: number) {
@@ -80,7 +80,7 @@ function buildAmpouleActivationState(totalDoseApplications: number, dosesPerAmpo
   if (safeTotalDoseApplications === 0) {
     return {
       actionLabel: 'Iniciar ampola atual',
-      helperText: 'A ampola atual comeca zerada a partir da data escolhida.',
+      helperText: 'A ampola atual começa zerada a partir da data escolhida.',
       completedAmpoulesCount: 0,
       activeAmpouleStartDoseApplications: 0,
     };
@@ -91,7 +91,7 @@ function buildAmpouleActivationState(totalDoseApplications: number, dosesPerAmpo
   if (remainder === 0) {
     return {
       actionLabel: 'Iniciar ampola atual',
-      helperText: 'As aplicacoes anteriores ja fecharam ampolas completas. A proxima ampola comeca zerada.',
+      helperText: 'As aplicações anteriores já fecharam ampolas completas. A próxima ampola começa zerada.',
       completedAmpoulesCount: safeTotalDoseApplications / safeDosesPerAmpoule,
       activeAmpouleStartDoseApplications: safeTotalDoseApplications,
     };
@@ -99,7 +99,7 @@ function buildAmpouleActivationState(totalDoseApplications: number, dosesPerAmpo
 
   return {
     actionLabel: 'Assumir ampola atual',
-    helperText: 'O sistema preserva o progresso ja em andamento da ampola atual quando voce iniciar o controle manual.',
+    helperText: 'O sistema preserva o progresso já em andamento da ampola atual quando você iniciar o controle manual.',
     completedAmpoulesCount: Math.floor(safeTotalDoseApplications / safeDosesPerAmpoule),
     activeAmpouleStartDoseApplications: safeTotalDoseApplications - remainder,
   };
@@ -152,7 +152,7 @@ export default function AmpoulesPage() {
 
         setLogSummaries(logs);
       } catch (error) {
-        console.error('Erro ao carregar configuracao de ampola', error);
+        console.error('Erro ao carregar configuração de ampola', error);
       } finally {
         setLoading(false);
       }
@@ -258,8 +258,8 @@ export default function AmpoulesPage() {
       setSaved(true);
       window.setTimeout(() => setSaved(false), 1800);
     } catch (error) {
-      console.error('Erro ao salvar configuracao de ampola', error);
-      alert('Nao foi possivel salvar a configuracao da ampola.');
+      console.error('Erro ao salvar configuração de ampola', error);
+      alert('Não foi possível salvar a configuração da ampola.');
     } finally {
       setSaving(false);
     }
@@ -291,10 +291,10 @@ export default function AmpoulesPage() {
       setCompletedAmpoulesCount(savedSettings.completedAmpoulesCount);
       setAmpouleOpenedOnInput(savedSettings.activeAmpouleOpenedOn ?? openedOn);
       await refreshHistory(savedSettings.activeAmpouleRecordId);
-      setFeedback('Ampola atual iniciada e adicionada ao historico.');
+      setFeedback('Ampola atual iniciada e adicionada ao histórico.');
     } catch (error) {
       console.error('Erro ao iniciar ampola atual', error);
-      alert('Nao foi possivel iniciar a ampola atual.');
+      alert('Não foi possível iniciar a ampola atual.');
     } finally {
       setSaving(false);
     }
@@ -330,10 +330,10 @@ export default function AmpoulesPage() {
       setCompletedAmpoulesCount(savedSettings.completedAmpoulesCount);
       setAmpouleOpenedOnInput(getTodayDateInputValue());
       await refreshHistory(savedSettings.activeAmpouleRecordId);
-      setFeedback('Ampola atual finalizada e registrada no historico.');
+      setFeedback('Ampola atual finalizada e registrada no histórico.');
     } catch (error) {
       console.error('Erro ao finalizar ampola atual', error);
-      alert('Nao foi possivel finalizar a ampola atual.');
+      alert('Não foi possível finalizar a ampola atual.');
     } finally {
       setSaving(false);
     }
@@ -346,12 +346,12 @@ export default function AmpoulesPage() {
     const nextClosedOn = editingClosedOn || entry.closedOn;
 
     if (!nextOpenedOn || !nextClosedOn) {
-      alert('Preencha as datas de abertura e fechamento para corrigir o historico.');
+      alert('Preencha as datas de abertura e fechamento para corrigir o histórico.');
       return;
     }
 
     if (nextClosedOn < nextOpenedOn) {
-      alert('A data de fechamento nao pode ser anterior a data de abertura.');
+      alert('A data de fechamento não pode ser anterior à data de abertura.');
       return;
     }
 
@@ -366,10 +366,10 @@ export default function AmpoulesPage() {
       });
       await refreshHistory();
       resetHistoryEditor();
-      setFeedback(`Historico da ampola #${entry.sequenceNumber} corrigido.`);
+      setFeedback(`Histórico da ampola #${entry.sequenceNumber} corrigido.`);
     } catch (error) {
-      console.error('Erro ao corrigir historico da ampola', error);
-      alert('Nao foi possivel corrigir o historico da ampola.');
+      console.error('Erro ao corrigir histórico da ampola', error);
+      alert('Não foi possível corrigir o histórico da ampola.');
     } finally {
       setSaving(false);
     }
@@ -407,10 +407,10 @@ export default function AmpoulesPage() {
       setAmpouleOpenedOnInput(savedSettings.activeAmpouleOpenedOn ?? getTodayDateInputValue());
       await refreshHistory(savedSettings.activeAmpouleRecordId);
       resetHistoryEditor();
-      setFeedback(`Ampola #${entry.sequenceNumber} reaberta para correcao.`);
+      setFeedback(`Ampola #${entry.sequenceNumber} reaberta para correção.`);
     } catch (error) {
-      console.error('Erro ao reabrir ampola do historico', error);
-      alert('Nao foi possivel reabrir essa ampola.');
+      console.error('Erro ao reabrir ampola do histórico', error);
+      alert('Não foi possível reabrir essa ampola.');
     } finally {
       setSaving(false);
     }
@@ -434,7 +434,7 @@ export default function AmpoulesPage() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="15 18 9 12 15 6" />
               </svg>
-              Voltar ao Dashboard
+              Voltar ao painel
             </Link>
             <h1 className="glow-text" style={{ fontSize: '2rem', marginBottom: '0.4rem' }}>Ampolas</h1>
             <p className="page-subtitle">
@@ -455,10 +455,10 @@ export default function AmpoulesPage() {
         >
           <section className="glass-panel anim-enter anim-delay-1" style={{ padding: '2rem' }}>
             <div style={{ marginBottom: '1.5rem' }}>
-              <p className="stat-label" style={{ marginBottom: '0.7rem' }}>Configuracao da ampola</p>
+              <p className="stat-label" style={{ marginBottom: '0.7rem' }}>Configuração da ampola</p>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>
-                Defina quantas doses cabem na sua ampola atual. Se voce ja aplicava antes de usar o app,
-                informe esse volume para manter os cards coerentes.
+                Defina quantas doses cabem em cada ampola. Se você já aplicava antes de usar o app,
+                informe esse total para manter o painel correto.
               </p>
             </div>
 
@@ -510,8 +510,8 @@ export default function AmpoulesPage() {
                 <p style={{ marginTop: '0.45rem', color: 'var(--text-muted)', fontSize: '0.84rem', lineHeight: 1.55 }}>
                   {hasActiveAmpoule
                     ? stats.isCurrentAmpouleComplete
-                      ? 'O limite de aplicacoes foi atingido. Voce pode finalizar a ampola manualmente quando quiser.'
-                      : 'A ampola atual continua aberta e o dashboard passa a respeitar essa abertura.'
+                      ? 'O limite de aplicações foi atingido. Você pode encerrar a ampola quando quiser.'
+                      : 'A ampola atual segue aberta e esse ciclo já entra nos cálculos do painel.'
                     : activationState.helperText}
                 </p>
                 {hasActiveAmpoule && currentAmpouleSequence ? (
@@ -541,7 +541,7 @@ export default function AmpoulesPage() {
 
               <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.5rem' }}>
                 <button type="submit" className="btn-primary" disabled={loading || saving}>
-                  {saving ? 'Salvando...' : saved ? 'Configuracao salva' : 'Salvar configuracao'}
+                  {saving ? 'Salvando...' : saved ? 'Configuração salva' : 'Salvar configuração'}
                 </button>
                 {!hasActiveAmpoule ? (
                   <button type="button" className="btn-outline" disabled={loading || saving} onClick={handleStartAmpoule}>
@@ -565,7 +565,7 @@ export default function AmpoulesPage() {
 
           <aside style={{ display: 'grid', gap: '1rem' }} className="anim-enter anim-delay-2">
             <div className="glass-panel" style={{ padding: '1.5rem' }}>
-              <p className="stat-label" style={{ marginBottom: '0.7rem' }}>Impacto no dashboard</p>
+              <p className="stat-label" style={{ marginBottom: '0.7rem' }}>Impacto no painel</p>
               <div style={{ display: 'grid', gap: '0.85rem' }}>
                 <div>
                   <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>Ampolas contabilizadas</span>
@@ -592,16 +592,16 @@ export default function AmpoulesPage() {
             </div>
 
             <div className="glass-panel" style={{ padding: '1.5rem' }}>
-              <p className="stat-label" style={{ marginBottom: '0.7rem' }}>Leitura atual</p>
+              <p className="stat-label" style={{ marginBottom: '0.7rem' }}>Resumo atual</p>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>
                 {hasActiveAmpoule
                   ? activeAmpouleOpenedLabel
-                    ? `A ampola atual esta aberta desde ${activeAmpouleOpenedLabel} e sincronizada no seu perfil.`
-                    : 'A ampola atual esta aberta e sincronizada no seu perfil.'
-                  : 'Nenhuma ampola esta aberta agora. Quando voce iniciar a proxima, o dashboard vai usar essa abertura.'}
+                    ? `A ampola atual está aberta desde ${activeAmpouleOpenedLabel} e sincronizada no seu perfil.`
+                    : 'A ampola atual está aberta e sincronizada no seu perfil.'
+                  : 'Nenhuma ampola está aberta agora. Quando você iniciar a próxima, o painel passará a considerar esse ciclo.'}
               </p>
               <p style={{ marginTop: '0.75rem', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.55 }}>
-                Cada nova ampola aberta passa a ganhar um registro proprio de abertura e fechamento no Firebase.
+                Cada ampola fica registrada com a data de abertura e, quando houver, a data de encerramento.
               </p>
               {legacyHistoryGap > 0 ? (
                 <div className="badge badge-warning" style={{ marginTop: '0.9rem' }}>
@@ -611,10 +611,10 @@ export default function AmpoulesPage() {
             </div>
 
             <div className="glass-panel" style={{ padding: '1.5rem' }}>
-              <p className="stat-label" style={{ marginBottom: '0.7rem' }}>Historico por ampola</p>
+              <p className="stat-label" style={{ marginBottom: '0.7rem' }}>Histórico por ampola</p>
               {historyEntries.length === 0 ? (
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>
-                  Ainda nao ha ampolas com trilha detalhada. Assim que voce iniciar a proxima, ela aparece aqui.
+                  Quando você iniciar a próxima ampola, ela aparecerá aqui com abertura e encerramento.
                 </p>
               ) : (
                 <div style={{ display: 'grid', gap: '0.85rem' }}>
@@ -652,7 +652,7 @@ export default function AmpoulesPage() {
                         </p>
                         {entry.status === 'active' ? (
                           <p style={{ marginTop: '0.45rem', color: 'var(--accent-secondary)', fontSize: '0.78rem' }}>
-                            Corrija a data da ampola ativa no bloco superior.
+                            Corrija a data da ampola ativa na seção superior.
                           </p>
                         ) : null}
                         {entry.status === 'closed' ? (
@@ -664,7 +664,7 @@ export default function AmpoulesPage() {
                               onClick={() => (isEditingEntry ? resetHistoryEditor() : startHistoryCorrection(entry))}
                               disabled={saving}
                             >
-                              {isEditingEntry ? 'Cancelar correcao' : 'Corrigir datas'}
+                              {isEditingEntry ? 'Cancelar correção' : 'Corrigir datas'}
                             </button>
                             {!hasActiveAmpoule && isLatestClosedEntry ? (
                               <button
@@ -708,7 +708,7 @@ export default function AmpoulesPage() {
                               onClick={() => void handleSaveHistoryCorrection(entry)}
                               disabled={saving}
                             >
-                              {saving ? 'Salvando...' : 'Salvar correcao'}
+                              {saving ? 'Salvando...' : 'Salvar correção'}
                             </button>
                           </div>
                         ) : null}

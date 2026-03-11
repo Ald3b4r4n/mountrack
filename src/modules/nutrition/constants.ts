@@ -3,8 +3,8 @@ import type { DefaultMealType, MealDefinition, NutritionObjective } from "./doma
 export const MEAL_ORDER: DefaultMealType[] = ["breakfast", "lunch", "snack", "dinner"];
 
 export const MEAL_LABELS: Record<DefaultMealType, string> = {
-  breakfast: "Cafe da manha",
-  lunch: "Almoco",
+  breakfast: "Café da manhã",
+  lunch: "Almoço",
   snack: "Lanche",
   dinner: "Jantar",
 };
@@ -17,12 +17,12 @@ export const DEFAULT_MEAL_DEFINITIONS: MealDefinition[] = MEAL_ORDER.map((mealKe
 
 export const OBJECTIVE_LABELS: Record<NutritionObjective, string> = {
   lose: "Emagrecimento",
-  maintain: "Manutencao",
+  maintain: "Manutenção",
   gain: "Ganho de peso",
 };
 
 export const MACRO_LABELS = {
-  protein: "Proteina",
+  protein: "Proteína",
   carbs: "Carboidratos",
   fat: "Gorduras",
 };

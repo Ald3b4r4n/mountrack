@@ -14,19 +14,19 @@ const WORKSPACE_META: Record<
 > = {
   today: {
     badge: "Hoje",
-    title: "Diario de hoje",
-    description: "Acompanhe suas refeicoes, agua e historico recente em um unico painel.",
-    status: "Diario ativo",
+    title: "Diário de hoje",
+    description: "Acompanhe suas refeições, água e histórico recente em um único painel.",
+    status: "Resumo ativo",
   },
   search: {
     badge: "Buscar",
     title: "Buscar alimentos",
-    description: "Pesquise no catalogo, confira os detalhes e registre cada item no diario.",
+    description: "Pesquise no catálogo, confira os detalhes e registre cada item no diário.",
   },
   planning: {
     badge: "Planejar",
     title: "Planejamento nutricional",
-    description: "Defina suas metas e monte um cardapio diario alinhado ao seu objetivo.",
+    description: "Defina suas metas e monte um cardápio diário alinhado ao seu objetivo.",
     status: "Planejamento",
   },
 };

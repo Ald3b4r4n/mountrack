@@ -397,7 +397,7 @@ export function buildMealPlanPdfMarkup({
 
       <div class="footer-copy">
         <span><strong>${escapeHtml(NUTRITION_COMPANY_SIGNATURE)}</strong> / ${escapeHtml(NUTRITION_COMPANY_URL)}</span>
-        <span>Gerado automaticamente pelo módulo de nutrição.</span>
+        <span>Gerado pelo MounTrack.</span>
       </div>
     </main>
   `;

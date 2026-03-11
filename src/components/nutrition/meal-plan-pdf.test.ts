@@ -12,7 +12,7 @@ const mealPlan: MealPlan = {
   meals: [
     {
       mealType: "breakfast",
-      name: "Cafe da manha",
+      name: "Café da manhã",
       targetCalories: 400,
       totalCalories: 410,
       items: [
@@ -39,7 +39,7 @@ describe("meal plan pdf html", () => {
       plan: mealPlan,
       targetCalories: 1500,
       objective: "maintain",
-      dateLabel: "7 de marco de 2026",
+      dateLabel: "7 de março de 2026",
       totals: {
         calories: 1540,
         protein: 120,
@@ -51,7 +51,7 @@ describe("meal plan pdf html", () => {
       plan: mealPlan,
       targetCalories: 1500,
       objective: "maintain",
-      dateLabel: "7 de marco de 2026",
+      dateLabel: "7 de março de 2026",
       totals: {
         calories: 1540,
         protein: 120,

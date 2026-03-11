@@ -84,7 +84,7 @@ describe("CustomFoodDialog", () => {
       clone: () => ({ json: async () => ({ code: "nutrition_auth_unauthorized" }) }),
     } as unknown as Response);
     getNutritionErrorMessageMock.mockResolvedValue(
-      "Sua sessao da nutricao expirou ou nao foi validada. Entre novamente e tente de novo.",
+      "Sua sessão da nutrição expirou ou não foi validada. Entre novamente e tente de novo.",
     );
 
     render(
@@ -100,7 +100,7 @@ describe("CustomFoodDialog", () => {
     await user.click(screen.getByRole("button", { name: /Criar alimento/i }));
 
     expect(
-      await screen.findByText(/Sua sessao da nutricao expirou ou nao foi validada/i),
+      await screen.findByText(/Sua sessão da nutrição expirou ou não foi validada/i),
     ).toBeInTheDocument();
   });
 });

@@ -66,10 +66,10 @@ function formatAmpouleAgeLabel(daysOpen: number | null): string | null {
   }
 
   if (daysOpen === 1) {
-    return 'aberta ha 1 dia';
+    return 'aberta há 1 dia';
   }
 
-  return `aberta ha ${daysOpen} dias`;
+  return `aberta há ${daysOpen} dias`;
 }
 
 export default function Home() {
@@ -211,7 +211,11 @@ export default function Home() {
             const notesLower = doseLog.notes.toLowerCase();
             const triggerWords = ['enjoo', 'náusea', 'nausea', 'dor ', 'fadiga', 'cansaço', 'cansaco', 'refluxo', 'azia', 'vômit', 'vomit'];
             const found = triggerWords.filter((word) => notesLower.includes(word));
-            setSymptomAlert(found.length > 0 ? `Notei sintomas recentes (${found.join(', ')}). Lembre-se de manter a hidratação alta e refeições leves!` : null);
+            setSymptomAlert(
+              found.length > 0
+                ? `Se houve sintomas recentes (${found.join(', ')}), vale reforçar a hidratação e preferir refeições leves.`
+                : null,
+            );
           } else setSymptomAlert(null);
         } else {
           setCurrentDose(null); setDaysSince(null); setDaysUntil(null); setLastDoseDate(null); setNextDoseTarget(null); setCountdown(null); setSymptomAlert(null);
@@ -318,7 +322,7 @@ export default function Home() {
               <div className="anim-enter" style={{ marginBottom: '1.5rem', background: 'rgba(234, 179, 8, 0.1)', border: '1px solid rgba(234, 179, 8, 0.3)', padding: '1rem', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <span style={{ fontSize: '1.5rem' }}>💡</span>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.4 }}>
-                  <strong style={{ color: '#EAB308' }}>Insight MounTrack:</strong><br />
+                  <strong style={{ color: '#EAB308' }}>Observação do dia:</strong><br />
                   {symptomAlert}
                 </p>
               </div>
@@ -353,7 +357,7 @@ export default function Home() {
                   <div>
                     <p className="stat-label" style={{ marginBottom: 0 }}>Evolução do Peso</p>
                     <p style={{ marginTop: '0.35rem', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
-                      Datas mapeadas diretamente na linha de progresso
+                      As datas mais recentes aparecem na linha do tempo.
                     </p>
                   </div>
                   <Link href="/analytics" style={{ color: 'var(--accent-primary)', fontSize: '0.8rem', textDecoration: 'none', fontWeight: 500 }}>
@@ -506,7 +510,7 @@ export default function Home() {
                 <p style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
                   {hasActiveAmpoule && currentAmpouleSequence
                     ? `${completedAmpoulesCount} fechada(s) + ampola #${currentAmpouleSequence} ativa.`
-                    : `${completedAmpoulesCount} ampola(s) fechada(s) no historico.`}
+                    : `${completedAmpoulesCount} ampola(s) fechada(s) no histórico.`}
                 </p>
               </article>
 
@@ -519,7 +523,7 @@ export default function Home() {
                 <div className="progress-track" style={{ marginTop: '1rem' }}>
                   <div className="progress-fill" style={{ width: `${currentAmpouleProgress}%` }}></div>
                 </div>
-                <p style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>Doses já usadas da ampola atual.</p>
+                <p style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>Aplicações já registradas nesta ampola.</p>
                 <p style={{ marginTop: '0.45rem', color: 'var(--accent-secondary)', fontSize: '0.78rem' }}>
                   {hasActiveAmpoule && currentAmpouleSequence
                     ? `Ampola #${currentAmpouleSequence}${ampouleOpenedLabel ? ` aberta em ${ampouleOpenedLabel}` : ''}${activeAmpouleAgeLabel ? `, ${activeAmpouleAgeLabel}` : ''}.`
@@ -553,7 +557,7 @@ export default function Home() {
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', background: 'rgba(6, 182, 212, 0.08)', border: '1px solid rgba(6, 182, 212, 0.2)', padding: '0.75rem', borderRadius: 'var(--radius-md)' }}>
                         <span style={{ fontSize: '1rem' }}>✨</span>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                          <strong style={{ color: 'var(--accent-secondary)' }}>Previsão IA:</strong><br />
+                          <strong style={{ color: 'var(--accent-secondary)' }}>Estimativa:</strong><br />
                           No seu ritmo atual, você atingirá a meta em <b>{predictedDate}</b>.
                         </div>
                       </div>

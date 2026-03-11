@@ -84,7 +84,7 @@ describe("BarcodeScannerDialog", () => {
   it("renders an accessible dialog and moves initial focus to the close button", async () => {
     render(<BarcodeScannerDialog open onClose={jest.fn()} onDetected={jest.fn()} />);
 
-    const dialog = await screen.findByRole("dialog", { name: /Leitor de codigo de barras/i });
+    const dialog = await screen.findByRole("dialog", { name: /Leitor de código de barras/i });
     const closeButton = screen.getByRole("button", { name: /^Fechar$/i });
 
     expect(dialog).toHaveAttribute("aria-modal", "true");
@@ -96,7 +96,7 @@ describe("BarcodeScannerDialog", () => {
 
     render(<BarcodeScannerDialog open onClose={jest.fn()} onDetected={jest.fn()} />);
 
-    expect(await screen.findByText(/Permissao da camera negada/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Permissão da câmera negada/i)).toBeInTheDocument();
   });
 
   it("falls back gracefully when the browser does not expose camera access", async () => {
@@ -108,7 +108,7 @@ describe("BarcodeScannerDialog", () => {
     render(<BarcodeScannerDialog open onClose={jest.fn()} onDetected={jest.fn()} />);
 
     expect(
-      await screen.findByText(/Este navegador nao liberou a camera aqui/i),
+      await screen.findByText(/Este navegador não liberou a câmera aqui/i),
     ).toBeInTheDocument();
     expect(startMock).not.toHaveBeenCalled();
   });
@@ -179,7 +179,7 @@ describe("BarcodeScannerDialog", () => {
 
     await waitFor(() => {
       expect(
-        screen.queryByRole("dialog", { name: /Leitor de codigo de barras/i }),
+        screen.queryByRole("dialog", { name: /Leitor de código de barras/i }),
       ).not.toBeInTheDocument();
     });
 
