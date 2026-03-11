@@ -9,7 +9,7 @@ const mealDefinitions: MealDefinition[] = [
   { key: "custom:ceia", label: "Ceia", isDefault: false },
 ];
 
-function renderDiaryPanel() {
+function renderDiaryPanel({ recentlyLoggedFoodLabel = null }: { recentlyLoggedFoodLabel?: string | null } = {}) {
   const setActiveDiaryView = jest.fn();
   const setDiaryPage = jest.fn();
   const handleSelectHydrationMode = jest.fn();
@@ -65,6 +65,7 @@ function renderDiaryPanel() {
       historyTotalPages={1}
       loadHistory={jest.fn()}
       onManageMeal={jest.fn()}
+      recentlyLoggedFoodLabel={recentlyLoggedFoodLabel}
     />,
   );
 
@@ -123,5 +124,19 @@ describe("DiaryPanel", () => {
     await user.click(screen.getByRole("button", { name: /Trocar refeicao/i }));
 
     expect(onOpenMealChooser).toHaveBeenCalledTimes(1);
+  });
+
+  it("surfaces the latest logged item inside the selected meal card on mobile", async () => {
+    const user = userEvent.setup();
+    const { onOpenSearchForMeal } = renderDiaryPanel({ recentlyLoggedFoodLabel: "Banana prata" });
+
+    await user.click(screen.getByRole("button", { name: /Registro do dia/i }));
+
+    expect(screen.getByText(/Ultimo registro/i)).toBeInTheDocument();
+    expect(screen.getByText(/Banana prata/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Adicionar mais/i }));
+
+    expect(onOpenSearchForMeal).toHaveBeenCalledWith("custom:ceia");
   });
 });

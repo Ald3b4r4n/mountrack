@@ -1257,6 +1257,9 @@ export function NutritionScreen() {
         historyTotalPages={historyTotalPages}
         loadHistory={(page) => void loadHistory(page)}
         onManageMeal={openManageMealDialog}
+        recentlyLoggedFoodLabel={
+          activeArea === "today" && isMobileLayout ? activeMealRecentlyLoggedFoodLabel : null
+        }
         open={isMobileLayout ? todayDiarySectionOpen : undefined}
         onOpenChange={isMobileLayout ? handleTodayDiarySectionOpenChange : undefined}
         sectionRef={isMobileLayout ? todayDiarySectionRef : undefined}

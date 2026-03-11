@@ -177,6 +177,70 @@ function OpenComposerWithFoodSwap() {
   );
 }
 
+function SearchResultSelectionPanel({
+  isMobileLayout = true,
+  onApplyFoodSelection = jest.fn(),
+}: {
+  isMobileLayout?: boolean;
+  onApplyFoodSelection?: (food: FoodItem, options?: { openComposer?: boolean; hideResults?: boolean }) => void;
+} = {}) {
+  const [currentFood, setCurrentFood] = useState<FoodItem | null>(null);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [resultsVisible, setResultsVisible] = useState(true);
+
+  function handleApplyFoodSelection(
+    food: FoodItem,
+    options?: { openComposer?: boolean; hideResults?: boolean },
+  ) {
+    onApplyFoodSelection(food, options);
+    setCurrentFood(food);
+    setComposerOpen(options?.openComposer ?? true);
+    setResultsVisible(!(options?.hideResults ?? true));
+  }
+
+  return (
+    <FoodSearchPanel
+      storageMode="database"
+      isMobileLayout={isMobileLayout}
+      searchQuery="banana"
+      onSearchQueryChange={jest.fn()}
+      onSearch={jest.fn()}
+      isSearching={false}
+      isEnrichingExternal={false}
+      barcodeQuery=""
+      onBarcodeQueryChange={jest.fn()}
+      onBarcodeLookup={jest.fn()}
+      onOpenScanner={jest.fn()}
+      searchSourceLabel="Catalogo do app"
+      searchFeedback="Resultados prontos"
+      resultsVisible={resultsVisible}
+      searchResults={[selectedFood]}
+      resultState={{ title: "Resultados", text: "Selecione um alimento." }}
+      onApplyFoodSelection={handleApplyFoodSelection}
+      onCustomFoodOpen={jest.fn()}
+      onClearSearch={jest.fn()}
+      selectedFood={currentFood}
+      isComposerOpen={composerOpen}
+      selectedFoodTotals={currentFood ? { protein: 33.33, carbs: 31.67, fat: 15 } : null}
+      onOpenComposer={() => setComposerOpen(true)}
+      onCloseComposer={() => setComposerOpen(false)}
+      onReopenSearchResults={() => {
+        setComposerOpen(false);
+        setResultsVisible(true);
+      }}
+      quantity="100"
+      onQuantityChange={jest.fn()}
+      unit="g"
+      onUnitChange={jest.fn()}
+      mealOptions={mealOptions}
+      mealType="breakfast"
+      onMealTypeChange={jest.fn()}
+      onAddDiaryItem={jest.fn()}
+      searchCatalogBadge="Catalogo sincronizado"
+    />
+  );
+}
+
 describe("FoodSearchPanel", () => {
   beforeEach(() => {
     window.scrollTo = jest.fn();
@@ -245,5 +309,36 @@ describe("FoodSearchPanel", () => {
     });
 
     expect(screen.getByText(/Pao de Forma Artesano Integral - Pullman/i)).toBeInTheDocument();
+  });
+
+  it("keeps mobile result selection in the ready card flow until the user confirms registration", async () => {
+    const user = userEvent.setup();
+    const onApplyFoodSelection = jest.fn();
+    render(<SearchResultSelectionPanel onApplyFoodSelection={onApplyFoodSelection} />);
+
+    await user.click(screen.getByRole("button", { name: /Barra de Proteina - Sabor Trufa/i }));
+
+    expect(onApplyFoodSelection).toHaveBeenCalledWith(selectedFood, {
+      openComposer: false,
+      hideResults: true,
+    });
+    expect(screen.queryByRole("dialog", { name: /Registrar no diario/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/Pronto para registrar/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Registrar em Cafe da manha/i }));
+
+    expect(screen.getByRole("dialog", { name: /Registrar no diario/i })).toBeInTheDocument();
+  });
+
+  it("keeps desktop result selection opening the composer directly", async () => {
+    const user = userEvent.setup();
+    const onApplyFoodSelection = jest.fn();
+    render(<SearchResultSelectionPanel isMobileLayout={false} onApplyFoodSelection={onApplyFoodSelection} />);
+
+    await user.click(screen.getByRole("button", { name: /Barra de Proteina - Sabor Trufa/i }));
+
+    expect(onApplyFoodSelection).toHaveBeenCalledWith(selectedFood, undefined);
+    expect(screen.getByText(/Use o compositor ao lado para finalizar o lancamento/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Adicionar ao diario/i })).toBeInTheDocument();
   });
 });

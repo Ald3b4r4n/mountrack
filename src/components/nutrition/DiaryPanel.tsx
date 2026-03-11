@@ -59,6 +59,7 @@ interface DiaryPanelProps {
   historyTotalPages: number;
   loadHistory: (page: number) => void;
   onManageMeal?: (meal: MealDefinition) => void;
+  recentlyLoggedFoodLabel?: string | null;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   sectionRef?: React.Ref<HTMLElement>;
@@ -118,6 +119,7 @@ export function DiaryPanel({
   historyTotalPages,
   loadHistory,
   onManageMeal,
+  recentlyLoggedFoodLabel,
   open,
   onOpenChange,
   sectionRef,
@@ -359,13 +361,24 @@ export function DiaryPanel({
                 </div>
                 <span className="badge badge-success whitespace-nowrap">{formatCalories(activeMealCalories)}</span>
               </div>
+              {recentlyLoggedFoodLabel ? (
+                <div className="mt-3 rounded-[0.9rem] border border-[#34d399]/16 bg-[#062032]/82 p-2.5">
+                  <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[#86efac]">
+                    Ultimo registro
+                  </span>
+                  <p className="mt-1 text-[0.82rem] text-[var(--text-secondary)]">
+                    <strong className="text-[var(--text-primary)]">{recentlyLoggedFoodLabel}</strong> acabou de entrar em{" "}
+                    <strong className="text-[var(--text-primary)]">{activeMealLabel.toLowerCase()}</strong>.
+                  </p>
+                </div>
+              ) : null}
               <div className="mt-3 grid gap-2">
                 {onOpenSearchForMeal ? (
                   <button
                     onClick={() => onOpenSearchForMeal(activeDiaryMeal)}
                     className="btn-primary min-h-[2.85rem] w-full"
                   >
-                    Adicionar alimento
+                    {recentlyLoggedFoodLabel ? "Adicionar mais" : "Adicionar alimento"}
                   </button>
                 ) : null}
                 {onOpenMealChooser || canManageActiveMeal ? (

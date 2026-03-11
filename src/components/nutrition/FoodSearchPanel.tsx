@@ -22,6 +22,10 @@ import {
 } from "@/modules/nutrition/ui-helpers";
 
 type SearchMode = "name" | "barcode" | "custom";
+type FoodSelectionOptions = {
+  openComposer?: boolean;
+  hideResults?: boolean;
+};
 
 interface FoodSearchPanelProps {
   storageMode: string;
@@ -41,7 +45,7 @@ interface FoodSearchPanelProps {
   resultsVisible: boolean;
   searchResults: FoodItem[];
   resultState: { title: string; text: string };
-  onApplyFoodSelection: (food: FoodItem) => void;
+  onApplyFoodSelection: (food: FoodItem, options?: FoodSelectionOptions) => void;
   onCustomFoodOpen: () => void;
   onClearSearch: () => void;
   selectedFood: FoodItem | null;
@@ -325,7 +329,15 @@ export function FoodSearchPanel({
   );
 
   function handleSelectFood(food: FoodItem) {
-    onApplyFoodSelection(food);
+    onApplyFoodSelection(
+      food,
+      isMobileLayout
+        ? {
+            openComposer: false,
+            hideResults: true,
+          }
+        : undefined,
+    );
   }
 
   function handleMobileComposerSubmit() {
