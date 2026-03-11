@@ -229,7 +229,7 @@ export default function Analytics() {
         <header className="anim-enter" style={{ marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', position: 'relative', zIndex: 1 }}>
           <div>
             <Logo size="md" />
-            <p className="page-subtitle" style={{ marginTop: '0.25rem' }}>Acompanhe sua evolução de peso e dosagem.</p>
+            <p className="page-subtitle" style={{ marginTop: '0.25rem' }}>Acompanhe peso, dose e ritmo da jornada.</p>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             {/* Botão de Compartilhar / Print da Evolução */}
@@ -252,7 +252,7 @@ export default function Analytics() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
               <Logo size="sm" />
               <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                Meu progresso registrado no <strong>mountrack.vercel.app</strong>
+                Meu progresso no <strong>MounTrack</strong>
               </div>
             </div>
           )}
@@ -286,10 +286,10 @@ export default function Analytics() {
               </defs>
 
               {/* Linhas de grade horizontais */}
-              {gridLines.map((val, i) => {
+              {gridLines.map((val) => {
                 const y = PAD_TOP + (1 - (val - minW) / range) * (SVG_H - PAD_TOP - PAD_BOTTOM);
                 return (
-                  <g key={i}>
+                  <g key={`grid-line-${val.toFixed(1)}-${Math.round(y)}`}>
                     <line x1={PAD_X} y1={y} x2={SVG_W - PAD_X} y2={y} stroke="rgba(255,255,255,0.05)" strokeDasharray="4 4" />
                     <text x={PAD_X - 8} y={y + 5} textAnchor="end" fill="var(--text-muted)" fontSize="14" fontFamily="DM Sans">{val.toFixed(1)}</text>
                   </g>
@@ -304,7 +304,7 @@ export default function Analytics() {
               
               {/* Pontos nos vértices e labels */}
               {getPointCoords().map((pt, i) => (
-                <g key={i}>
+                <g key={`${pt.date}-${pt.weight}-${pt.x}`}>
                   {/* Halo no último ponto */}
                   {pt.isLast && <circle cx={pt.x} cy={pt.y} r="16" fill="var(--accent-primary)" opacity="0.15" filter="url(#dotGlow)" />}
                   
@@ -332,12 +332,12 @@ export default function Analytics() {
               <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                 Registrado em {new Date(chartLogs[0].date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}
               </p>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Adicione mais registros para ver o gráfico de evolução.</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Adicione mais registros para visualizar a curva de evolução.</p>
             </div>
           ) : (
             <div style={{ height: '250px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
               <Image src="/images/analytics-empty.png" alt="Ilustração de gráfico" width={180} height={135} style={{ opacity: 0.5 }} />
-              <p style={{ color: 'var(--text-muted)' }}>Cadastre seu primeiro registro para ver os gráficos.</p>
+              <p style={{ color: 'var(--text-muted)' }}>Registre seu primeiro dado para liberar os gráficos.</p>
             </div>
           )}
         </div>
@@ -347,25 +347,25 @@ export default function Analytics() {
           <div className={`glass-panel ${!isCapturing ? 'anim-enter anim-delay-1' : ''}`} style={{ padding: '1.5rem', opacity: 1, transform: 'none' }}>
             <p className="stat-label">Peso Atual</p>
             <p className="stat-number" style={{ fontSize: '2.25rem', color: 'var(--text-primary)' }}>{currentWeight > 0 ? currentWeight.toFixed(1) : '—'}<span className="stat-unit">kg</span></p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>Último registro</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>Último peso salvo</p>
           </div>
 
           <div className={`glass-panel ${!isCapturing ? 'anim-enter anim-delay-2' : ''}`} style={{ padding: '1.5rem', opacity: 1, transform: 'none' }}>
             <p className="stat-label">Média Semanal</p>
             <p className="stat-number" style={{ fontSize: '2.25rem', color: 'var(--accent-primary)' }}>{avgWeeklyLoss}<span className="stat-unit">kg</span></p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>Perda por semana</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>Média de perda por semana</p>
           </div>
           
           <div className={`glass-panel ${!isCapturing ? 'anim-enter anim-delay-3' : ''}`} style={{ padding: '1.5rem', opacity: 1, transform: 'none' }}>
             <p className="stat-label">Perda Total</p>
             <p className="stat-number" style={{ fontSize: '2.25rem', color: totalLoss > 0 ? 'var(--accent-primary)' : 'var(--text-primary)' }}>{totalLoss}<span className="stat-unit">kg</span></p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>Desde o início</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>Desde o primeiro registro</p>
           </div>
           
           <div className={`glass-panel ${!isCapturing ? 'anim-enter anim-delay-4' : ''}`} style={{ padding: '1.5rem', opacity: 1, transform: 'none' }}>
             <p className="stat-label">Dose Atual</p>
             <p className="stat-number" style={{ fontSize: '2.25rem' }}>{currentDose > 0 ? currentDose.toFixed(1) : '—'}<span className="stat-unit">mg</span></p>
-            {currentDose > 0 && <span className="badge badge-success" style={{ marginTop: '0.5rem' }}>Ativa</span>}
+            {currentDose > 0 && <span className="badge badge-success" style={{ marginTop: '0.5rem' }}>Em uso</span>}
           </div>
         </section>
 

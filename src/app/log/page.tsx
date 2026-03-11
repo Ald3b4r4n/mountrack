@@ -82,8 +82,8 @@ export default function LogDose() {
         </Link>
         
         <div className="glass-panel anim-enter anim-delay-1" style={{ padding: '2.5rem', position: 'relative', zIndex: 1 }}>
-          <h1 className="glow-text" style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>Novo Registro</h1>
-          <p className="page-subtitle" style={{ marginBottom: '1.5rem' }}>Escolha o tipo de registro que deseja fazer.</p>
+          <h1 className="glow-text" style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>Novo registro</h1>
+          <p className="page-subtitle" style={{ marginBottom: '1.5rem' }}>Escolha o que deseja registrar hoje.</p>
 
           {/* ===== SELETOR DE TIPO ===== */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', marginBottom: '2rem' }}>
@@ -109,7 +109,7 @@ export default function LogDose() {
               }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-              Dose Semanal
+              Dose
             </button>
             <button
               type="button"
@@ -133,7 +133,7 @@ export default function LogDose() {
               }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v18"/><path d="M8 7l4-4 4 4"/><path d="M8 17l4 4 4-4"/></svg>
-              Só Pesagem
+              Pesagem
             </button>
             <button
               type="button"
@@ -157,7 +157,7 @@ export default function LogDose() {
               }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
-              Diário Livre
+              Nota
             </button>
           </div>
 
@@ -165,21 +165,21 @@ export default function LogDose() {
             
             {/* Data — sempre presente */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <label htmlFor="date" className="label">Data</label>
+              <label htmlFor="date" className="label">Data do registro</label>
               <input type="date" id="date" value={date} onChange={(e) => setDate(e.target.value)} required className="input-field" />
             </div>
 
             {/* Dose — só aparece se for registro de dose */}
             {logType === 'dose' && (
               <div className="anim-enter" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label htmlFor="dose" className="label">Dose Aplicada (mg)</label>
+                <label htmlFor="dose" className="label">Dose aplicada (mg)</label>
                 <select id="dose" value={dose} onChange={(e) => setDose(e.target.value)} className="input-field">
-                  <option value="2.5">2.5 mg (Início)</option>
+                  <option value="2.5">2.5 mg (início)</option>
                   <option value="5.0">5.0 mg</option>
                   <option value="7.5">7.5 mg</option>
                   <option value="10.0">10.0 mg</option>
                   <option value="12.5">12.5 mg</option>
-                  <option value="15.0">15.0 mg (Máxima)</option>
+                  <option value="15.0">15.0 mg (máxima)</option>
                 </select>
               </div>
             )}
@@ -187,19 +187,19 @@ export default function LogDose() {
             {/* Peso — não aparece se for só diário */}
             {logType !== 'note' && (
               <div className="anim-enter" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label htmlFor="weight" className="label">Peso Atual (kg)</label>
+                <label htmlFor="weight" className="label">Peso atual (kg)</label>
                 <input type="number" id="weight" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="Ex: 87.5" required className="input-field" />
               </div>
             )}
 
             {/* Notas — sempre presente para o diário */}
             <div className="anim-enter" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <label htmlFor="notes" className="label">Efeitos Colaterais / Notas</label>
-              <textarea id="notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Como você está se sentindo? Dieta, colaterais, conquistas..." className="input-field" style={{ resize: 'none' }} />
+              <label htmlFor="notes" className="label">Observações e sintomas</label>
+              <textarea id="notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Como foi o dia, sintomas, alimentação, treino ou algo importante para lembrar." className="input-field" style={{ resize: 'none' }} />
             </div>
 
             <button type="submit" disabled={loading} className="btn-primary" style={{ marginTop: '0.5rem', padding: '1rem', fontSize: '1rem', opacity: loading ? 0.7 : 1 }}>
-              {loading ? 'Salvando...' : logType === 'dose' ? 'Salvar Dose' : logType === 'weight' ? 'Salvar Pesagem' : 'Salvar Diário'}
+              {loading ? 'Salvando...' : logType === 'dose' ? 'Salvar dose' : logType === 'weight' ? 'Salvar pesagem' : 'Salvar nota'}
             </button>
           </form>
         </div>
