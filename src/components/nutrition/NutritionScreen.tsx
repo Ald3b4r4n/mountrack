@@ -246,6 +246,7 @@ export function NutritionScreen() {
     openSelectedFoodComposer,
     closeSelectedFoodComposer,
     reopenSearchResults,
+    swapSelectedFood,
   } = sActions;
 
   const { waterDraft, isUpdatingWater, hydrationMode } = hState;
@@ -1298,6 +1299,7 @@ export function NutritionScreen() {
       onOpenComposer={openSelectedFoodComposer}
       onCloseComposer={closeSelectedFoodComposer}
       onReopenSearchResults={reopenSearchResults}
+      onSwapFoodSelection={swapSelectedFood}
       quantity={quantity}
       onQuantityChange={setQuantity}
       unit={unit}

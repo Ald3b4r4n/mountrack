@@ -69,6 +69,7 @@ function ClosedComposerPanel({ onAddDiaryItem = jest.fn() }: { onAddDiaryItem?: 
       onOpenComposer={() => setComposerOpen(true)}
       onCloseComposer={() => setComposerOpen(false)}
       onReopenSearchResults={jest.fn()}
+      onSwapFoodSelection={jest.fn()}
       quantity="100"
       onQuantityChange={jest.fn()}
       unit="g"
@@ -112,6 +113,7 @@ function OpenComposerPanel({ onAddDiaryItem = jest.fn() }: { onAddDiaryItem?: ()
       onOpenComposer={() => setComposerOpen(true)}
       onCloseComposer={() => setComposerOpen(false)}
       onReopenSearchResults={jest.fn()}
+      onSwapFoodSelection={jest.fn()}
       quantity="100"
       onQuantityChange={jest.fn()}
       unit="g"
@@ -163,6 +165,7 @@ function OpenComposerWithFoodSwap() {
         onOpenComposer={jest.fn()}
         onCloseComposer={jest.fn()}
         onReopenSearchResults={jest.fn()}
+        onSwapFoodSelection={jest.fn()}
         quantity="39"
         onQuantityChange={jest.fn()}
         unit="g"
@@ -180,9 +183,11 @@ function OpenComposerWithFoodSwap() {
 function SearchResultSelectionPanel({
   isMobileLayout = true,
   onApplyFoodSelection = jest.fn(),
+  onSwapFoodSelection = jest.fn(),
 }: {
   isMobileLayout?: boolean;
   onApplyFoodSelection?: (food: FoodItem, options?: { openComposer?: boolean; hideResults?: boolean }) => void;
+  onSwapFoodSelection?: () => void;
 } = {}) {
   const [currentFood, setCurrentFood] = useState<FoodItem | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
@@ -196,6 +201,13 @@ function SearchResultSelectionPanel({
     setCurrentFood(food);
     setComposerOpen(options?.openComposer ?? true);
     setResultsVisible(!(options?.hideResults ?? true));
+  }
+
+  function handleSwapFoodSelection() {
+    onSwapFoodSelection();
+    setCurrentFood(null);
+    setComposerOpen(false);
+    setResultsVisible(true);
   }
 
   return (
@@ -228,6 +240,7 @@ function SearchResultSelectionPanel({
         setComposerOpen(false);
         setResultsVisible(true);
       }}
+      onSwapFoodSelection={handleSwapFoodSelection}
       quantity="100"
       onQuantityChange={jest.fn()}
       unit="g"
@@ -328,6 +341,22 @@ describe("FoodSearchPanel", () => {
     await user.click(screen.getByRole("button", { name: /Registrar em Cafe da manha/i }));
 
     expect(screen.getByRole("dialog", { name: /Registrar no diario/i })).toBeInTheDocument();
+  });
+
+  it("clears the mobile selection when the user chooses to swap foods", async () => {
+    const user = userEvent.setup();
+    const onSwapFoodSelection = jest.fn();
+    render(<SearchResultSelectionPanel onSwapFoodSelection={onSwapFoodSelection} />);
+
+    await user.click(screen.getByRole("button", { name: /Barra de Proteina - Sabor Trufa/i }));
+    expect(screen.getByText(/Pronto para registrar/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Trocar alimento/i }));
+
+    expect(onSwapFoodSelection).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/Pronto para registrar/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Barra de Proteina - Sabor Trufa/i })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: /Registrar no diario/i })).not.toBeInTheDocument();
   });
 
   it("keeps desktop result selection opening the composer directly", async () => {

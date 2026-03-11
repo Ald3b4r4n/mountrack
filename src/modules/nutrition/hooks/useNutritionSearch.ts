@@ -235,6 +235,13 @@ export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowse
     setIsComposerOpen(false);
   }
 
+  function swapSelectedFood() {
+    setSelectedFood(null);
+    setResultsVisible(true);
+    setIsComposerOpen(false);
+    setMessage(null);
+  }
+
   return {
     state: {
       searchQuery,
@@ -271,6 +278,7 @@ export function useNutritionSearch(activeUser: NutritionSearchUser, canUseBrowse
       openSelectedFoodComposer,
       closeSelectedFoodComposer,
       reopenSearchResults,
+      swapSelectedFood,
     },
   };
 }

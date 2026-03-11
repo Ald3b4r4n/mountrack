@@ -54,6 +54,7 @@ interface FoodSearchPanelProps {
   onOpenComposer: () => void;
   onCloseComposer: () => void;
   onReopenSearchResults: () => void;
+  onSwapFoodSelection: () => void;
   quantity: string;
   onQuantityChange: (val: string) => void;
   unit: NutritionUnit;
@@ -219,6 +220,7 @@ export function FoodSearchPanel({
   onOpenComposer,
   onCloseComposer,
   onReopenSearchResults,
+  onSwapFoodSelection,
   quantity,
   onQuantityChange,
   unit,
@@ -230,6 +232,7 @@ export function FoodSearchPanel({
 }: FoodSearchPanelProps) {
   const [searchMode, setSearchMode] = useState<SearchMode>("name");
   const composerScrollRef = useRef<HTMLDivElement | null>(null);
+  const resultsPanelRef = useRef<HTMLDivElement | null>(null);
   const skipScrollRestoreRef = useRef(false);
   const portalTarget = typeof document !== "undefined" ? document.body : null;
 
@@ -345,6 +348,24 @@ export function FoodSearchPanel({
     onAddDiaryItem();
   }
 
+  function handleSwapFoodSelection() {
+    onSwapFoodSelection();
+    if (!isMobileLayout) return;
+
+    window.requestAnimationFrame(() => {
+      const node = resultsPanelRef.current;
+      if (!node || typeof node.scrollIntoView !== "function") {
+        return;
+      }
+
+      try {
+        node.scrollIntoView({ block: "start", behavior: "smooth" });
+      } catch {
+        node.scrollIntoView();
+      }
+    });
+  }
+
   const mobileComposer =
     isMobileLayout && selectedFood && isComposerOpen && portalTarget
       ? createPortal(
@@ -402,9 +423,7 @@ export function FoodSearchPanel({
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => {
-                        onReopenSearchResults();
-                      }}
+                      onClick={handleSwapFoodSelection}
                       className="rounded-full bg-[#07182a]/92 px-3.5 py-2 text-[0.85rem] text-[var(--text-primary)] ring-1 ring-[#17344d]/78 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#34d399]/35 active:scale-[0.985]"
                     >
                       Trocar alimento
@@ -647,12 +666,10 @@ export function FoodSearchPanel({
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    onReopenSearchResults();
-                  }}
+                  onClick={handleSwapFoodSelection}
                   className="btn-outline min-w-auto px-3 py-2"
                 >
-                  Trocar
+                  Trocar alimento
                 </button>
               </div>
             </div>
@@ -661,6 +678,7 @@ export function FoodSearchPanel({
 
         {hasSearchSession ? (
           <div
+            ref={resultsPanelRef}
             className={`grid gap-4 ${
               isMobileLayout ? "grid-cols-1" : "grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]"
             }`}
