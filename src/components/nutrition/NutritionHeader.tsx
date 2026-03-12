@@ -112,7 +112,7 @@ function MobileSummaryTile({
         ? "border-[#38bdf8]/12 bg-[linear-gradient(180deg,rgba(8,20,36,0.92),rgba(6,17,30,0.72))] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
         : "border-white/7 bg-[linear-gradient(180deg,rgba(7,18,35,0.92),rgba(6,17,30,0.72))] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]";
   const tileClassName = [
-    `rounded-[1rem] border p-3 ${toneClassName}`,
+    `min-w-0 overflow-hidden rounded-[1rem] border p-3 ${toneClassName}`,
     onClick
       ? "w-full text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#34d399]/35 active:scale-[0.985]"
       : "",
@@ -122,18 +122,18 @@ function MobileSummaryTile({
 
   const content = (
     <>
-      <div className="flex items-start justify-between gap-2">
-        <span className="block text-[0.66rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">{label}</span>
+      <div className="flex min-w-0 items-start justify-between gap-2">
+        <span className="block min-w-0 truncate text-[0.66rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">{label}</span>
         {meta ? (
-          <span className="rounded-full border border-white/8 bg-white/4 px-2 py-0.5 text-[0.68rem] text-[var(--text-secondary)]">
+          <span className="shrink-0 rounded-full border border-white/8 bg-white/4 px-2 py-0.5 text-[0.68rem] text-[var(--text-secondary)]">
             {meta}
           </span>
         ) : null}
       </div>
       <strong className={`mt-1.5 block text-[1rem] leading-none ${accentClass}`}>{value}</strong>
       {hint ? (
-        <span className="mt-2 flex items-center gap-1 text-[0.76rem] text-[var(--text-secondary)]">
-          {hint}
+        <span className="mt-2 flex min-w-0 items-center gap-1 text-[0.76rem] text-[var(--text-secondary)]">
+          <span className="min-w-0 truncate">{hint}</span>
           {onClick ? <ChevronRight size={14} className="shrink-0 text-[var(--accent-primary)]" /> : null}
         </span>
       ) : null}
@@ -170,14 +170,14 @@ function MobileActiveMealCard({
 }) {
   return (
     <article
-      className={`rounded-[1rem] border bg-[linear-gradient(145deg,rgba(6,21,39,0.92),rgba(4,16,30,0.82))] p-3 shadow-[0_18px_36px_rgba(4,20,38,0.18)] ${
+      className={`min-w-0 overflow-hidden rounded-[1rem] border bg-[linear-gradient(145deg,rgba(6,21,39,0.92),rgba(4,16,30,0.82))] p-3 shadow-[0_18px_36px_rgba(4,20,38,0.18)] ${
         recentlyLoggedFoodLabel ? "border-[#34d399]/26 shadow-[0_18px_40px_rgba(8,64,52,0.22)]" : "border-[#34d399]/14"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-[0.7rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Agora</p>
-          <strong className="mt-1 block text-[1rem] text-[var(--text-primary)]">{mealLabel}</strong>
+          <strong className="mt-1 block truncate text-[1rem] text-[var(--text-primary)]">{mealLabel}</strong>
           <div className="mt-2 flex flex-wrap gap-2">
             <span className="rounded-full border border-white/8 bg-white/4 px-2.5 py-1 text-[0.74rem] text-[var(--text-secondary)]">
               {mealItemsCount > 0 ? `${mealItemsCount} item(ns)` : "Sem itens"}
@@ -192,7 +192,7 @@ function MobileActiveMealCard({
         <span className="badge badge-success shrink-0 whitespace-nowrap">{formatCalories(mealCalories)}</span>
       </div>
       {recentlyLoggedFoodLabel ? (
-        <div className="mt-3 flex items-center gap-2.5 rounded-[0.9rem] border border-[#34d399]/18 bg-[#062032]/88 px-3 py-2">
+        <div className="mt-3 flex min-w-0 items-center gap-2.5 overflow-hidden rounded-[0.9rem] border border-[#34d399]/18 bg-[#062032]/88 px-3 py-2">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#34d399]/12 text-[#86efac]">
             <CheckCircle2 size={15} />
           </span>
@@ -206,12 +206,12 @@ function MobileActiveMealCard({
       ) : null}
       <div className={`mt-3 grid gap-2 ${onOpenMeal && onAddToMeal ? "grid-cols-2" : "grid-cols-1"}`}>
         {onOpenMeal ? (
-          <button type="button" onClick={onOpenMeal} className="btn-outline min-h-[2.85rem] w-full">
+          <button type="button" onClick={onOpenMeal} className="btn-outline min-h-[2.85rem] min-w-0 w-full">
             Ver refeição
           </button>
         ) : null}
         {onAddToMeal ? (
-          <button type="button" onClick={onAddToMeal} className="btn-primary min-h-[2.85rem] w-full">
+          <button type="button" onClick={onAddToMeal} className="btn-primary min-h-[2.85rem] min-w-0 w-full">
             Adicionar
           </button>
         ) : null}
@@ -287,8 +287,8 @@ function MobileSummaryStrip({
   recentlyLoggedFoodLabel?: string | null;
 }) {
   return (
-    <div className="grid gap-2.5">
-      <div className="grid grid-cols-2 gap-2.5">
+    <div className="grid min-w-0 gap-2.5">
+      <div className="grid min-w-0 grid-cols-2 gap-2.5">
         <MobileSummaryTile
           label="Consumido"
           value={formatCalories(summary.consumedCalories)}
@@ -315,16 +315,16 @@ function MobileSummaryStrip({
         onAddToMeal={onAddToActiveMeal}
         recentlyLoggedFoodLabel={recentlyLoggedFoodLabel}
       />
-      <div className="glass-panel static-panel rounded-[1rem] border-[#34d399]/14 bg-[linear-gradient(145deg,rgba(5,20,38,0.9),rgba(6,22,45,0.7))] p-3.5">
+      <div className="glass-panel static-panel min-w-0 overflow-hidden rounded-[1rem] border-[#34d399]/14 bg-[linear-gradient(145deg,rgba(5,20,38,0.9),rgba(6,22,45,0.7))] p-3.5">
         <div className="mb-3 flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <p className="text-[0.7rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Hoje</p>
             <strong className="block text-[1rem] text-[var(--text-primary)]">Água e metas</strong>
-            <span className="mt-1.5 inline-flex items-center rounded-full border border-white/8 bg-white/4 px-2.5 py-1 text-[0.74rem] text-[var(--text-secondary)]">
-              {activeMealLabel} em foco
+            <span className="mt-1.5 inline-flex max-w-full items-center overflow-hidden rounded-full border border-white/8 bg-white/4 px-2.5 py-1 text-[0.74rem] text-[var(--text-secondary)]">
+              <span className="truncate">{activeMealLabel} em foco</span>
             </span>
           </div>
-          <div className="flex flex-col items-end gap-1.5">
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
             <span className="rounded-full border border-[#38bdf8]/18 bg-[#38bdf8]/10 px-2.5 py-1 text-[0.72rem] text-sky-200">
               Água {Math.round(waterRatio)}%
             </span>
@@ -333,11 +333,11 @@ function MobileSummaryStrip({
             </span>
           </div>
         </div>
-        <div className="grid grid-cols-[minmax(0,1.25fr)_minmax(0,0.95fr)] gap-2.5">
-          <div className="rounded-[0.95rem] border border-white/7 bg-[linear-gradient(180deg,rgba(7,18,35,0.92),rgba(6,17,30,0.72))] p-3">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1.25fr)_minmax(0,0.95fr)] gap-2.5">
+          <div className="min-w-0 rounded-[0.95rem] border border-white/7 bg-[linear-gradient(180deg,rgba(7,18,35,0.92),rgba(6,17,30,0.72))] p-3">
             <div className="mb-1.5 flex items-center justify-between gap-3 text-[0.78rem] text-[var(--text-secondary)]">
               <span>Água</span>
-              <span>
+              <span className="shrink-0 text-right">
                 {formatMilliliters(summary.waterIntakeMl)} / {formatMilliliters(summary.targetWaterMl)}
               </span>
             </div>
@@ -353,7 +353,7 @@ function MobileSummaryStrip({
                 : `Faltam ${formatMilliliters(Math.max(summary.targetWaterMl - summary.waterIntakeMl, 0))}`}
             </span>
           </div>
-          <div className="rounded-[0.95rem] border border-white/7 bg-[linear-gradient(180deg,rgba(7,18,35,0.92),rgba(6,17,30,0.72))] p-3">
+          <div className="min-w-0 rounded-[0.95rem] border border-white/7 bg-[linear-gradient(180deg,rgba(7,18,35,0.92),rgba(6,17,30,0.72))] p-3">
             <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Alvo kcal</span>
             <strong className="mt-2 block text-[1rem] text-[var(--text-primary)]">
               {formatCalories(summary.targetCalories)}
