@@ -1,4 +1,5 @@
 import type { FoodItem } from "@/modules/nutrition/domain/types";
+import { SUPPLEMENT_BRAND_PROFILES } from "@/modules/nutrition/data/supplement-brands";
 import {
   buildOpenFoodFactsSearchTerms,
   rankOpenFoodFactsResults,
@@ -29,10 +30,16 @@ describe("open food facts search helpers", () => {
   });
 
   it("adds brand-specific supplement queries when the search is a known brand", () => {
-    const terms = buildOpenFoodFactsSearchTerms("Optimum Nutrition");
+    const wheyBrandProfile = SUPPLEMENT_BRAND_PROFILES.find((profile) =>
+      profile.preferredQueries.some((query) => query.includes("whey")),
+    );
 
-    expect(terms).toContain("Optimum Nutrition");
-    expect(terms.some((term) => term.includes("Gold Standard") || term.includes("whey"))).toBe(true);
+    expect(wheyBrandProfile).toBeDefined();
+
+    const terms = buildOpenFoodFactsSearchTerms(wheyBrandProfile!.brand);
+
+    expect(terms).toContain(wheyBrandProfile!.brand);
+    expect(terms.some((term) => term.includes("whey"))).toBe(true);
   });
 
   it("ranks protein bars ahead of unrelated matches", () => {
