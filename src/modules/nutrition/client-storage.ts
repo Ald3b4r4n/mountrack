@@ -5,6 +5,7 @@ import type {
   DiaryHistoryEntry,
   DiaryItemSnapshot,
   MealDefinition,
+  MealType,
   MealPlan,
   NutritionGoal,
 } from "@/modules/nutrition/domain/types";
@@ -25,6 +26,7 @@ interface NutritionBrowserDiary {
 interface NutritionBrowserState {
   goal?: NutritionGoal;
   mealPlan?: MealPlan | null;
+  focusedMeal?: MealType;
   diaries?: Record<string, NutritionBrowserDiary>;
 }
 
@@ -323,5 +325,16 @@ export function saveNutritionMealPlanToBrowser(userId: string, mealPlan: MealPla
 export function clearNutritionMealPlanFromBrowser(userId: string): void {
   const state = readRawState(userId);
   state.mealPlan = null;
+  writeRawState(userId, state);
+}
+
+export function loadNutritionFocusedMealFromBrowser(userId: string): MealType | null {
+  const state = readRawState(userId);
+  return typeof state.focusedMeal === "string" ? state.focusedMeal : null;
+}
+
+export function saveNutritionFocusedMealToBrowser(userId: string, mealType: MealType): void {
+  const state = readRawState(userId);
+  state.focusedMeal = mealType;
   writeRawState(userId, state);
 }

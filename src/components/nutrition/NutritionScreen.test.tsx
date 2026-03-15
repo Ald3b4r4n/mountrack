@@ -8,6 +8,7 @@ import { useHydration } from "@/modules/nutrition/hooks/useHydration";
 import { useNutritionDashboard } from "@/modules/nutrition/hooks/useNutritionDashboard";
 import { useNutritionSearch } from "@/modules/nutrition/hooks/useNutritionSearch";
 import { useNutritionScreenActions } from "@/components/nutrition/useNutritionScreenActions";
+import { saveNutritionFocusedMealToBrowser } from "@/modules/nutrition/client-storage";
 import type { DailySummary, NutritionGoal } from "@/modules/nutrition/domain/types";
 
 jest.mock("@/components/nutrition/NutritionScreenPreviewGate", () => ({
@@ -90,6 +91,7 @@ describe("NutritionScreen", () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date(2026, 2, 15, 12, 30, 0));
+    window.localStorage.clear();
 
     Object.defineProperty(window, "matchMedia", {
       writable: true,
@@ -214,5 +216,13 @@ describe("NutritionScreen", () => {
       expect(screen.getByRole("button", { name: "Buscar" })).toHaveAttribute("aria-pressed", "true");
     });
     expect(screen.queryByRole("button", { name: /^Adicionar$/i })).not.toBeInTheDocument();
+  });
+
+  it("prefers the last focused meal over the hour fallback", async () => {
+    saveNutritionFocusedMealToBrowser("preview-demo-user", "snack");
+
+    render(<NutritionScreen />);
+
+    expect(await screen.findByText(/Lanche em foco/i)).toBeInTheDocument();
   });
 });

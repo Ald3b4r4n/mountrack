@@ -19,6 +19,10 @@ import { useNutritionScreenFlows } from "@/components/nutrition/useNutritionScre
 import { useNutritionScreenActions } from "@/components/nutrition/useNutritionScreenActions";
 import { useAuth } from "@/contexts/AuthContext";
 import { PLANNING_TABS } from "@/modules/nutrition/constants";
+import {
+  loadNutritionFocusedMealFromBrowser,
+  saveNutritionFocusedMealToBrowser,
+} from "@/modules/nutrition/client-storage";
 import type { MealType, NutritionObjective } from "@/modules/nutrition/domain/types";
 import { useHydration } from "@/modules/nutrition/hooks/useHydration";
 import { useNutritionDashboard } from "@/modules/nutrition/hooks/useNutritionDashboard";
@@ -164,6 +168,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
 
   const activeWorkspaceRef = useRef<HTMLDivElement | null>(null);
   const activePlanningPanelRef = useRef<HTMLDivElement | null>(null);
+  const mealPreferenceReadyForUserRef = useRef<string | null>(null);
 
   const mealDefinitions = useMemo(
     () => buildMealDefinitions(diaryItems, diaryMealDefinitions),
@@ -349,6 +354,42 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
       cancelled = true;
     };
   }, [activeUser, dispatchUiState, loadDashboard, loadHistory, setHistoryPage]);
+
+  useEffect(() => {
+    if (!activeUser) {
+      mealPreferenceReadyForUserRef.current = null;
+      return;
+    }
+
+    if (isLoading || mealPreferenceReadyForUserRef.current === activeUser.uid) {
+      return;
+    }
+
+    const preferredMeal = loadNutritionFocusedMealFromBrowser(activeUser.uid);
+    if (preferredMeal && mealDefinitions.some((definition) => definition.key === preferredMeal)) {
+      dispatchUiState({
+        type: "patch",
+        value: {
+          activeDiaryMeal: preferredMeal,
+          mealType: preferredMeal,
+        },
+      });
+    }
+
+    mealPreferenceReadyForUserRef.current = activeUser.uid;
+  }, [activeUser, dispatchUiState, isLoading, mealDefinitions]);
+
+  useEffect(() => {
+    if (!activeUser || mealPreferenceReadyForUserRef.current !== activeUser.uid) {
+      return;
+    }
+
+    if (!mealDefinitions.some((definition) => definition.key === activeDiaryMeal)) {
+      return;
+    }
+
+    saveNutritionFocusedMealToBrowser(activeUser.uid, activeDiaryMeal);
+  }, [activeDiaryMeal, activeUser, mealDefinitions]);
 
   useEffect(() => {
     dispatchUiState({ type: "syncGoalDraft", goal });
