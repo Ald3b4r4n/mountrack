@@ -3,8 +3,10 @@ import {
   clearNutritionMealPlanFromBrowser,
   hasNutritionBrowserSnapshot,
   loadNutritionDashboardFromBrowser,
+  loadNutritionFocusedMealFromBrowser,
   loadNutritionHistoryFromBrowser,
   saveNutritionDiaryItemToBrowser,
+  saveNutritionFocusedMealToBrowser,
   saveNutritionGoalToBrowser,
   saveNutritionMealPlanToBrowser,
   saveNutritionWaterToBrowser,
@@ -121,5 +123,13 @@ describe("nutrition client storage", () => {
     expect(dashboard.goal.targetCalories).toBe(1850);
     expect(dashboard.summary.targetCalories).toBe(1850);
     expect(dashboard.summary.targetWaterMl).toBe(2600);
+  });
+
+  it("persists the last focused meal per user", () => {
+    expect(loadNutritionFocusedMealFromBrowser(userId)).toBeNull();
+
+    saveNutritionFocusedMealToBrowser(userId, "snack");
+
+    expect(loadNutritionFocusedMealFromBrowser(userId)).toBe("snack");
   });
 });
