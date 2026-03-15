@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { within } from "@testing-library/dom";
 import { FoodSearchPanel } from "@/components/nutrition/FoodSearchPanel";
 import type { FoodItem, MealDefinition } from "@/modules/nutrition/domain/types";
+import { calculateNutritionForQuantity } from "@/modules/nutrition/services/nutrition-calc.service";
 
 const mealOptions: MealDefinition[] = [
   { key: "breakfast", label: "Café da manhã", isDefault: true },
@@ -65,7 +66,7 @@ function ClosedComposerPanel({ onAddDiaryItem = jest.fn() }: { onAddDiaryItem?: 
       onClearSearch={jest.fn()}
       selectedFood={selectedFood}
       isComposerOpen={composerOpen}
-      selectedFoodTotals={{ protein: 33.33, carbs: 31.67, fat: 15 }}
+      selectedFoodTotals={{ calories: 360, protein: 33.33, carbs: 31.67, fat: 15 }}
       onOpenComposer={() => setComposerOpen(true)}
       onCloseComposer={() => setComposerOpen(false)}
       onReopenSearchResults={jest.fn()}
@@ -109,7 +110,7 @@ function OpenComposerPanel({ onAddDiaryItem = jest.fn() }: { onAddDiaryItem?: ()
       onClearSearch={jest.fn()}
       selectedFood={selectedFood}
       isComposerOpen={composerOpen}
-      selectedFoodTotals={{ protein: 33.33, carbs: 31.67, fat: 15 }}
+      selectedFoodTotals={{ calories: 360, protein: 33.33, carbs: 31.67, fat: 15 }}
       onOpenComposer={() => setComposerOpen(true)}
       onCloseComposer={() => setComposerOpen(false)}
       onReopenSearchResults={jest.fn()}
@@ -158,6 +159,7 @@ function OpenComposerWithFoodSwap() {
         selectedFood={food}
         isComposerOpen
         selectedFoodTotals={{
+          calories: food.caloriesPer100 ?? 0,
           protein: food.proteinPer100 ?? 0,
           carbs: food.carbsPer100 ?? 0,
           fat: food.fatPer100 ?? 0,
@@ -233,7 +235,7 @@ function SearchResultSelectionPanel({
       onClearSearch={jest.fn()}
       selectedFood={currentFood}
       isComposerOpen={composerOpen}
-      selectedFoodTotals={currentFood ? { protein: 33.33, carbs: 31.67, fat: 15 } : null}
+      selectedFoodTotals={currentFood ? { calories: 360, protein: 33.33, carbs: 31.67, fat: 15 } : null}
       onOpenComposer={() => setComposerOpen(true)}
       onCloseComposer={() => setComposerOpen(false)}
       onReopenSearchResults={() => {
@@ -250,6 +252,55 @@ function SearchResultSelectionPanel({
       onMealTypeChange={jest.fn()}
       onAddDiaryItem={jest.fn()}
       searchCatalogBadge="Catálogo sincronizado"
+    />
+  );
+}
+
+function DynamicCaloriesComposerPanel() {
+  const [quantity, setQuantity] = useState("100");
+  const selectedFoodTotals = calculateNutritionForQuantity({
+    food: selectedFood,
+    quantity: Number(quantity),
+    unit: "g",
+  });
+
+  return (
+    <FoodSearchPanel
+      storageMode="database"
+      isMobileLayout={false}
+      searchQuery=""
+      onSearchQueryChange={jest.fn()}
+      onSearch={jest.fn()}
+      isSearching={false}
+      isEnrichingExternal={false}
+      barcodeQuery=""
+      onBarcodeQueryChange={jest.fn()}
+      onBarcodeLookup={jest.fn()}
+      onOpenScanner={jest.fn()}
+      searchSourceLabel="CatÃ¡logo do app"
+      searchFeedback="Item encontrado"
+      resultsVisible={false}
+      searchResults={[selectedFood]}
+      resultState={{ title: "Selecao pronta", text: "Item pronto para registro." }}
+      onApplyFoodSelection={jest.fn()}
+      onCustomFoodOpen={jest.fn()}
+      onClearSearch={jest.fn()}
+      selectedFood={selectedFood}
+      isComposerOpen
+      selectedFoodTotals={selectedFoodTotals}
+      onOpenComposer={jest.fn()}
+      onCloseComposer={jest.fn()}
+      onReopenSearchResults={jest.fn()}
+      onSwapFoodSelection={jest.fn()}
+      quantity={quantity}
+      onQuantityChange={setQuantity}
+      unit="g"
+      onUnitChange={jest.fn()}
+      mealOptions={mealOptions}
+      mealType="breakfast"
+      onMealTypeChange={jest.fn()}
+      onAddDiaryItem={jest.fn()}
+      searchCatalogBadge="CatÃ¡logo sincronizado"
     />
   );
 }
@@ -369,5 +420,27 @@ describe("FoodSearchPanel", () => {
     expect(onApplyFoodSelection).toHaveBeenCalledWith(selectedFood, undefined);
     expect(screen.getByText(/Use o painel ao lado para concluir o registro/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Adicionar ao diário/i })).toBeInTheDocument();
+  });
+  it("updates the portion calorie display as the quantity changes", async () => {
+    const user = userEvent.setup();
+    render(<DynamicCaloriesComposerPanel />);
+
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === "SPAN" && element.textContent === "Porção atual 360 kcal",
+      ),
+    ).toBeInTheDocument();
+
+    const quantityInput = screen.getByDisplayValue("100");
+    await user.clear(quantityInput);
+    await user.type(quantityInput, "50");
+
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === "SPAN" && element.textContent === "Porção atual 180 kcal",
+      ),
+    ).toBeInTheDocument();
   });
 });
