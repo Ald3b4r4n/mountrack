@@ -133,7 +133,7 @@ describe("nutrition client storage", () => {
     const history = loadNutritionHistoryFromBrowser(userId, defaultGoal, 1, 6, "2026-03-15");
 
     expect(history.entries).toHaveLength(1);
-    expect(history.entries[0]?.date).toBe("2026-03-14");
+    expect(history.entries[0]?.date).toBe("2026-03-14T12:00:00.000Z");
   });
 
   it("updates existing diary targets when goal changes", () => {

@@ -27,4 +27,16 @@ describe("nutrition ui helpers", () => {
   it("keeps invalid calendar dates untouched", () => {
     expect(formatHistoryDate("2026-99-99")).toBe("2026-99-99");
   });
+
+  it("formats stable history timestamps without shifting the calendar day", () => {
+    const expected = new Date("2026-03-14T12:00:00.000Z")
+      .toLocaleDateString("pt-BR", {
+        weekday: "short",
+        day: "2-digit",
+        month: "short",
+      })
+      .replace(".", "");
+
+    expect(formatHistoryDate("2026-03-14T12:00:00.000Z")).toBe(expected);
+  });
 });
