@@ -10,6 +10,7 @@ import {
   findAccessibleFoodById,
   getOrCreateDiary,
   listAccessibleFoods,
+  listDiaryHistory,
   listFoods,
   listUserCustomFoods,
   queueMissingFoodLookup,
@@ -315,5 +316,23 @@ describe("nutrition-store authorization", () => {
 
     const claimed = await claimMissingFoodLookups(5);
     expect(claimed).toHaveLength(0);
+  });
+
+  it("excludes the current day from diary history in memory mode", async () => {
+    const todayDiary = await getOrCreateDiary("user-a", "2026-03-15", 2000, 2200);
+    const previousDiary = await getOrCreateDiary("user-a", "2026-03-14", 2000, 2200);
+
+    await saveDiaryItem("user-a", "2026-03-15", 2000, 2200, makeDiaryItem("item-today", todayDiary.id));
+    await saveDiaryItem("user-a", "2026-03-14", 2000, 2200, makeDiaryItem("item-previous", previousDiary.id));
+
+    const history = await listDiaryHistory("user-a", {
+      limit: 6,
+      offset: 0,
+      excludeDate: "2026-03-15",
+    });
+
+    expect(history.total).toBe(1);
+    expect(history.diaries).toHaveLength(1);
+    expect(history.diaries[0]?.date).toBe("2026-03-14");
   });
 });

@@ -220,9 +220,10 @@ export function useNutritionDashboard(
         },
         page,
         HISTORY_PAGE_SIZE,
+        today,
       );
     },
-    [activeUser],
+    [activeUser, today],
   );
 
   const loadDashboard = useCallback(async (): Promise<NutritionUiStorageMode> => {
@@ -310,7 +311,7 @@ export function useNutritionDashboard(
 
         const response = await authorizedNutritionFetch(
           activeUser,
-          `/api/nutrition/history?page=${nextPage}&pageSize=${HISTORY_PAGE_SIZE}`,
+          `/api/nutrition/history?page=${nextPage}&pageSize=${HISTORY_PAGE_SIZE}&excludeDate=${today}`,
         );
         if (!response.ok) {
           await resolveRequestError(response, "Não foi possível carregar o histórico agora.");
@@ -344,7 +345,7 @@ export function useNutritionDashboard(
         setIsHistoryLoading(false);
       }
     },
-    [activeUser, canUseBrowserPersistence, hydrateHistory, loadBrowserHistory, resolveRequestError],
+    [activeUser, canUseBrowserPersistence, hydrateHistory, loadBrowserHistory, resolveRequestError, today],
   );
 
   return {

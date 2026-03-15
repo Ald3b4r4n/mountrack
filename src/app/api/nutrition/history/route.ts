@@ -12,13 +12,14 @@ export async function GET(request: Request) {
   try {
     const { user, defaultGoal } = await requireNutritionUser(request);
     const url = new URL(request.url);
-    const { page, pageSize } = historyQuerySchema.parse({
+    const { page, pageSize, excludeDate } = historyQuerySchema.parse({
       page: url.searchParams.get("page") ?? undefined,
       pageSize: url.searchParams.get("pageSize") ?? undefined,
+      excludeDate: url.searchParams.get("excludeDate") ?? undefined,
     });
     const offset = (page - 1) * pageSize;
     const goal = await getGoal(user.uid, defaultGoal);
-    const { diaries, total } = await listDiaryHistory(user.uid, { limit: pageSize, offset });
+    const { diaries, total } = await listDiaryHistory(user.uid, { limit: pageSize, offset, excludeDate });
 
     const entries: DiaryHistoryEntry[] = diaries.map((diary) => ({
       date: diary.date,

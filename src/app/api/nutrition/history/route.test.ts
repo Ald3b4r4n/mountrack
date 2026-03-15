@@ -83,6 +83,7 @@ describe("GET /api/nutrition/history", () => {
     expect(listDiaryHistoryMock).toHaveBeenCalledWith("user-123", {
       limit: 6,
       offset: 0,
+      excludeDate: undefined,
     });
 
     await expect(response.json()).resolves.toEqual({
@@ -100,6 +101,24 @@ describe("GET /api/nutrition/history", () => {
       pageSize: 6,
       total: 1,
       totalPages: 1,
+    });
+  });
+
+  it("forwards the excluded date so history only returns closed days", async () => {
+    listDiaryHistoryMock.mockResolvedValue({
+      diaries: [],
+      total: 0,
+    });
+
+    const response = await GET(
+      new Request("http://localhost/api/nutrition/history?page=1&pageSize=6&excludeDate=2026-03-15"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(listDiaryHistoryMock).toHaveBeenCalledWith("user-123", {
+      limit: 6,
+      offset: 0,
+      excludeDate: "2026-03-15",
     });
   });
 });

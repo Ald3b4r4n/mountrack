@@ -183,10 +183,13 @@ export function loadNutritionHistoryFromBrowser(
   defaultGoal: NutritionGoal,
   page: number,
   pageSize: number,
+  excludeDate?: string,
 ): NutritionHistorySnapshot {
   const state = readRawState(userId);
   const goal = resolveGoal(userId, state, defaultGoal);
-  const diaries = Object.values(state.diaries ?? {}).sort((left, right) => right.date.localeCompare(left.date));
+  const diaries = Object.values(state.diaries ?? {})
+    .filter((diary) => !excludeDate || diary.date !== excludeDate)
+    .sort((left, right) => right.date.localeCompare(left.date));
   const safePage = Math.max(1, page);
   const offset = (safePage - 1) * pageSize;
   const slice = diaries.slice(offset, offset + pageSize);
