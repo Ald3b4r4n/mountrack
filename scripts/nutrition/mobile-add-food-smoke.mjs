@@ -23,6 +23,10 @@ function parseMetric(text, pattern) {
   return Number(match[1]);
 }
 
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 async function verifyBaseUrl(baseUrl) {
   const response = await fetch(`${baseUrl}/nutrition?preview=1`, {
     redirect: "follow",
@@ -59,11 +63,15 @@ async function run() {
 
     const initialConsumedText = (await initialConsumedCard.textContent()) ?? "";
     const initialActiveMealText = (await initialActiveMealCard.textContent()) ?? "";
+    const initialMealLabel = ((await initialActiveMealCard.locator("strong").first().textContent()) ?? "").trim();
     const initialConsumedCalories = parseMetric(initialConsumedText, /(\d+)\s*kcal/i) ?? 0;
     const initialMealItems = parseMetric(initialActiveMealText, /(\d+)\s*item\(ns\)/i) ?? 0;
 
+    assert(initialMealLabel, "Could not determine the focused meal label from the mobile summary.");
+
     await page.getByRole("button", { name: /^Adicionar$/i }).click();
     await page.getByRole("heading", { name: /Buscar e registrar/i }).waitFor();
+    await page.getByRole("button", { name: /^Adicionar$/i }).waitFor({ state: "detached" });
 
     const searchInput = page.getByRole("textbox", { name: /Nome do alimento/i });
     await searchInput.fill("banana");
@@ -72,9 +80,37 @@ async function run() {
     await page.getByRole("button", { name: /^Banana prata/i }).waitFor();
     await page.getByRole("button", { name: /^Banana prata/i }).click();
 
-    await page.getByRole("button", { name: /Registrar em Café da manhã/i }).click();
-    await page.getByRole("dialog", { name: /Registrar no diário/i }).waitFor();
-    await page.getByRole("button", { name: /Adicionar ao diário em Café da manhã/i }).click();
+    await page.getByRole("button", { name: new RegExp(`Registrar em ${escapeRegex(initialMealLabel)}`, "i") }).click();
+    await page.getByRole("dialog", { name: /Registrar no di[aá]rio/i }).waitFor();
+    await page
+      .getByRole("button", { name: new RegExp(`Adicionar ao di[aá]rio em ${escapeRegex(initialMealLabel)}`, "i") })
+      .click();
+    await page.waitForFunction(
+      ({ previousConsumedCalories, previousMealItems }) => {
+        const consumedButton = Array.from(document.querySelectorAll("button")).find((node) =>
+          /Consumido/i.test(node.textContent ?? ""),
+        );
+        const activeMealArticle = Array.from(document.querySelectorAll("article")).find((node) =>
+          (node.textContent ?? "").includes("Registrado agora"),
+        );
+
+        if (!consumedButton || !activeMealArticle) {
+          return false;
+        }
+
+        const consumedMatch = (consumedButton.textContent ?? "").match(/(\d+)\s*kcal/i);
+        const mealItemsMatch = (activeMealArticle.textContent ?? "").match(/(\d+)\s*item\(ns\)/i);
+        const currentConsumedCalories = consumedMatch ? Number(consumedMatch[1]) : 0;
+        const currentMealItems = mealItemsMatch ? Number(mealItemsMatch[1]) : 0;
+
+        return currentConsumedCalories > previousConsumedCalories && currentMealItems > previousMealItems;
+      },
+      {
+        previousConsumedCalories: initialConsumedCalories,
+        previousMealItems: initialMealItems,
+      },
+      { timeout: 15000 },
+    );
 
     const consumedCard = page.getByRole("button", { name: /Consumido/i });
     const activeMealCard = page.locator("article").filter({ hasText: "Registrado agora" }).first();
@@ -126,6 +162,7 @@ async function run() {
           ok: true,
           baseUrl,
           viewport: MOBILE_VIEWPORT,
+          initialMealLabel,
           initialConsumedCalories,
           consumedCalories,
           initialMealItems,

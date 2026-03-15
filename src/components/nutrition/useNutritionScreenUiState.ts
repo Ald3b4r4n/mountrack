@@ -1,5 +1,6 @@
 import { useReducer } from "react";
 import type { GoalInputState } from "@/components/nutrition/GoalPanel";
+import { getDefaultFocusedMeal } from "@/components/nutrition/nutrition-screen-helpers";
 import type { NutritionArea } from "@/components/nutrition/NutritionWorkspaceNav";
 import type { PlanningTabKey } from "@/modules/nutrition/constants";
 import type {
@@ -87,15 +88,17 @@ type NutritionScreenUiAction =
     };
 
 function createInitialNutritionScreenUiState(): NutritionScreenUiState {
+  const defaultFocusedMeal = getDefaultFocusedMeal();
+
   return {
     planRejectedFoods: [],
     quantity: "100",
     unit: "g",
-    mealType: "breakfast",
+    mealType: defaultFocusedMeal,
     activeArea: "today",
     planningTab: "goal",
     activeDiaryView: "today",
-    activeDiaryMeal: "breakfast",
+    activeDiaryMeal: defaultFocusedMeal,
     diaryPage: 1,
     todayMealsSectionOpen: false,
     todayDiarySectionOpen: false,
