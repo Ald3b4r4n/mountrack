@@ -10,6 +10,7 @@
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
     "nutrition:enrich": "node scripts/trigger-nutrition-enrichment.mjs",
+    "nutrition:test-mobile-add": "node scripts/nutrition/mobile-add-food-smoke.mjs",
     "nutrition:validate-persistence": "node scripts/nutrition/validate-persistence.js",
     "nutrition:catalog:build": "node scripts/nutrition/catalog/build-public-catalog.mjs",
     "nutrition:catalog:refresh-missing": "node scripts/nutrition/catalog/build-public-catalog.mjs --only-missing --fetch-timeout-ms 1800 --retry-attempts 1 --concurrency 1"
@@ -47,6 +48,7 @@
     "eslint-config-next": "16.1.6",
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
+    "playwright": "^1.58.2",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
     "ts-jest": "^29.4.6",
