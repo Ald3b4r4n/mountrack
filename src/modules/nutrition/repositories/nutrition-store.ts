@@ -287,6 +287,17 @@ function normalizeFoodLookupValue(value: string): string {
     .replace(/\s+/g, " ");
 }
 
+function normalizeDiaryDateValue(value: string | Date): string {
+  if (!(value instanceof Date)) {
+    return value;
+  }
+
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function numberOrUndefined(value: string | null): number | undefined {
   if (value == null || value === "") {
     return undefined;
@@ -1141,7 +1152,7 @@ export async function getOrCreateDiary(
   return {
     id: diaryRow.id,
     userId: diaryRow.user_id,
-    date: diaryRow.diary_date,
+    date: normalizeDiaryDateValue(diaryRow.diary_date),
     targetCalories: Number(diaryRow.target_calories),
     targetWaterMl: Number(diaryRow.target_water_ml),
     waterIntakeMl: Number(diaryRow.water_intake_ml),
@@ -1244,7 +1255,7 @@ export async function updateDiaryWater(
   return {
     id: diaryRow.id,
     userId: diaryRow.user_id,
-    date: diaryRow.diary_date,
+    date: normalizeDiaryDateValue(diaryRow.diary_date),
     targetCalories: Number(diaryRow.target_calories),
     targetWaterMl: Number(diaryRow.target_water_ml),
     waterIntakeMl: Number(diaryRow.water_intake_ml),
@@ -1359,7 +1370,7 @@ export async function listDiaryHistory(
     diaries: diaryResult.rows.map((row) => ({
       id: row.id,
       userId: row.user_id,
-      date: row.diary_date,
+      date: normalizeDiaryDateValue(row.diary_date),
       targetCalories: Number(row.target_calories),
       targetWaterMl: Number(row.target_water_ml),
       waterIntakeMl: Number(row.water_intake_ml),
@@ -1426,7 +1437,7 @@ export async function replaceDiaryItem(userId: string, itemId: string, nextItem:
 
   const currentDiary = await getOrCreateDiary(
     diaryRow.user_id,
-    diaryRow.diary_date,
+    normalizeDiaryDateValue(diaryRow.diary_date),
     Number(diaryRow.target_calories),
     Number(diaryRow.target_water_ml),
   );
@@ -1452,7 +1463,7 @@ export async function replaceDiaryItem(userId: string, itemId: string, nextItem:
 
   return getOrCreateDiary(
     diaryRow.user_id,
-    diaryRow.diary_date,
+    normalizeDiaryDateValue(diaryRow.diary_date),
     Number(diaryRow.target_calories),
     Number(diaryRow.target_water_ml),
   );

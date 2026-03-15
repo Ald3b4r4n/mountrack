@@ -121,4 +121,35 @@ describe("GET /api/nutrition/history", () => {
       excludeDate: "2026-03-15",
     });
   });
+
+  it("stabilizes diary dates when the repository returns Date objects at runtime", async () => {
+    listDiaryHistoryMock.mockResolvedValue({
+      diaries: [
+        {
+          id: "diary-1",
+          userId: "user-123",
+          date: new Date(2026, 2, 14) as unknown as string,
+          targetCalories: 2100,
+          targetWaterMl: 2400,
+          waterIntakeMl: 700,
+          items: [],
+          mealDefinitions: [],
+        },
+      ],
+      total: 1,
+    });
+
+    const response = await GET(new Request("http://localhost/api/nutrition/history?page=1&pageSize=6"));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual(
+      expect.objectContaining({
+        entries: [
+          expect.objectContaining({
+            date: "2026-03-14T12:00:00.000Z",
+          }),
+        ],
+      }),
+    );
+  });
 });

@@ -1,5 +1,5 @@
 import { FoodSearchPanel } from "@/components/nutrition/FoodSearchPanel";
-import type { FoodItem, MealDefinition, MealType, NutritionUnit } from "@/modules/nutrition/domain/types";
+import type { FoodItem, MealDefinition, MealType, NutritionTotals, NutritionUnit } from "@/modules/nutrition/domain/types";
 
 interface NutritionSearchWorkspaceProps {
   storageMode: string;
@@ -24,7 +24,7 @@ interface NutritionSearchWorkspaceProps {
   onClearSearch: () => void;
   selectedFood: FoodItem | null;
   isComposerOpen: boolean;
-  selectedFoodTotals: { protein: number; carbs: number; fat: number } | null;
+  selectedFoodTotals: Pick<NutritionTotals, "calories" | "protein" | "carbs" | "fat"> | null;
   onOpenComposer: () => void;
   onCloseComposer: () => void;
   onReopenSearchResults: () => void;

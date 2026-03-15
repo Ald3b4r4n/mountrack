@@ -3,6 +3,7 @@ import type {
   FoodItem,
   MealDefinition,
   MealType,
+  NutritionTotals,
   NutritionUnit,
 } from "@/modules/nutrition/domain/types";
 import {
@@ -25,6 +26,7 @@ type FoodSelectionOptions = {
   openComposer?: boolean;
   hideResults?: boolean;
 };
+type SelectedFoodTotals = Pick<NutritionTotals, "calories" | "protein" | "carbs" | "fat">;
 
 interface FoodSearchPanelProps {
   storageMode: string;
@@ -49,7 +51,7 @@ interface FoodSearchPanelProps {
   onClearSearch: () => void;
   selectedFood: FoodItem | null;
   isComposerOpen: boolean;
-  selectedFoodTotals: { protein: number; carbs: number; fat: number } | null;
+  selectedFoodTotals: SelectedFoodTotals | null;
   onOpenComposer: () => void;
   onCloseComposer: () => void;
   onReopenSearchResults: () => void;
@@ -79,7 +81,7 @@ function ComposerBody({
   showActionButton = true,
 }: {
   selectedFood: FoodItem | null;
-  selectedFoodTotals: { protein: number; carbs: number; fat: number } | null;
+  selectedFoodTotals: SelectedFoodTotals | null;
   quantity: string;
   onQuantityChange: (val: string) => void;
   unit: NutritionUnit;
@@ -111,11 +113,18 @@ function ComposerBody({
               {formatFoodSourceLabel(selectedFood.source)}
             </span>
           </div>
-          <span className="badge badge-success self-start">
-            {selectedFood.caloriesPer100 != null
-              ? `${formatCalories(selectedFood.caloriesPer100)} / 100${selectedFood.baseUnit}`
-              : "Sem kcal base"}
-          </span>
+          <div className="flex flex-col items-start gap-2 sm:items-end">
+            <span className="badge badge-success self-start">
+              {selectedFood.caloriesPer100 != null
+                ? `${formatCalories(selectedFood.caloriesPer100)} / 100${selectedFood.baseUnit}`
+                : "Sem kcal base"}
+            </span>
+            {selectedFoodTotals ? (
+              <span className="rounded-full border border-[#34d399]/18 bg-[#34d399]/10 px-3 py-1 text-[0.78rem] text-[#86efac]">
+                Porção atual {formatCalories(selectedFoodTotals.calories)}
+              </span>
+            ) : null}
+          </div>
         </div>
 
         {selectedFoodTotals ? (
