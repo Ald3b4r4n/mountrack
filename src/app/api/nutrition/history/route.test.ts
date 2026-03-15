@@ -89,7 +89,7 @@ describe("GET /api/nutrition/history", () => {
     await expect(response.json()).resolves.toEqual({
       entries: [
         {
-          date: "2026-03-09",
+          date: "2026-03-09T12:00:00.000Z",
           itemCount: 0,
           summary: expect.objectContaining({
             targetCalories: 2100,

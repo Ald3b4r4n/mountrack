@@ -9,6 +9,7 @@ import type {
   MealPlan,
   NutritionGoal,
 } from "@/modules/nutrition/domain/types";
+import { toStableHistoryDate } from "@/modules/nutrition/history-date";
 import { buildDailySummary } from "@/modules/nutrition/services/daily-calories.service";
 import { getDefaultMealDefinitions, getMealLabel } from "@/modules/nutrition/meal-helpers";
 
@@ -195,7 +196,7 @@ export function loadNutritionHistoryFromBrowser(
   const slice = diaries.slice(offset, offset + pageSize);
 
   const entries = slice.map((diary) => ({
-    date: diary.date,
+    date: toStableHistoryDate(diary.date),
     itemCount: diary.items.length,
     summary: buildDailySummary({
       date: diary.date,

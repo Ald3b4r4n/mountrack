@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { DiaryHistoryEntry } from "@/modules/nutrition/domain/types";
 import { requireNutritionUser } from "@/modules/nutrition/auth/require-user";
 import { toNutritionRouteErrorResponse } from "@/modules/nutrition/http/route-error";
+import { toStableHistoryDate } from "@/modules/nutrition/history-date";
 import { buildDailySummary } from "@/modules/nutrition/services/daily-calories.service";
 import { getGoal, getNutritionStorageHeaders, listDiaryHistory } from "@/modules/nutrition/repositories/nutrition-store";
 import { historyQuerySchema } from "@/modules/nutrition/validators";
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
     const { diaries, total } = await listDiaryHistory(user.uid, { limit: pageSize, offset, excludeDate });
 
     const entries: DiaryHistoryEntry[] = diaries.map((diary) => ({
-      date: diary.date,
+      date: toStableHistoryDate(diary.date),
       itemCount: diary.items.length,
       summary: buildDailySummary({
         date: diary.date,
