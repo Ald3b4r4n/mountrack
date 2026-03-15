@@ -10,14 +10,14 @@ import { useAuth } from '@/contexts/AuthContext';
  * Página de login com identidade visual do produto e entrada com Google.
  */
 export default function Login() {
-  const { user, loading, signInWithGoogle } = useAuth();
+  const { user, loading, sessionReady, signInWithGoogle } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading && sessionReady && user) {
       router.push('/');
     }
-  }, [user, loading, router]);
+  }, [user, loading, sessionReady, router]);
 
   if (loading) {
     return (

@@ -1,0 +1,391 @@
+# Billing Implementation Backlog
+
+## Objective
+
+Implement paid access for MounTrack with:
+
+- Firebase as the identity provider
+- Supabase Postgres as the billing and entitlement database
+- Mercado Pago as the payment provider
+- server-side access control
+- admin and finance operations with auditability
+- hardening against SQL injection, IDOR, webhook forgery, replay, privilege escalation, and payment hijacking
+
+## Final Architecture
+
+## Chosen stack
+
+- Identity: Firebase Auth
+- Product app data already in use: Firestore and current app stores
+- Billing and access control: Supabase Postgres accessed server-side
+- Payment provider: Mercado Pago official API and webhooks
+- App server: Next.js route handlers and server-side helpers
+
+## Storage split
+
+### Firebase
+
+- user authentication
+- current session origin through Firebase ID token
+- existing app data that already lives in Firestore
+
+### Supabase Postgres
+
+- plans
+- subscriptions
+- payments
+- checkout sessions
+- entitlements
+- manual access grants
+- roles
+- audit logs
+- billing events
+
+## Important implementation rule
+
+- Do not use a public Supabase browser client for billing tables.
+- Do not let the browser query billing tables directly.
+- Billing flows must go through server-side repositories using parameterized SQL.
+- Reuse the existing repository style already present in the nutrition module.
+
+## Runtime flow
+
+### 1. Login
+
+- user signs in with Firebase
+- frontend gets Firebase ID token
+- backend verifies token
+- backend creates secure server session
+
+### 2. Access decision
+
+- backend resolves current user
+- backend checks entitlement in Postgres
+- access is allowed only when entitlement is active
+- client-side guards remain UX helpers only
+
+### 3. Trial
+
+- first eligible login creates `trialing` entitlement for `3 days`
+- trial expiration is computed on the server
+- once expired, protected routes redirect to paywall
+
+### 4. Payment
+
+- frontend requests checkout creation from backend
+- backend creates checkout session bound to one internal user
+- Mercado Pago checkout processes payment
+- webhook notifies backend
+- backend verifies, reconciles, and updates subscription and entitlement
+
+### 5. Admin operations
+
+- owner and admin can create manual access grants
+- finance can inspect revenue and payment state
+- support can inspect access state but not change sensitive billing controls
+- all privileged actions write audit logs
+
+## Security Architecture
+
+## SQL injection prevention
+
+- Use parameterized queries everywhere.
+- No string interpolation for SQL.
+- Keep billing persistence in a dedicated repository layer.
+- Validate request payloads before repository calls.
+- Reject unknown fields with strict schemas.
+- Use least-privilege database credentials if possible.
+
+## Access control
+
+- All sensitive endpoints require authenticated server session.
+- All user-scoped queries must include the internal authenticated user id.
+- Never trust ids coming from the client without ownership checks.
+- Role checks happen server-side before any privileged mutation.
+
+## Webhook security
+
+- Verify Mercado Pago webhook signature in production.
+- Validate timestamp freshness.
+- Reject duplicate deliveries with idempotency keys.
+- Store raw event envelope metadata, not unsafe payload logs.
+- Reconcile payment status against Mercado Pago API before unlocking access.
+
+## Payment hijack prevention
+
+- Bind checkout session to one user id and one plan.
+- Persist expected amount and currency before redirecting to checkout.
+- On webhook processing, compare:
+  - user binding
+  - amount
+  - currency
+  - provider reference
+- If any mismatch occurs, set `fraud_hold` and require manual review.
+
+## Privileged account security
+
+- `owner` and `admin` require MFA.
+- Sensitive actions require recent-auth confirmation.
+- Role changes and manual grants must be audited.
+- Never hardcode permanent admin users in code.
+- Bootstrap the initial owner from environment only once.
+
+## Session hardening
+
+- HTTP-only cookies
+- `Secure`
+- `SameSite=Lax` or stricter where compatible
+- short lifetime for admin sessions
+- logout revokes server session
+
+## Logging policy
+
+- Do not log raw card data.
+- Do not log provider secrets.
+- Do not log full authorization headers.
+- Mask payment references where possible in operator-facing logs.
+- Audit logs must be immutable from the app UI.
+
+## Implementation Workstreams
+
+## Workstream 1: Billing domain foundation
+
+### Deliverables
+
+- billing status model
+- entitlement policy
+- role policy
+- repository interfaces
+
+### Tasks
+
+1. Define billing statuses:
+   - `trialing`
+   - `active`
+   - `grace_period`
+   - `past_due`
+   - `cancelled`
+   - `expired`
+   - `fraud_hold`
+   - `chargeback_hold`
+2. Define entitlement precedence rules.
+3. Define manual grant types.
+4. Define role matrix:
+   - `owner`
+   - `admin`
+   - `finance`
+   - `support`
+   - `user`
+5. Define audit actions list.
+
+### Risks
+
+- mixing payment state and access state
+- unclear precedence between paid access and courtesy grants
+
+## Workstream 2: Postgres billing persistence
+
+### Deliverables
+
+- migration set for billing tables
+- repository layer
+- idempotent persistence for webhook events
+
+### Tasks
+
+1. Create migrations for:
+   - `plans`
+   - `billing_customers`
+   - `subscriptions`
+   - `payments`
+   - `checkout_sessions`
+   - `entitlements`
+   - `manual_access_grants`
+   - `roles`
+   - `user_roles`
+   - `billing_events`
+   - `audit_logs`
+2. Add unique constraints for provider ids.
+3. Add indexes for:
+   - `user_id`
+   - `status`
+   - `provider_event_id`
+   - `current_period_end`
+4. Build server-side repositories with parameterized queries only.
+5. Add tests specifically targeting malicious input payloads.
+
+### Risks
+
+- weak uniqueness and duplicated webhook processing
+- accidental browser exposure of billing data
+
+## Workstream 3: Session and access gate
+
+### Deliverables
+
+- server-side session resolver
+- entitlement guard helper
+- protected app gate
+
+### Tasks
+
+1. Introduce server-side session cookie after Firebase token verification.
+2. Build `requirePaidAccess()` or equivalent helper.
+3. Add route-level or layout-level protected access gate.
+4. Add paywall redirect when entitlement is invalid.
+5. Preserve public routes:
+   - login
+   - landing
+   - billing success or return pages as needed
+
+### Risks
+
+- relying only on current client-side `ProtectedRoute`
+- leaving API endpoints accessible to unpaid users
+
+## Workstream 4: Mercado Pago integration
+
+### Deliverables
+
+- checkout creation endpoint
+- webhook endpoint
+- reconciliation service
+
+### Tasks
+
+1. Create `POST /api/billing/checkout`.
+2. Generate checkout session with:
+   - internal user id
+   - plan id
+   - expected amount
+   - currency
+   - nonce
+   - expiration
+3. Create webhook endpoint.
+4. Verify webhook authenticity and replay window.
+5. Reconcile event with Mercado Pago API.
+6. Update payment, subscription, and entitlement only after reconciliation.
+7. Add hold workflow for suspicious events.
+
+### Risks
+
+- trusting redirect success instead of webhook
+- unlocking access before provider confirmation
+
+## Workstream 5: Admin and finance panel
+
+### Deliverables
+
+- finance dashboard
+- user access admin
+- operator role management
+- webhook observability
+
+### Tasks
+
+1. Build billing dashboard:
+   - active subscribers
+   - trial users
+   - failed renewals
+   - revenue summaries
+2. Build user lookup panel.
+3. Build manual grant creation flow.
+4. Build grant revocation flow.
+5. Build payments and webhook events screen.
+6. Build roles screen restricted to owner.
+7. Show audit history for privileged actions.
+
+### Risks
+
+- overpowered support users
+- manual grants without expiration or reason
+
+## Workstream 6: Security hardening and test coverage
+
+### Deliverables
+
+- security-focused automated tests
+- operational checklist
+- rollout gates
+
+### Tasks
+
+1. Add unit tests for:
+   - entitlement logic
+   - webhook signature checks
+   - replay detection
+   - idempotency
+2. Add integration tests for:
+   - unauthorized access
+   - expired trial
+   - checkout binding
+   - payment mismatch
+   - role enforcement
+3. Add security tests for:
+   - SQL injection
+   - IDOR
+   - XSS in operator notes
+   - privilege escalation
+   - replayed webhook
+4. Add E2E tests for:
+   - trial flow
+   - paywall flow
+   - successful payment
+   - failed renewal
+   - manual courtesy grant
+5. Add CI gates for the billing surface.
+
+### Risks
+
+- coverage focused only on happy path
+- missing abuse cases in payment and role flows
+
+## Security Checklist
+
+## Mandatory before production
+
+- Billing endpoints exist only on the server.
+- Billing queries are parameterized.
+- Billing payloads are schema-validated.
+- Webhook signature verification is enabled.
+- Replay protection is enabled.
+- Idempotency is enforced.
+- Payment-to-user binding is checked.
+- Owner bootstrap works once and is audited.
+- Owner and admin require MFA.
+- Courtesy grants require actor, reason, and timestamps.
+- Audit logs capture all privileged mutations.
+- No raw payment data is stored or logged.
+
+## Recommended before production
+
+- short admin session TTL
+- recent-auth check for sensitive operator actions
+- suspicious payment review queue
+- chargeback hold workflow
+- metrics and alerts for webhook failures
+
+## Backlog Order Recommendation
+
+1. Billing domain foundation
+2. Postgres billing persistence
+3. Session and access gate
+4. Mercado Pago integration
+5. Admin and finance panel
+6. Security hardening and test coverage
+
+## Non-goals for v1
+
+- multi-tier packaging
+- family or team plans
+- coupon engine
+- affiliate payouts
+- in-app self-service advanced billing portal
+- browser-side billing data access
+
+## Open product decisions
+
+- monthly permanent pricing is fixed at `R$ 14,99`
+- whether annual plan is deferred fully to phase 2
+- whether courtesy grants expire by default
+- whether finance role can export CSV in v1 or only inspect dashboard

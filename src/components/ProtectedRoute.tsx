@@ -10,21 +10,21 @@ import { useEffect, useRef } from 'react';
  * evitando o "flash" de loading a cada navegação client-side.
  */
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, sessionReady } = useAuth();
   const router = useRouter();
   const hasRedirected = useRef(false);
 
   useEffect(() => {
     // Só redireciona após o loading inicial do Firebase Auth terminar
-    if (!loading && !user && !hasRedirected.current) {
+    if (!loading && sessionReady && !user && !hasRedirected.current) {
       hasRedirected.current = true;
       router.push('/login');
     }
-  }, [user, loading, router]);
+  }, [user, loading, sessionReady, router]);
 
   // Se o Firebase Auth ainda está carregando pela primeira vez (cold start)
   // mostra o spinner elegante
-  if (loading) {
+  if (loading || !sessionReady) {
     return (
       <div style={{
         display: 'flex', justifyContent: 'center', alignItems: 'center',
