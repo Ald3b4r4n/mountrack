@@ -60,9 +60,29 @@ export function formatDeltaCalories(value: number): string {
   return `${prefix}${Math.abs(value).toFixed(0)} kcal`;
 }
 
+function parseHistoryDate(dateString: string): Date {
+  const localCalendarMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString);
+  if (!localCalendarMatch) return new Date(dateString);
+
+  const year = Number(localCalendarMatch[1]);
+  const monthIndex = Number(localCalendarMatch[2]) - 1;
+  const day = Number(localCalendarMatch[3]);
+  const parsedDate = new Date(year, monthIndex, day);
+
+  if (
+    parsedDate.getFullYear() !== year ||
+    parsedDate.getMonth() !== monthIndex ||
+    parsedDate.getDate() !== day
+  ) {
+    return new Date(Number.NaN);
+  }
+
+  return parsedDate;
+}
+
 export function formatHistoryDate(dateString: string): string {
   try {
-    const d = new Date(dateString);
+    const d = parseHistoryDate(dateString);
     if (!Number.isFinite(d.getTime())) return dateString;
     return d.toLocaleDateString("pt-BR", {
       weekday: "short",
