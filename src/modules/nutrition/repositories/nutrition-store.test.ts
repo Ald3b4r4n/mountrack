@@ -70,11 +70,17 @@ describe("nutrition-store authorization", () => {
       diaries?: Map<string, unknown>;
       mealPlans?: Map<string, unknown>;
     };
+    __nutritionPool__?: {
+      query: jest.Mock;
+    };
+    __nutritionSchemaPromise__?: Promise<void>;
   };
 
   beforeEach(() => {
     process.env.DATABASE_URL = "";
     process.env.SUPABASE_DATABASE_URL = "";
+    delete globalStore.__nutritionPool__;
+    delete globalStore.__nutritionSchemaPromise__;
 
     const store = getNutritionMemoryStore();
     store.cachedFoods.clear();
@@ -334,5 +340,48 @@ describe("nutrition-store authorization", () => {
     expect(history.total).toBe(1);
     expect(history.diaries).toHaveLength(1);
     expect(history.diaries[0]?.date).toBe("2026-03-14");
+  });
+
+  it("normalizes database history rows when pg returns Date objects", async () => {
+    process.env.DATABASE_URL = "postgres://example.invalid/mountrack";
+
+    const query = jest
+      .fn()
+      .mockResolvedValueOnce({
+        rows: [{ count: "1" }],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: "diary-1",
+            user_id: "user-a",
+            diary_date: new Date(2026, 2, 14),
+            target_calories: "2000",
+            target_water_ml: "2200",
+            water_intake_ml: "700",
+            meal_definitions: [],
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [],
+      });
+
+    globalStore.__nutritionPool__ = { query };
+    globalStore.__nutritionSchemaPromise__ = Promise.resolve();
+
+    const history = await listDiaryHistory("user-a", {
+      limit: 6,
+      offset: 0,
+      excludeDate: "2026-03-15",
+    });
+
+    expect(history.total).toBe(1);
+    expect(history.diaries).toHaveLength(1);
+    expect(history.diaries[0]?.date).toBe("2026-03-14");
+    expect(query).toHaveBeenCalledTimes(3);
+
+    delete globalStore.__nutritionPool__;
+    delete globalStore.__nutritionSchemaPromise__;
   });
 });
