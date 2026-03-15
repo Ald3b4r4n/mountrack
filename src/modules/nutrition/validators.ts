@@ -1,6 +1,8 @@
 import { z } from "zod";
 import type { MealDefinition, MealType } from "@/modules/nutrition/domain/types";
 
+const diaryDateStringSchema = z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/);
+
 const mealTypeSchema = z
   .string()
   .regex(/^(breakfast|lunch|dinner|snack|custom:[a-z0-9-]{1,48})$/)
@@ -107,6 +109,7 @@ export const customFoodSchema = z.object({
 export const historyQuerySchema = z.object({
   page: z.coerce.number().int().min(1).catch(1),
   pageSize: z.coerce.number().int().min(3).max(12).catch(6),
+  excludeDate: diaryDateStringSchema.optional().catch(undefined),
 });
 
 export const barcodeLookupParamsSchema = z.object({
@@ -118,7 +121,7 @@ export const searchQuerySchema = z.object({
 });
 
 export const diaryDateParamsSchema = z.object({
-  date: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/),
+  date: diaryDateStringSchema,
 });
 
 export const entityIdParamsSchema = z.object({

@@ -109,6 +109,33 @@ describe("nutrition client storage", () => {
     expect(loadNutritionDashboardFromBrowser(userId, date, defaultGoal).mealPlan).toBeNull();
   });
 
+  it("excludes the current day from browser history snapshots", () => {
+    const todayItem = createDiaryItemSnapshot({
+      diaryId: `${userId}:2026-03-15`,
+      food: wheyFood,
+      quantity: 1,
+      unit: "serving",
+      mealType: "lunch",
+      consumedAt: "2026-03-15T12:30:00.000Z",
+    });
+    const previousDayItem = createDiaryItemSnapshot({
+      diaryId: `${userId}:2026-03-14`,
+      food: wheyFood,
+      quantity: 1,
+      unit: "serving",
+      mealType: "breakfast",
+      consumedAt: "2026-03-14T08:30:00.000Z",
+    });
+
+    saveNutritionDiaryItemToBrowser(userId, "2026-03-15", defaultGoal, todayItem);
+    saveNutritionDiaryItemToBrowser(userId, "2026-03-14", defaultGoal, previousDayItem);
+
+    const history = loadNutritionHistoryFromBrowser(userId, defaultGoal, 1, 6, "2026-03-15");
+
+    expect(history.entries).toHaveLength(1);
+    expect(history.entries[0]?.date).toBe("2026-03-14");
+  });
+
   it("updates existing diary targets when goal changes", () => {
     saveNutritionWaterToBrowser(userId, date, defaultGoal, 500);
     saveNutritionGoalToBrowser(userId, {

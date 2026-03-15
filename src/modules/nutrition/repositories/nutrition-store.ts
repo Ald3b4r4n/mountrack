@@ -197,6 +197,7 @@ interface ListFoodsOptions {
 interface ListDiaryHistoryOptions {
   limit?: number;
   offset?: number;
+  excludeDate?: string;
 }
 
 interface CustomFoodRow {
@@ -1288,12 +1289,13 @@ export async function updateDiaryMealDefinitions(
 
 export async function listDiaryHistory(
   userId: string,
-  { limit = 7, offset = 0 }: ListDiaryHistoryOptions = {},
+  { limit = 7, offset = 0, excludeDate }: ListDiaryHistoryOptions = {},
 ): Promise<DiaryListResult> {
   if (!hasDatabaseUrl()) {
     const store = getNutritionMemoryStore();
     const diaries = Array.from(store.diaries.values())
       .filter((diary) => diary.userId === userId)
+      .filter((diary) => !excludeDate || diary.date !== excludeDate)
       .sort((left, right) => right.date.localeCompare(left.date));
 
     return {
@@ -1304,8 +1306,13 @@ export async function listDiaryHistory(
 
   await ensureSchema();
   const totalResult = await getPool().query<{ count: string }>(
-    "select count(*)::text as count from nutrition_diaries where user_id = $1",
-    [userId],
+    `
+    select count(*)::text as count
+    from nutrition_diaries
+    where user_id = $1
+      and ($2::date is null or diary_date <> $2::date)
+    `,
+    [userId, excludeDate ?? null],
   );
   const diaryResult = await getPool().query<{
     id: string;
@@ -1320,10 +1327,11 @@ export async function listDiaryHistory(
     select id, user_id, diary_date, target_calories, target_water_ml, water_intake_ml, meal_definitions
     from nutrition_diaries
     where user_id = $1
+      and ($4::date is null or diary_date <> $4::date)
     order by diary_date desc
     limit $2 offset $3
     `,
-    [userId, limit, offset],
+    [userId, limit, offset, excludeDate ?? null],
   );
 
   const diaryIds = diaryResult.rows.map((row) => row.id);
