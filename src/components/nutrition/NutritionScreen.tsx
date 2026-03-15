@@ -729,7 +729,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
         recentlyLoggedFoodLabel:
           activeArea === "today" && isMobileLayout ? activeMealRecentlyLoggedFoodLabel : null,
         onOpenConsumedSummary: isMobileLayout ? handleOpenConsumedSummary : undefined,
-        onAddToActiveMeal: isMobileLayout
+        onAddToActiveMeal: isMobileLayout && activeArea !== "search"
           ? () => {
               openSearchForMeal(activeDiaryMeal);
             }
