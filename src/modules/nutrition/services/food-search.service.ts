@@ -10,7 +10,19 @@ interface SearchFoodsOptions {
   limit?: number;
 }
 
-const STOP_WORDS = new Set(["a", "as", "de", "da", "das", "do", "dos", "e", "em", "para", "por"]);
+const STOP_WORDS = new Set([
+  "a",
+  "as",
+  "de",
+  "da",
+  "das",
+  "do",
+  "dos",
+  "e",
+  "em",
+  "para",
+  "por",
+]);
 
 function normalizeTerm(value: string): string {
   return value
@@ -26,8 +38,15 @@ function getNormalizedTags(food: FoodItem): string[] {
   return (food.tags ?? []).map(normalizeTerm).filter(Boolean);
 }
 
-function buildSearchableFoodText(food: FoodItem, normalizedTags: string[] = getNormalizedTags(food)): string {
-  return [food.displayName ?? food.name, food.brand ?? "", ...normalizedTags].join(" ");
+function buildSearchableFoodText(
+  food: FoodItem,
+  normalizedTags: string[] = getNormalizedTags(food),
+): string {
+  return [
+    food.displayName ?? food.name,
+    food.brand ?? "",
+    ...normalizedTags,
+  ].join(" ");
 }
 
 function getQueryTokens(rawQuery: string): string[] {
@@ -73,12 +92,18 @@ function isBrandOnlyPlaceholder(food: FoodItem): boolean {
   const nameTokens = tokenizeSearchText(candidateName);
   const brandTokens = tokenizeSearchText(food.brand ?? "");
 
-  return nameTokens.length <= 2 && nameTokens.every((token) => tokenMatchesWords(brandTokens, token));
+  return (
+    nameTokens.length <= 2 &&
+    nameTokens.every((token) => tokenMatchesWords(brandTokens, token))
+  );
 }
 
 function tokenMatchesWords(words: string[], token: string): boolean {
   const tokenStem = getTokenStem(token);
-  return words.some((word) => word === token || word.startsWith(token) || word.startsWith(tokenStem));
+  return words.some(
+    (word) =>
+      word === token || word.startsWith(token) || word.startsWith(tokenStem),
+  );
 }
 
 function tokenMatchesText(haystack: string, token: string): boolean {
@@ -91,10 +116,16 @@ function hasTextTokenMatch(haystack: string, tokens: string[]): boolean {
 
 function countTextTokenMatches(haystack: string, tokens: string[]): number {
   const words = tokenizeSearchText(haystack);
-  return tokens.filter((token, index) => tokens.indexOf(token) === index && tokenMatchesWords(words, token)).length;
+  return tokens.filter(
+    (token, index) =>
+      tokens.indexOf(token) === index && tokenMatchesWords(words, token),
+  ).length;
 }
 
-export function hasStrongFoodSearchResult(query: string, food: FoodItem | null | undefined): boolean {
+export function hasStrongFoodSearchResult(
+  query: string,
+  food: FoodItem | null | undefined,
+): boolean {
   if (!food) {
     return false;
   }
@@ -112,7 +143,9 @@ export function hasStrongFoodSearchResult(query: string, food: FoodItem | null |
   const normalizedTags = getNormalizedTags(food);
   const normalizedName = normalizeTerm(food.displayName ?? food.name);
   const normalizedBrand = normalizeTerm(food.brand ?? "");
-  const searchableText = normalizeTerm(buildSearchableFoodText(food, normalizedTags));
+  const searchableText = normalizeTerm(
+    buildSearchableFoodText(food, normalizedTags),
+  );
   const queryTokens = getQueryTokens(rawQuery);
   const matchingTokenCount = countTextTokenMatches(searchableText, queryTokens);
   const brandProfile = findSupplementBrandProfile(query);
@@ -121,11 +154,17 @@ export function hasStrongFoodSearchResult(query: string, food: FoodItem | null |
     return true;
   }
 
-  if (normalizedName === normalizedQuery || normalizedBrand === normalizedQuery) {
+  if (
+    normalizedName === normalizedQuery ||
+    normalizedBrand === normalizedQuery
+  ) {
     return true;
   }
 
-  if (normalizedQuery.length >= 4 && normalizedName.startsWith(normalizedQuery)) {
+  if (
+    normalizedQuery.length >= 4 &&
+    normalizedName.startsWith(normalizedQuery)
+  ) {
     return true;
   }
 
@@ -137,11 +176,19 @@ export function hasStrongFoodSearchResult(query: string, food: FoodItem | null |
     return true;
   }
 
-  if (queryTokens.length === 1 && queryTokens[0] && queryTokens[0].length >= 4 && tokenMatchesText(searchableText, queryTokens[0])) {
+  if (
+    queryTokens.length === 1 &&
+    queryTokens[0] &&
+    queryTokens[0].length >= 4 &&
+    tokenMatchesText(searchableText, queryTokens[0])
+  ) {
     return true;
   }
 
-  if (brandProfile && matchesSupplementBrandText(searchableText, brandProfile)) {
+  if (
+    brandProfile &&
+    matchesSupplementBrandText(searchableText, brandProfile)
+  ) {
     return true;
   }
 
@@ -157,10 +204,16 @@ function computeFoodScore(food: FoodItem, rawQuery: string): number {
   const normalizedTags = getNormalizedTags(food);
   const brandProfile = findSupplementBrandProfile(rawQuery);
   const matchesRequestedBrand = brandProfile
-    ? matchesSupplementBrandText(buildSearchableFoodText(food, normalizedTags), brandProfile)
+    ? matchesSupplementBrandText(
+        buildSearchableFoodText(food, normalizedTags),
+        brandProfile,
+      )
     : false;
   const isGenericSingleTokenQuery = !brandProfile && queryTokens.length === 1;
-  const nameStartsWithPrimaryToken = startsWithQueryToken(food.displayName ?? food.name, primaryQueryToken);
+  const nameStartsWithPrimaryToken = startsWithQueryToken(
+    food.displayName ?? food.name,
+    primaryQueryToken,
+  );
   const isBrandedResult = Boolean(normalizedBrand);
 
   if (food.barcode && rawQuery.trim() === food.barcode) {
@@ -182,14 +235,18 @@ function computeFoodScore(food: FoodItem, rawQuery: string): number {
   if (normalizedTags.some((tag) => tag.includes(query))) score += 65;
   if (hasTextTokenMatch(normalizedName, queryTokens)) score += 80;
   if (hasTextTokenMatch(normalizedBrand, queryTokens)) score += 45;
-  if (normalizedTags.some((tag) => hasTextTokenMatch(tag, queryTokens))) score += 55;
+  if (normalizedTags.some((tag) => hasTextTokenMatch(tag, queryTokens)))
+    score += 55;
   if (query.includes("prote") && food.category === "protein") score += 70;
-  if (query.includes("barra") && /(barra|bar)/.test(normalizedName)) score += 70;
+  if (query.includes("barra") && /(barra|bar)/.test(normalizedName))
+    score += 70;
   if (food.locale?.startsWith("pt")) score += 55;
   if (food.countryCode === "BR") score += 45;
   if (food.source === "custom") score += 70;
+  if (food.source === "fatsecret") score += 90;
   if (food.source === "openfoodfacts") score += 24;
-  if (food.source === "internal") score -= brandProfile && matchesRequestedBrand ? 0 : 35;
+  if (food.source === "internal")
+    score -= brandProfile && matchesRequestedBrand ? 0 : 35;
   if (food.source === "usda") score -= 12;
   if (brandProfile) {
     if (matchesRequestedBrand) {
@@ -237,24 +294,31 @@ export async function searchFoodsByQuery(
 
   const filteredFoods = combinedFoods.filter((food) => {
     if (!normalizedQuery) return true;
-    if (isBrandOnlyPlaceholder(food) && food.barcode !== query.trim()) return false;
+    if (isBrandOnlyPlaceholder(food) && food.barcode !== query.trim())
+      return false;
     const normalizedName = normalizeTerm(food.displayName ?? food.name);
     const normalizedBrand = normalizeTerm(food.brand ?? "");
     const normalizedTags = getNormalizedTags(food);
     const searchableText = buildSearchableFoodText(food, normalizedTags);
-    const minimumTokenMatches = queryTokens.length >= 2 ? Math.min(2, queryTokens.length) : 1;
-    const matchingTokenCount = countTextTokenMatches(searchableText, queryTokens);
+    const minimumTokenMatches =
+      queryTokens.length >= 2 ? Math.min(2, queryTokens.length) : 1;
+    const matchingTokenCount = countTextTokenMatches(
+      searchableText,
+      queryTokens,
+    );
 
     const hasTokenMatch =
-      queryTokens.length > 0 &&
-      matchingTokenCount >= minimumTokenMatches;
+      queryTokens.length > 0 && matchingTokenCount >= minimumTokenMatches;
 
     const matchesProteinIntent =
       normalizedQuery.includes("prote") &&
       food.category === "protein" &&
-      (/(barra|bar|protein|prote)/.test(normalizedName) || normalizedTags.some((tag) => /(protein|prote)/.test(tag)));
+      (/(barra|bar|protein|prote)/.test(normalizedName) ||
+        normalizedTags.some((tag) => /(protein|prote)/.test(tag)));
 
-    const matchesRequestedBrand = brandProfile ? matchesSupplementBrandText(searchableText, brandProfile) : false;
+    const matchesRequestedBrand = brandProfile
+      ? matchesSupplementBrandText(searchableText, brandProfile)
+      : false;
 
     if (brandProfile && !matchesRequestedBrand) {
       return food.barcode === query.trim();
@@ -280,10 +344,13 @@ export async function searchFoodsByQuery(
   }
 
   const curatedBrandMatches = rankedFoods.filter(
-    (food) => food.source === "internal" && matchesSupplementBrandText(buildSearchableFoodText(food), brandProfile),
+    (food) =>
+      food.source === "internal" &&
+      matchesSupplementBrandText(buildSearchableFoodText(food), brandProfile),
   );
   const remainingFoods = rankedFoods.filter(
-    (food) => !curatedBrandMatches.some((candidate) => candidate.id === food.id),
+    (food) =>
+      !curatedBrandMatches.some((candidate) => candidate.id === food.id),
   );
 
   return [...curatedBrandMatches, ...remainingFoods].slice(0, limit);

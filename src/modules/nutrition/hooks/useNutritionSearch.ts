@@ -19,6 +19,7 @@ export type NutritionSearchSource =
   | "custom"
   | "external"
   | "fallback"
+  | "fatsecret"
   | "none"
   | "openfoodfacts"
   | null;
@@ -205,7 +206,7 @@ export function useNutritionSearch(
           );
         } else {
           setMessage(
-            "Resultados prontos. Se faltar algo, novas referÃªncias entram em segundo plano.",
+            "Resultados prontos. Se faltar algo, novas referências entram em segundo plano.",
           );
         }
       } else if (!results.length) {
@@ -292,12 +293,12 @@ export function useNutritionSearch(
 
       if (foundItem) {
         setSearchResults([foundItem]);
-        setLastSearchSource(payload.source ?? "openfoodfacts");
+        setLastSearchSource(payload.source ?? "fatsecret");
         setSelectedFood(foundItem);
         setResultsVisible(false);
         setIsComposerOpen(true);
         setMessage(
-          `${foundItem.displayName ?? foundItem.name} encontrado pelo código de barras.${buildBarcodeDebugMessage(rawCode, normalizedCode, candidates, payload.source ?? "openfoodfacts")}`,
+          `${foundItem.displayName ?? foundItem.name} encontrado pelo código de barras.${buildBarcodeDebugMessage(rawCode, normalizedCode, candidates, payload.source ?? "fatsecret")}`,
         );
       } else {
         setLastSearchSource(payload.source ?? "none");

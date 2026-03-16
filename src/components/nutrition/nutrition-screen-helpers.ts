@@ -36,16 +36,22 @@ export function parseNonNegativeInputNumber(value: string): number | null {
 export function normalizeMealPlan(plan: MealPlan): MealPlan {
   const meals = plan.meals.map((meal) => ({
     ...meal,
-    totalCalories: roundValue(meal.items.reduce((total, item) => total + item.calories, 0)),
+    totalCalories: roundValue(
+      meal.items.reduce((total, item) => total + item.calories, 0),
+    ),
   }));
 
   return {
-    totalCalories: roundValue(meals.reduce((total, meal) => total + meal.totalCalories, 0)),
+    totalCalories: roundValue(
+      meals.reduce((total, meal) => total + meal.totalCalories, 0),
+    ),
     meals,
   };
 }
 
-export function summarizeMealPlan(plan: MealPlan): Pick<NutritionTotals, "calories" | "protein" | "carbs" | "fat"> {
+export function summarizeMealPlan(
+  plan: MealPlan,
+): Pick<NutritionTotals, "calories" | "protein" | "carbs" | "fat"> {
   return plan.meals.reduce(
     (totals, meal) => {
       for (const item of meal.items) {
@@ -61,7 +67,11 @@ export function summarizeMealPlan(plan: MealPlan): Pick<NutritionTotals, "calori
   );
 }
 
-export function scaleMealPlanItem(item: MealPlanItem, ratio: number, quantity: number): MealPlanItem {
+export function scaleMealPlanItem(
+  item: MealPlanItem,
+  ratio: number,
+  quantity: number,
+): MealPlanItem {
   return {
     ...item,
     quantity,
@@ -74,7 +84,9 @@ export function scaleMealPlanItem(item: MealPlanItem, ratio: number, quantity: n
   };
 }
 
-export function formatSearchSourceLabel(source: NutritionSearchSource): string | null {
+export function formatSearchSourceLabel(
+  source: NutritionSearchSource,
+): string | null {
   switch (source) {
     case "catalog":
       return "Catálogo do app";
@@ -86,6 +98,8 @@ export function formatSearchSourceLabel(source: NutritionSearchSource): string |
       return "Sugestoes do app";
     case "openfoodfacts":
       return "Catálogo aberto";
+    case "fatsecret":
+      return "FatSecret";
     case "none":
       return "Sem resultado";
     default:

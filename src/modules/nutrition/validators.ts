@@ -1,8 +1,14 @@
 import { z } from "zod";
 import { NUTRITION_BARCODE_REGEX } from "@/modules/nutrition/barcode";
-import type { MealDefinition, MealType } from "@/modules/nutrition/domain/types";
+import type {
+  MealDefinition,
+  MealType,
+} from "@/modules/nutrition/domain/types";
 
-const diaryDateStringSchema = z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/);
+const diaryDateStringSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{4}-\d{2}-\d{2}$/);
 
 const mealTypeSchema = z
   .string()
@@ -26,7 +32,14 @@ export const nutritionGoalSchema = z.object({
 
 const foodSnapshotSchema = z.object({
   id: z.string().min(1),
-  source: z.enum(["openfoodfacts", "usda", "tbca", "internal", "custom"]),
+  source: z.enum([
+    "fatsecret",
+    "openfoodfacts",
+    "usda",
+    "tbca",
+    "internal",
+    "custom",
+  ]),
   sourceId: z.string().trim().min(1).optional(),
   name: z.string().trim().min(1).max(160),
   displayName: z.string().trim().min(1).max(160).optional(),
@@ -48,8 +61,21 @@ const foodSnapshotSchema = z.object({
   countryCode: z.string().trim().min(2).max(8).optional(),
   isBranded: z.boolean().optional(),
   externalUpdatedAt: z.string().datetime().optional(),
-  mealCategories: z.array(z.enum(["breakfast", "lunch", "dinner", "snack"])).default([]),
-  category: z.enum(["protein", "carb", "fruit", "vegetable", "dairy", "fat", "snack", "beverage"]).optional(),
+  mealCategories: z
+    .array(z.enum(["breakfast", "lunch", "dinner", "snack"]))
+    .default([]),
+  category: z
+    .enum([
+      "protein",
+      "carb",
+      "fruit",
+      "vegetable",
+      "dairy",
+      "fat",
+      "snack",
+      "beverage",
+    ])
+    .optional(),
   tags: z.array(z.string().trim().min(1).max(60)).optional(),
 });
 
@@ -77,9 +103,14 @@ export const diaryPatchSchema = z
     waterIntakeMl: z.number().min(0).max(12000).optional(),
     mealDefinitions: z.array(mealDefinitionSchema).min(4).optional(),
   })
-  .refine((payload) => payload.waterIntakeMl !== undefined || payload.mealDefinitions !== undefined, {
-    message: "At least one diary field must be provided",
-  });
+  .refine(
+    (payload) =>
+      payload.waterIntakeMl !== undefined ||
+      payload.mealDefinitions !== undefined,
+    {
+      message: "At least one diary field must be provided",
+    },
+  );
 
 export const mealPlanRequestSchema = z.object({
   targetCalories: z.number().min(600).max(8000),
@@ -93,11 +124,7 @@ export const mealPlanRequestSchema = z.object({
 export const customFoodSchema = z.object({
   name: z.string().trim().min(1).max(120),
   brand: z.string().trim().min(1).max(120).optional(),
-  barcode: z
-    .string()
-    .trim()
-    .regex(NUTRITION_BARCODE_REGEX)
-    .optional(),
+  barcode: z.string().trim().regex(NUTRITION_BARCODE_REGEX).optional(),
   caloriesPer100: z.number().min(0).max(1200).optional(),
   proteinPer100: z.number().min(0).max(100).optional(),
   carbsPer100: z.number().min(0).max(100).optional(),

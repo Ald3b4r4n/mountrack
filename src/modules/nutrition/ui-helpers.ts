@@ -1,4 +1,8 @@
-import { FoodItem, FoodSource, NutritionUnit } from "@/modules/nutrition/domain/types";
+import {
+  FoodItem,
+  FoodSource,
+  NutritionUnit,
+} from "@/modules/nutrition/domain/types";
 
 const DECIMAL_FORMATTER = new Intl.NumberFormat("pt-BR", {
   minimumFractionDigits: 0,
@@ -24,10 +28,15 @@ export function getFoodDefaultQuantity(food: FoodItem): string {
   return food.servingGrams ? "1" : "100";
 }
 
-export function formatFoodSourceLabel(source: FoodSource, options?: { compact?: boolean }): string {
+export function formatFoodSourceLabel(
+  source: FoodSource,
+  options?: { compact?: boolean },
+): string {
   const compact = options?.compact ?? false;
 
   switch (source) {
+    case "fatsecret":
+      return compact ? "FatSecret" : "FatSecret";
     case "internal":
       return compact ? "App" : "Catálogo do app";
     case "tbca":
@@ -84,11 +93,13 @@ export function formatHistoryDate(dateString: string): string {
   try {
     const d = parseHistoryDate(dateString);
     if (!Number.isFinite(d.getTime())) return dateString;
-    return d.toLocaleDateString("pt-BR", {
-      weekday: "short",
-      day: "2-digit",
-      month: "short"
-    }).replace(".", ""); // Ex: "seg, 01 de mar"
+    return d
+      .toLocaleDateString("pt-BR", {
+        weekday: "short",
+        day: "2-digit",
+        month: "short",
+      })
+      .replace(".", ""); // Ex: "seg, 01 de mar"
   } catch {
     return dateString;
   }

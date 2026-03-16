@@ -32,6 +32,40 @@ interface UsdaFoodSearchItem {
   publicationDate?: string;
 }
 
+interface FatSecretFoodCandidate {
+  food_id?: string | number;
+  food_name?: string;
+  food_type?: string;
+  brand_name?: string;
+  food_url?: string;
+  barcode?: string;
+  serving_description?: string;
+  servings?: {
+    serving?:
+      | {
+          metric_serving_amount?: string | number;
+          metric_serving_unit?: string;
+          calories?: string | number;
+          protein?: string | number;
+          carbohydrate?: string | number;
+          fat?: string | number;
+          fiber?: string | number;
+          sodium?: string | number;
+        }
+      | Array<{
+          metric_serving_amount?: string | number;
+          metric_serving_unit?: string;
+          calories?: string | number;
+          protein?: string | number;
+          carbohydrate?: string | number;
+          fat?: string | number;
+          fiber?: string | number;
+          sodium?: string | number;
+        }>;
+  };
+  food_description?: string;
+}
+
 function toNumber(value: number | string | undefined): number | undefined {
   if (value === undefined) return undefined;
   const parsed = Number(value);
@@ -51,15 +85,22 @@ function repairMojibake(value: string | undefined): string | undefined {
   }
 }
 
-function pickOpenFoodFactsName(product: OpenFoodFactsProduct): string | undefined {
+function pickOpenFoodFactsName(
+  product: OpenFoodFactsProduct,
+): string | undefined {
   return repairMojibake(
-    product.product_name_pt || product.product_name || product.generic_name_pt || product.generic_name,
+    product.product_name_pt ||
+      product.product_name ||
+      product.generic_name_pt ||
+      product.generic_name,
   );
 }
 
 function parseServingGrams(servingSize?: string): number | undefined {
   if (!servingSize) return undefined;
-  const match = servingSize.replace(",", ".").match(/(\d+(?:\.\d+)?)\s?(g|ml)/i);
+  const match = servingSize
+    .replace(",", ".")
+    .match(/(\d+(?:\.\d+)?)\s?(g|ml)/i);
   if (!match) return undefined;
   const value = Number(match[1]);
   return Number.isFinite(value) ? value : undefined;
@@ -75,25 +116,121 @@ function completenessScoreFromFood(food: Partial<FoodItem>): number {
     food.sodiumPer100,
   ];
 
-  return Number((fields.filter((value) => value !== undefined).length / fields.length).toFixed(2));
+  return Number(
+    (
+      fields.filter((value) => value !== undefined).length / fields.length
+    ).toFixed(2),
+  );
 }
 
 function readUsdaNutrient(
   nutrients: UsdaFoodSearchItem["foodNutrients"] = [],
   names: string[],
 ): number | undefined {
-  const nutrient = nutrients.find((item) => item.nutrientName && names.includes(item.nutrientName));
+  const nutrient = nutrients.find(
+    (item) => item.nutrientName && names.includes(item.nutrientName),
+  );
   return nutrient?.value;
 }
 
-export function normalizeOpenFoodFactsProduct(product: OpenFoodFactsProduct): FoodItem | null {
+function readFatSecretServing(food: FatSecretFoodCandidate): {
+  caloriesPer100?: number;
+  proteinPer100?: number;
+  carbsPer100?: number;
+  fatPer100?: number;
+  fiberPer100?: number;
+  sodiumPer100?: number;
+  servingDescription?: string;
+  servingGrams?: number;
+} {
+  const servingPayload = food.servings?.serving;
+  const serving = Array.isArray(servingPayload)
+    ? (servingPayload.find(
+        (item) => String(item.metric_serving_unit ?? "").toLowerCase() === "g",
+      ) ?? servingPayload[0])
+    : servingPayload;
+
+  if (serving) {
+    const metricServingAmount = toNumber(serving.metric_serving_amount);
+    const scale =
+      metricServingAmount && metricServingAmount > 0
+        ? 100 / metricServingAmount
+        : 1;
+
+    return {
+      caloriesPer100:
+        toNumber(serving.calories) != null
+          ? Number((Number(serving.calories) * scale).toFixed(2))
+          : undefined,
+      proteinPer100:
+        toNumber(serving.protein) != null
+          ? Number((Number(serving.protein) * scale).toFixed(2))
+          : undefined,
+      carbsPer100:
+        toNumber(serving.carbohydrate) != null
+          ? Number((Number(serving.carbohydrate) * scale).toFixed(2))
+          : undefined,
+      fatPer100:
+        toNumber(serving.fat) != null
+          ? Number((Number(serving.fat) * scale).toFixed(2))
+          : undefined,
+      fiberPer100:
+        toNumber(serving.fiber) != null
+          ? Number((Number(serving.fiber) * scale).toFixed(2))
+          : undefined,
+      sodiumPer100:
+        toNumber(serving.sodium) != null
+          ? Number((Number(serving.sodium) * scale).toFixed(2))
+          : undefined,
+      servingDescription: food.serving_description,
+      servingGrams: metricServingAmount,
+    };
+  }
+
+  const description = food.food_description ?? "";
+  const macroMatch = description.match(
+    /Calories:\s*([\d.,]+)kcal\s*\|\s*Fat:\s*([\d.,]+)g\s*\|\s*Carbs:\s*([\d.,]+)g\s*\|\s*Protein:\s*([\d.,]+)g/i,
+  );
+
+  if (!macroMatch) {
+    return {};
+  }
+
+  const calories = Number(macroMatch[1].replace(",", "."));
+  const fat = Number(macroMatch[2].replace(",", "."));
+  const carbs = Number(macroMatch[3].replace(",", "."));
+  const protein = Number(macroMatch[4].replace(",", "."));
+
+  if (![calories, fat, carbs, protein].every(Number.isFinite)) {
+    return {};
+  }
+
+  return {
+    caloriesPer100: calories,
+    fatPer100: fat,
+    carbsPer100: carbs,
+    proteinPer100: protein,
+  };
+}
+
+export function normalizeOpenFoodFactsProduct(
+  product: OpenFoodFactsProduct,
+): FoodItem | null {
   const name = pickOpenFoodFactsName(product);
   if (!name) return null;
 
-  const tags = ["industrializado", ...(product.categories_tags ?? []).map((tag) => repairMojibake(tag) ?? tag)];
+  const tags = [
+    "industrializado",
+    ...(product.categories_tags ?? []).map((tag) => repairMojibake(tag) ?? tag),
+  ];
   const classification = inferFoodClassification(name, tags);
-  const countryCode = product.countries_tags?.some((tag) => /brazil|brasil/i.test(tag)) ? "BR" : undefined;
-  const locale = product.product_name_pt || product.generic_name_pt ? "pt-BR" : undefined;
+  const countryCode = product.countries_tags?.some((tag) =>
+    /brazil|brasil/i.test(tag),
+  )
+    ? "BR"
+    : undefined;
+  const locale =
+    product.product_name_pt || product.generic_name_pt ? "pt-BR" : undefined;
 
   const food: FoodItem = {
     id: `off-${product.code ?? name.toLowerCase().replace(/\s+/g, "-")}`,
@@ -117,7 +254,9 @@ export function normalizeOpenFoodFactsProduct(product: OpenFoodFactsProduct): Fo
     locale,
     countryCode,
     isBranded: true,
-    externalUpdatedAt: product.last_modified_t ? new Date(product.last_modified_t * 1000).toISOString() : undefined,
+    externalUpdatedAt: product.last_modified_t
+      ? new Date(product.last_modified_t * 1000).toISOString()
+      : undefined,
     ...classification,
   };
 
@@ -144,7 +283,9 @@ export function normalizeUsdaFood(food: UsdaFoodSearchItem): FoodItem | null {
     baseUnit: "g",
     caloriesPer100: readUsdaNutrient(food.foodNutrients, ["Energy"]),
     proteinPer100: readUsdaNutrient(food.foodNutrients, ["Protein"]),
-    carbsPer100: readUsdaNutrient(food.foodNutrients, ["Carbohydrate, by difference"]),
+    carbsPer100: readUsdaNutrient(food.foodNutrients, [
+      "Carbohydrate, by difference",
+    ]),
     fatPer100: readUsdaNutrient(food.foodNutrients, ["Total lipid (fat)"]),
     fiberPer100: readUsdaNutrient(food.foodNutrients, ["Fiber, total dietary"]),
     sodiumPer100: readUsdaNutrient(food.foodNutrients, ["Sodium, Na"]),
@@ -153,6 +294,50 @@ export function normalizeUsdaFood(food: UsdaFoodSearchItem): FoodItem | null {
     countryCode: "US",
     isBranded: /branded/i.test(food.dataType ?? ""),
     externalUpdatedAt: food.publicationDate,
+    ...classification,
+  };
+
+  normalizedFood.completenessScore = completenessScoreFromFood(normalizedFood);
+  return normalizedFood;
+}
+
+export function normalizeFatSecretFood(
+  food: FatSecretFoodCandidate,
+): FoodItem | null {
+  const name = repairMojibake(food.food_name?.trim());
+  const sourceId = String(food.food_id ?? "").trim();
+
+  if (!name || !sourceId) {
+    return null;
+  }
+
+  const macros = readFatSecretServing(food);
+  const tags = [repairMojibake(food.food_type ?? "") ?? "", "fatsecret"].filter(
+    Boolean,
+  );
+  const classification = inferFoodClassification(name, tags);
+
+  const normalizedFood: FoodItem = {
+    id: `fatsecret-${sourceId}`,
+    source: "fatsecret",
+    sourceId,
+    name,
+    displayName: name,
+    brand: repairMojibake(food.brand_name?.trim()) || undefined,
+    barcode: food.barcode?.trim() || undefined,
+    baseUnit: "g",
+    servingDescription: macros.servingDescription,
+    servingGrams: macros.servingGrams,
+    caloriesPer100: macros.caloriesPer100,
+    proteinPer100: macros.proteinPer100,
+    carbsPer100: macros.carbsPer100,
+    fatPer100: macros.fatPer100,
+    fiberPer100: macros.fiberPer100,
+    sodiumPer100: macros.sodiumPer100,
+    confidenceScore: 0.88,
+    locale: "pt-BR",
+    countryCode: "BR",
+    isBranded: Boolean(food.brand_name),
     ...classification,
   };
 
