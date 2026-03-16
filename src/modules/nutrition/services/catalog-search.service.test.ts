@@ -19,7 +19,10 @@ import {
   retryMissingFoodLookup,
   upsertFoods,
 } from "@/modules/nutrition/repositories/nutrition-store";
-import { fetchOpenFoodFactsBarcode, searchOpenFoodFacts } from "@/modules/nutrition/providers/open-food-facts";
+import {
+  fetchOpenFoodFactsBarcode,
+  searchOpenFoodFacts,
+} from "@/modules/nutrition/providers/open-food-facts";
 import { searchUsdaFoods } from "@/modules/nutrition/providers/usda-food-data";
 
 jest.mock("@/modules/nutrition/data/supplement-foods", () => ({
@@ -75,7 +78,9 @@ function makeFood(id: string, overrides: Partial<FoodItem> = {}): FoodItem {
   };
 }
 
-function makeLookup(overrides: Partial<MissingFoodLookupRecord> = {}): MissingFoodLookupRecord {
+function makeLookup(
+  overrides: Partial<MissingFoodLookupRecord> = {},
+): MissingFoodLookupRecord {
   return {
     id: "lookup-1",
     query: "cuscuz de milho",
@@ -127,7 +132,10 @@ describe("catalog search service", () => {
       }),
     ]);
 
-    const result = await searchNutritionCatalog("user-a", "Zz Persistencia Privada 2026");
+    const result = await searchNutritionCatalog(
+      "user-a",
+      "Zz Persistencia Privada 2026",
+    );
 
     expect(result.source).toBe("custom");
     expect(result.externalPending).toBe(false);
@@ -181,6 +189,40 @@ describe("catalog search service", () => {
     expect(mockedFetchOpenFoodFactsBarcode).not.toHaveBeenCalled();
   });
 
+  it("matches stored foods when scanner returns UPC-A and catalog stores EAN-13", async () => {
+    mockedListAccessibleFoods.mockResolvedValue([
+      makeFood("whey-1kg", {
+        barcode: "0789100010010",
+        name: "Whey Protein 1kg",
+        displayName: "Whey Protein 1kg",
+      }),
+    ]);
+
+    const result = await lookupNutritionBarcode("user-a", "789100010010");
+
+    expect(result.item?.id).toBe("whey-1kg");
+    expect(result.source).toBe("catalog");
+    expect(mockedFetchOpenFoodFactsBarcode).not.toHaveBeenCalled();
+  });
+
+  it("checks TBCA/public catalog before Open Food Facts when local list is empty", async () => {
+    mockedListAccessibleFoods.mockResolvedValue([]);
+    mockedListFoods.mockResolvedValue([
+      makeFood("tbca-barcode-hit", {
+        source: "tbca",
+        barcode: "7893596226205",
+        name: "Item TBCA",
+        displayName: "Item TBCA",
+      }),
+    ]);
+
+    const result = await lookupNutritionBarcode("user-a", "7893596226205");
+
+    expect(result.item?.id).toBe("tbca-barcode-hit");
+    expect(result.source).toBe("catalog");
+    expect(mockedFetchOpenFoodFactsBarcode).not.toHaveBeenCalled();
+  });
+
   it("enriches queued query lookups through external providers", async () => {
     mockedSearchOpenFoodFacts.mockResolvedValue([
       makeFood("off-cuscuz", {
@@ -190,7 +232,11 @@ describe("catalog search service", () => {
       }),
     ]);
 
-    const queuedLookup = makeLookup({ status: "processing", attempts: 1, updatedAt: "2026-03-09T10:01:00.000Z" });
+    const queuedLookup = makeLookup({
+      status: "processing",
+      attempts: 1,
+      updatedAt: "2026-03-09T10:01:00.000Z",
+    });
     const result = await enrichMissingFoodLookup(queuedLookup);
 
     expect(mockedSearchOpenFoodFacts).toHaveBeenCalledWith("cuscuz de milho");
@@ -208,12 +254,21 @@ describe("catalog search service", () => {
         updatedAt: "2026-03-09T10:01:00.000Z",
       }),
     ]);
-    mockedSearchOpenFoodFacts.mockRejectedValue(new Error("Temporary OFF outage"));
+    mockedSearchOpenFoodFacts.mockRejectedValue(
+      new Error("Temporary OFF outage"),
+    );
 
     const result = await processQueuedFoodLookups(5);
 
-    expect(mockedRetryMissingFoodLookup).toHaveBeenCalledWith("lookup-1", "Temporary OFF outage");
-    expect(mockedCompleteMissingFoodLookup).not.toHaveBeenCalledWith("lookup-1", "failed", expect.anything());
+    expect(mockedRetryMissingFoodLookup).toHaveBeenCalledWith(
+      "lookup-1",
+      "Temporary OFF outage",
+    );
+    expect(mockedCompleteMissingFoodLookup).not.toHaveBeenCalledWith(
+      "lookup-1",
+      "failed",
+      expect.anything(),
+    );
     expect(result.retried).toBe(1);
     expect(result.failed).toBe(0);
   });
@@ -226,12 +281,18 @@ describe("catalog search service", () => {
         updatedAt: "2026-03-09T10:01:00.000Z",
       }),
     ]);
-    mockedSearchOpenFoodFacts.mockRejectedValue(new Error("Persistent OFF outage"));
+    mockedSearchOpenFoodFacts.mockRejectedValue(
+      new Error("Persistent OFF outage"),
+    );
 
     const result = await processQueuedFoodLookups(5);
 
     expect(mockedRetryMissingFoodLookup).not.toHaveBeenCalled();
-    expect(mockedCompleteMissingFoodLookup).toHaveBeenCalledWith("lookup-1", "failed", "Persistent OFF outage");
+    expect(mockedCompleteMissingFoodLookup).toHaveBeenCalledWith(
+      "lookup-1",
+      "failed",
+      "Persistent OFF outage",
+    );
     expect(mockedUpsertFoods).not.toHaveBeenCalled();
     expect(result.failed).toBe(1);
     expect(result.retried).toBe(0);

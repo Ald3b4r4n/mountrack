@@ -5,6 +5,7 @@ import {
   completeMissingFoodLookup,
   claimMissingFoodLookups,
   listAccessibleFoods,
+  listFoods,
   queueMissingFoodLookup,
   retryMissingFoodLookup,
   upsertFoods,
@@ -13,13 +14,41 @@ import {
   MISSING_FOOD_LOOKUP_MAX_ATTEMPTS,
   type MissingFoodLookupRecord,
 } from "@/modules/nutrition/repositories/missing-food-lookup";
-import { hasStrongFoodSearchResult, searchFoodsByQuery } from "@/modules/nutrition/services/food-search.service";
-import { fetchOpenFoodFactsBarcode, searchOpenFoodFacts } from "@/modules/nutrition/providers/open-food-facts";
+import {
+  hasStrongFoodSearchResult,
+  searchFoodsByQuery,
+} from "@/modules/nutrition/services/food-search.service";
+import {
+  fetchOpenFoodFactsBarcode,
+  searchOpenFoodFacts,
+} from "@/modules/nutrition/providers/open-food-facts";
 import { searchUsdaFoods } from "@/modules/nutrition/providers/usda-food-data";
 
 const SEARCH_LIMIT = 8;
 
-function shouldEnrichFromExternal(query: string, results: FoodItem[], hasRequestedBrand: boolean): boolean {
+function findBarcodeMatch(
+  foods: FoodItem[],
+  candidates: string[],
+): FoodItem | null {
+  return (
+    foods.find((food) => {
+      if (!food.barcode) {
+        return false;
+      }
+
+      const storedCandidates = buildNutritionBarcodeCandidates(food.barcode);
+      return storedCandidates.some((candidate) =>
+        candidates.includes(candidate),
+      );
+    }) ?? null
+  );
+}
+
+function shouldEnrichFromExternal(
+  query: string,
+  results: FoodItem[],
+  hasRequestedBrand: boolean,
+): boolean {
   if (!query.trim()) {
     return false;
   }
@@ -64,16 +93,26 @@ export async function searchNutritionCatalog(
   userId: string,
   query: string,
 ): Promise<{ results: FoodItem[]; source: string; externalPending: boolean }> {
-  const catalogFoods = await listAccessibleFoods(userId, { includeInternal: true });
+  const catalogFoods = await listAccessibleFoods(userId, {
+    includeInternal: true,
+  });
   const requestedBrand = findSupplementBrandProfile(query);
   const storedResults = await searchFoodsByQuery(query, {
     internalFoods: catalogFoods,
     limit: SEARCH_LIMIT,
   });
 
-  const externalPending = shouldEnrichFromExternal(query, storedResults, Boolean(requestedBrand));
+  const externalPending = shouldEnrichFromExternal(
+    query,
+    storedResults,
+    Boolean(requestedBrand),
+  );
   if (!externalPending) {
-    return { results: storedResults, source: resolveCatalogSource(storedResults), externalPending: false };
+    return {
+      results: storedResults,
+      source: resolveCatalogSource(storedResults),
+      externalPending: false,
+    };
   }
   await queueMissingFoodLookup({ query, reason: "search_miss" });
 
@@ -86,7 +125,11 @@ export async function searchNutritionCatalog(
 
 export async function enrichMissingFoodLookup(
   lookup: MissingFoodLookupRecord,
-): Promise<{ status: "completed" | "failed" | "no_match"; insertedCount: number; lastError?: string | null }> {
+): Promise<{
+  status: "completed" | "failed" | "no_match";
+  insertedCount: number;
+  lastError?: string | null;
+}> {
   try {
     if (lookup.barcode) {
       const barcodeMatch = await fetchOpenFoodFactsBarcode(lookup.barcode);
@@ -118,7 +161,10 @@ export async function enrichMissingFoodLookup(
     return {
       status: "failed",
       insertedCount: 0,
-      lastError: error instanceof Error ? error.message : "Unexpected enrichment failure",
+      lastError:
+        error instanceof Error
+          ? error.message
+          : "Unexpected enrichment failure",
     };
   }
 }
@@ -174,16 +220,30 @@ export async function processQueuedFoodLookups(limit = 5): Promise<{
   };
 }
 
-export async function lookupNutritionBarcode(userId: string, code: string): Promise<{ item: FoodItem | null; source: string }> {
+export async function lookupNutritionBarcode(
+  userId: string,
+  code: string,
+): Promise<{ item: FoodItem | null; source: string }> {
   const candidates = buildNutritionBarcodeCandidates(code);
   if (!candidates.length) {
     return { item: null, source: "none" };
   }
 
-  const storedFoods = await listAccessibleFoods(userId, { includeInternal: true });
-  const storedMatch = storedFoods.find((food) => food.barcode && candidates.includes(food.barcode)) ?? null;
+  const storedFoods = await listAccessibleFoods(userId, {
+    includeInternal: true,
+  });
+  const storedMatch = findBarcodeMatch(storedFoods, candidates);
   if (storedMatch) {
     return { item: storedMatch, source: resolveCatalogSource([storedMatch]) };
+  }
+
+  const tbcaCatalogFoods = await listFoods({ includeInternal: true });
+  const tbcaCatalogMatch = findBarcodeMatch(tbcaCatalogFoods, candidates);
+  if (tbcaCatalogMatch) {
+    return {
+      item: tbcaCatalogMatch,
+      source: resolveCatalogSource([tbcaCatalogMatch]),
+    };
   }
 
   for (const candidate of candidates) {
@@ -194,10 +254,14 @@ export async function lookupNutritionBarcode(userId: string, code: string): Prom
     }
   }
 
-  await queueMissingFoodLookup({ barcode: candidates[0], reason: "barcode_miss" });
+  await queueMissingFoodLookup({
+    barcode: candidates[0],
+    reason: "barcode_miss",
+  });
 
-  const fallbackMatch = (await listAccessibleFoods(userId, { includeInternal: true })).find(
-    (food) => food.barcode && candidates.includes(food.barcode),
-  ) ?? null;
+  const fallbackMatch = findBarcodeMatch(
+    await listAccessibleFoods(userId, { includeInternal: true }),
+    candidates,
+  );
   return { item: fallbackMatch, source: fallbackMatch ? "fallback" : "none" };
 }
