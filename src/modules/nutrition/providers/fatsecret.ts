@@ -22,6 +22,12 @@ function getFatSecretCredentials(): {
   const clientSecret = process.env.FATSECRET_CLIENT_SECRET?.trim() ?? "";
 
   if (!clientId || !clientSecret) {
+    console.warn(
+      "[FatSecret] Missing credentials: clientId=" +
+        (clientId ? "set" : "missing") +
+        ", clientSecret=" +
+        (clientSecret ? "set" : "missing"),
+    );
     return null;
   }
 
@@ -52,11 +58,13 @@ async function fetchWithTimeout(
 async function getFatSecretAccessToken(): Promise<string | null> {
   const credentials = getFatSecretCredentials();
   if (!credentials) {
+    console.warn("[FatSecret] No credentials provided");
     return null;
   }
 
   const cached = globalFatSecretState.__fatSecretTokenCache__;
   if (cached && cached.expiresAt > Date.now() + 5000) {
+    console.debug("[FatSecret] Using cached token");
     return cached.accessToken;
   }
 
@@ -78,6 +86,11 @@ async function getFatSecretAccessToken(): Promise<string | null> {
   });
 
   if (!response?.ok) {
+    console.error(
+      "[FatSecret] Token request failed:",
+      response?.status,
+      response?.statusText,
+    );
     return null;
   }
 
@@ -88,6 +101,7 @@ async function getFatSecretAccessToken(): Promise<string | null> {
     };
 
     if (!payload.access_token) {
+      console.error("[FatSecret] No access token in response", payload);
       return null;
     }
 
@@ -97,14 +111,25 @@ async function getFatSecretAccessToken(): Promise<string | null> {
       expiresAt: Date.now() + ttlMs,
     };
 
+    console.debug("[FatSecret] Got new access token");
     return payload.access_token;
-  } catch {
+  } catch (error) {
+    console.error("[FatSecret] Error parsing token response:", error);
     return null;
   }
 }
 
 function parseFoodsFromPayload(payload: unknown): FoodItem[] {
   if (!payload || typeof payload !== "object") {
+    return [];
+  }
+
+  // Check for API errors in response
+  const errorPayload = payload as {
+    error?: { code?: number; message?: string };
+  };
+  if (errorPayload.error) {
+    console.error("[FatSecret] API error:", errorPayload.error);
     return [];
   }
 
@@ -128,6 +153,7 @@ async function callFatSecretApi(
 ): Promise<unknown | null> {
   const accessToken = await getFatSecretAccessToken();
   if (!accessToken) {
+    console.warn(`[FatSecret] No access token for method: ${method}`);
     return null;
   }
 
@@ -147,12 +173,23 @@ async function callFatSecretApi(
   });
 
   if (!response?.ok) {
+    console.error(
+      `[FatSecret] Request failed for method ${method}:`,
+      response?.status,
+      response?.statusText,
+    );
     return null;
   }
 
   try {
-    return (await response.json()) as unknown;
-  } catch {
+    const payload = (await response.json()) as unknown;
+    console.debug(`[FatSecret] Got response for method: ${method}`);
+    return payload;
+  } catch (error) {
+    console.error(
+      `[FatSecret] Failed to parse response for method ${method}:`,
+      error,
+    );
     return null;
   }
 }
@@ -161,6 +198,8 @@ export async function searchFatSecretFoods(query: string): Promise<FoodItem[]> {
   if (!query.trim()) {
     return [];
   }
+
+  console.debug(`[FatSecret] Searching for: "${query}"`);
 
   const payload = await callFatSecretApi("foods.search.v3", {
     search_expression: query.trim(),
@@ -171,17 +210,23 @@ export async function searchFatSecretFoods(query: string): Promise<FoodItem[]> {
   if (payload) {
     const foods = parseFoodsFromPayload(payload);
     if (foods.length) {
+      console.debug(`[FatSecret] Found ${foods.length} foods for "${query}"`);
       return foods;
     }
   }
 
+  console.debug(`[FatSecret] Fallback search for: "${query}"`);
   const fallbackPayload = await callFatSecretApi("foods.search", {
     search_expression: query.trim(),
     max_results: "8",
     page_number: "0",
   });
 
-  return parseFoodsFromPayload(fallbackPayload);
+  const fallbackResults = parseFoodsFromPayload(fallbackPayload);
+  console.debug(
+    `[FatSecret] Fallback found ${fallbackResults.length} foods for "${query}"`,
+  );
+  return fallbackResults;
 }
 
 function normalizeBarcodeCandidate(value: string): string {
@@ -193,8 +238,11 @@ export async function fetchFatSecretBarcode(
 ): Promise<FoodItem | null> {
   const normalizedBarcode = normalizeBarcodeCandidate(barcode);
   if (!normalizedBarcode) {
+    console.debug(`[FatSecret] Invalid barcode format: "${barcode}"`);
     return null;
   }
+
+  console.debug(`[FatSecret] Looking up barcode: ${normalizedBarcode}`);
 
   const directMatchPayload = await callFatSecretApi(
     "food.find_id_for_barcode",
@@ -217,6 +265,9 @@ export async function fetchFatSecretBarcode(
         : "";
 
   if (resolvedFoodId) {
+    console.debug(
+      `[FatSecret] Found food ID ${resolvedFoodId} for barcode ${normalizedBarcode}`,
+    );
     const detailPayload = await callFatSecretApi("food.get.v4", {
       food_id: resolvedFoodId,
     });
@@ -228,10 +279,14 @@ export async function fetchFatSecretBarcode(
 
     if (normalized) {
       normalized.barcode = normalized.barcode ?? normalizedBarcode;
+      console.debug(
+        `[FatSecret] Returning food: ${normalized.name} for barcode ${normalizedBarcode}`,
+      );
       return normalized;
     }
   }
 
+  console.debug(`[FatSecret] No direct match, searching by barcode number`);
   const searchPayload = await callFatSecretApi("foods.search", {
     search_expression: normalizedBarcode,
     max_results: "5",
@@ -248,6 +303,16 @@ export async function fetchFatSecretBarcode(
 
   if (strictMatch && !strictMatch.barcode) {
     strictMatch.barcode = normalizedBarcode;
+  }
+
+  if (!strictMatch) {
+    console.debug(
+      `[FatSecret] No match found for barcode: ${normalizedBarcode}`,
+    );
+  } else {
+    console.debug(
+      `[FatSecret] Found match via search: ${strictMatch.name} for barcode ${normalizedBarcode}`,
+    );
   }
 
   return strictMatch;
