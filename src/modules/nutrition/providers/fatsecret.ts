@@ -22,7 +22,7 @@ function getFatSecretCredentials(): {
   const clientSecret = process.env.FATSECRET_CLIENT_SECRET?.trim() ?? "";
 
   if (!clientId || !clientSecret) {
-    console.warn(
+    console.error(
       "[FatSecret] Missing credentials: clientId=" +
         (clientId ? "set" : "missing") +
         ", clientSecret=" +
@@ -58,13 +58,13 @@ async function fetchWithTimeout(
 async function getFatSecretAccessToken(): Promise<string | null> {
   const credentials = getFatSecretCredentials();
   if (!credentials) {
-    console.warn("[FatSecret] No credentials provided");
+    console.error("[FatSecret] No credentials provided");
     return null;
   }
 
   const cached = globalFatSecretState.__fatSecretTokenCache__;
   if (cached && cached.expiresAt > Date.now() + 5000) {
-    console.debug("[FatSecret] Using cached token");
+    console.log("[FatSecret] Using cached token");
     return cached.accessToken;
   }
 
@@ -111,7 +111,7 @@ async function getFatSecretAccessToken(): Promise<string | null> {
       expiresAt: Date.now() + ttlMs,
     };
 
-    console.debug("[FatSecret] Got new access token");
+    console.log("[FatSecret] Got new access token");
     return payload.access_token;
   } catch (error) {
     console.error("[FatSecret] Error parsing token response:", error);
@@ -121,6 +121,7 @@ async function getFatSecretAccessToken(): Promise<string | null> {
 
 function parseFoodsFromPayload(payload: unknown): FoodItem[] {
   if (!payload || typeof payload !== "object") {
+    console.error("[FatSecret] Empty or invalid payload:", payload);
     return [];
   }
 
@@ -134,11 +135,21 @@ function parseFoodsFromPayload(payload: unknown): FoodItem[] {
   }
 
   const foodsNode = (payload as { foods?: { food?: unknown } }).foods?.food;
+  if (!foodsNode) {
+    console.log(
+      "[FatSecret] No foods node in payload. Full payload:",
+      JSON.stringify(payload).slice(0, 200),
+    );
+    return [];
+  }
+
   const foodEntries = Array.isArray(foodsNode)
     ? foodsNode
     : foodsNode
       ? [foodsNode]
       : [];
+
+  console.log(`[FatSecret] Got ${foodEntries.length} raw food entries`);
 
   return foodEntries
     .map((foodEntry) =>
@@ -199,7 +210,7 @@ export async function searchFatSecretFoods(query: string): Promise<FoodItem[]> {
     return [];
   }
 
-  console.debug(`[FatSecret] Searching for: "${query}"`);
+  console.log(`[FatSecret] Searching for: "${query}"`);
 
   const payload = await callFatSecretApi("foods.search.v3", {
     search_expression: query.trim(),
@@ -210,12 +221,12 @@ export async function searchFatSecretFoods(query: string): Promise<FoodItem[]> {
   if (payload) {
     const foods = parseFoodsFromPayload(payload);
     if (foods.length) {
-      console.debug(`[FatSecret] Found ${foods.length} foods for "${query}"`);
+      console.log(`[FatSecret] Found ${foods.length} foods for "${query}"`);
       return foods;
     }
   }
 
-  console.debug(`[FatSecret] Fallback search for: "${query}"`);
+  console.log(`[FatSecret] Fallback search for: "${query}"`);
   const fallbackPayload = await callFatSecretApi("foods.search", {
     search_expression: query.trim(),
     max_results: "8",
@@ -223,7 +234,7 @@ export async function searchFatSecretFoods(query: string): Promise<FoodItem[]> {
   });
 
   const fallbackResults = parseFoodsFromPayload(fallbackPayload);
-  console.debug(
+  console.log(
     `[FatSecret] Fallback found ${fallbackResults.length} foods for "${query}"`,
   );
   return fallbackResults;
@@ -238,11 +249,11 @@ export async function fetchFatSecretBarcode(
 ): Promise<FoodItem | null> {
   const normalizedBarcode = normalizeBarcodeCandidate(barcode);
   if (!normalizedBarcode) {
-    console.debug(`[FatSecret] Invalid barcode format: "${barcode}"`);
+    console.log(`[FatSecret] Invalid barcode format: "${barcode}"`);
     return null;
   }
 
-  console.debug(`[FatSecret] Looking up barcode: ${normalizedBarcode}`);
+  console.log(`[FatSecret] Looking up barcode: ${normalizedBarcode}`);
 
   const directMatchPayload = await callFatSecretApi(
     "food.find_id_for_barcode",
