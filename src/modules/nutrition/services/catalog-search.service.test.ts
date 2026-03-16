@@ -5,6 +5,7 @@ import {
 } from "@/modules/nutrition/repositories/missing-food-lookup";
 import {
   enrichMissingFoodLookup,
+  lookupNutritionBarcode,
   processQueuedFoodLookups,
   searchNutritionCatalog,
 } from "@/modules/nutrition/services/catalog-search.service";
@@ -18,7 +19,7 @@ import {
   retryMissingFoodLookup,
   upsertFoods,
 } from "@/modules/nutrition/repositories/nutrition-store";
-import { searchOpenFoodFacts } from "@/modules/nutrition/providers/open-food-facts";
+import { fetchOpenFoodFactsBarcode, searchOpenFoodFacts } from "@/modules/nutrition/providers/open-food-facts";
 import { searchUsdaFoods } from "@/modules/nutrition/providers/usda-food-data";
 
 jest.mock("@/modules/nutrition/data/supplement-foods", () => ({
@@ -53,6 +54,7 @@ const mockedListUserCustomFoods = jest.mocked(listUserCustomFoods);
 const mockedQueueMissingFoodLookup = jest.mocked(queueMissingFoodLookup);
 const mockedRetryMissingFoodLookup = jest.mocked(retryMissingFoodLookup);
 const mockedUpsertFoods = jest.mocked(upsertFoods);
+const mockedFetchOpenFoodFactsBarcode = jest.mocked(fetchOpenFoodFactsBarcode);
 const mockedSearchOpenFoodFacts = jest.mocked(searchOpenFoodFacts);
 const mockedSearchUsdaFoods = jest.mocked(searchUsdaFoods);
 
@@ -98,6 +100,7 @@ describe("catalog search service", () => {
     mockedQueueMissingFoodLookup.mockReset();
     mockedRetryMissingFoodLookup.mockReset();
     mockedUpsertFoods.mockReset();
+    mockedFetchOpenFoodFactsBarcode.mockReset();
     mockedSearchOpenFoodFacts.mockReset();
     mockedSearchUsdaFoods.mockReset();
 
@@ -109,6 +112,7 @@ describe("catalog search service", () => {
     mockedQueueMissingFoodLookup.mockResolvedValue(makeLookup());
     mockedRetryMissingFoodLookup.mockResolvedValue(undefined);
     mockedUpsertFoods.mockResolvedValue(undefined);
+    mockedFetchOpenFoodFactsBarcode.mockResolvedValue(null);
     mockedSearchOpenFoodFacts.mockResolvedValue([]);
     mockedSearchUsdaFoods.mockResolvedValue([]);
   });
@@ -159,6 +163,22 @@ describe("catalog search service", () => {
 
     expect(result.source).toBe("catalog");
     expect(result.externalPending).toBe(false);
+  });
+
+  it("matches stored foods when the scanner returns a GTIN-14 variant", async () => {
+    mockedListAccessibleFoods.mockResolvedValue([
+      makeFood("leite-condensado", {
+        barcode: "7891000100103",
+        name: "Leite Condensado",
+        displayName: "Leite Condensado",
+      }),
+    ]);
+
+    const result = await lookupNutritionBarcode("user-a", "07891000100103");
+
+    expect(result.item?.id).toBe("leite-condensado");
+    expect(result.source).toBe("catalog");
+    expect(mockedFetchOpenFoodFactsBarcode).not.toHaveBeenCalled();
   });
 
   it("enriches queued query lookups through external providers", async () => {

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { NUTRITION_BARCODE_REGEX } from "@/modules/nutrition/barcode";
 import type { MealDefinition, MealType } from "@/modules/nutrition/domain/types";
 
 const diaryDateStringSchema = z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -30,7 +31,7 @@ const foodSnapshotSchema = z.object({
   name: z.string().trim().min(1).max(160),
   displayName: z.string().trim().min(1).max(160).optional(),
   brand: z.string().trim().min(1).max(160).optional(),
-  barcode: z.string().trim().regex(/^\d{8,14}$/).optional(),
+  barcode: z.string().trim().regex(NUTRITION_BARCODE_REGEX).optional(),
   baseUnit: z.enum(["g", "ml", "unit"]),
   servingDescription: z.string().trim().min(1).max(160).optional(),
   servingGrams: z.number().positive().max(5000).optional(),
@@ -95,7 +96,7 @@ export const customFoodSchema = z.object({
   barcode: z
     .string()
     .trim()
-    .regex(/^\d{8,14}$/)
+    .regex(NUTRITION_BARCODE_REGEX)
     .optional(),
   caloriesPer100: z.number().min(0).max(1200).optional(),
   proteinPer100: z.number().min(0).max(100).optional(),
@@ -113,7 +114,7 @@ export const historyQuerySchema = z.object({
 });
 
 export const barcodeLookupParamsSchema = z.object({
-  code: z.string().trim().regex(/^\d{8,14}$/),
+  code: z.string().trim().regex(NUTRITION_BARCODE_REGEX),
 });
 
 export const searchQuerySchema = z.object({

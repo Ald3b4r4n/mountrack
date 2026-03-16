@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Html5Qrcode } from "html5-qrcode";
+import { normalizeNutritionBarcode } from "@/modules/nutrition/barcode";
 
 interface BarcodeScannerDialogProps {
   open: boolean;
@@ -94,7 +95,6 @@ export function BarcodeScannerDialog({
             Html5QrcodeSupportedFormats.UPC_A,
             Html5QrcodeSupportedFormats.UPC_E,
             Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.QR_CODE,
           ],
         };
 
@@ -102,13 +102,20 @@ export function BarcodeScannerDialog({
           { facingMode: "environment" },
           scannerConfig as Parameters<Html5Qrcode["start"]>[1],
           (decodedText) => {
+            const normalizedCode = normalizeNutritionBarcode(decodedText);
+
+            if (!normalizedCode) {
+              setError("A leitura detectada não parece um EAN, GTIN ou UPC válido. Aponte para o código numérico da embalagem.");
+              return;
+            }
+
             if (!active || hasDetected) {
               return;
             }
 
             hasDetected = true;
             shouldRestoreFocusRef.current = false;
-            onDetected(decodedText);
+            onDetected(normalizedCode);
             void stopAndClearScanner(scanner).finally(() => {
               if (active) {
                 onClose();
