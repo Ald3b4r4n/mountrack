@@ -71,16 +71,21 @@ export function BarcodeScannerDialog({
     async function startScanner() {
       try {
         if (!window.isSecureContext) {
-          setError("A câmera só funciona em conexão segura. Digite o código manualmente.");
+          setError(
+            "A câmera só funciona em conexão segura. Digite o código manualmente.",
+          );
           return;
         }
 
         if (!navigator.mediaDevices?.getUserMedia) {
-          setError("Este navegador não liberou a câmera aqui. Digite o código manualmente.");
+          setError(
+            "Este navegador não liberou a câmera aqui. Digite o código manualmente.",
+          );
           return;
         }
 
-        const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
+        const { Html5Qrcode, Html5QrcodeSupportedFormats } =
+          await import("html5-qrcode");
         if (!active) return;
 
         const scanner = new Html5Qrcode(containerId);
@@ -105,7 +110,9 @@ export function BarcodeScannerDialog({
             const normalizedCode = normalizeNutritionBarcode(decodedText);
 
             if (!normalizedCode) {
-              setError("A leitura detectada não parece um EAN, GTIN ou UPC válido. Aponte para o código numérico da embalagem.");
+              setError(
+                "A leitura detectada não parece um EAN, GTIN ou UPC válido. Aponte para o código numérico da embalagem.",
+              );
               return;
             }
 
@@ -115,7 +122,7 @@ export function BarcodeScannerDialog({
 
             hasDetected = true;
             shouldRestoreFocusRef.current = false;
-            onDetected(normalizedCode);
+            onDetected(decodedText);
             void stopAndClearScanner(scanner).finally(() => {
               if (active) {
                 onClose();
@@ -147,7 +154,10 @@ export function BarcodeScannerDialog({
   useEffect(() => {
     if (!open) return;
 
-    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    previousFocusRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     previousOverflowRef.current = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -235,7 +245,12 @@ export function BarcodeScannerDialog({
         aria-describedby={descriptionId}
         className="glass-panel"
         tabIndex={-1}
-        style={{ position: "relative", width: "100%", maxWidth: "32rem", padding: "1.25rem" }}
+        style={{
+          position: "relative",
+          width: "100%",
+          maxWidth: "32rem",
+          padding: "1.25rem",
+        }}
       >
         <div
           style={{
@@ -250,7 +265,10 @@ export function BarcodeScannerDialog({
             <h3 id={titleId} style={{ fontSize: "1.1rem", fontWeight: 600 }}>
               Leitor de código de barras
             </h3>
-            <p id={descriptionId} style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
+            <p
+              id={descriptionId}
+              style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}
+            >
               Aponte a câmera para o EAN, GTIN ou QR da embalagem.
             </p>
           </div>
@@ -275,12 +293,25 @@ export function BarcodeScannerDialog({
           }}
         />
 
-        <p style={{ marginTop: "0.75rem", color: "var(--text-secondary)", fontSize: "0.88rem" }}>
+        <p
+          style={{
+            marginTop: "0.75rem",
+            color: "var(--text-secondary)",
+            fontSize: "0.88rem",
+          }}
+        >
           Formatos aceitos: EAN-13, EAN-8, UPC, CODE-128 e QR Code.
         </p>
 
         {error ? (
-          <p role="status" style={{ marginTop: "0.5rem", color: "#fca5a5", fontSize: "0.9rem" }}>
+          <p
+            role="status"
+            style={{
+              marginTop: "0.5rem",
+              color: "#fca5a5",
+              fontSize: "0.9rem",
+            }}
+          >
             {error}
           </p>
         ) : null}

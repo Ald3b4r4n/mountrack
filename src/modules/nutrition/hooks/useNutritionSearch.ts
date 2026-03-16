@@ -1,6 +1,9 @@
 import type { User } from "firebase/auth";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { normalizeNutritionBarcode } from "@/modules/nutrition/barcode";
+import {
+  buildNutritionBarcodeCandidates,
+  normalizeNutritionBarcode,
+} from "@/modules/nutrition/barcode";
 import {
   authorizedNutritionFetch,
   getNutritionErrorMessage,
@@ -34,6 +37,25 @@ type FoodSelectionOptions = {
   openComposer?: boolean;
   hideResults?: boolean;
 };
+
+function buildBarcodeDebugMessage(
+  rawCode: string,
+  normalizedCode: string | null,
+  candidates: string[],
+  source?: NutritionSearchSource | "invalid",
+): string {
+  const segments = [
+    `lido=${rawCode || "(vazio)"}`,
+    `normalizado=${normalizedCode ?? "invalido"}`,
+    `candidatos=${candidates.length ? candidates.join(",") : "nenhum"}`,
+  ];
+
+  if (source) {
+    segments.push(`fonte=${source}`);
+  }
+
+  return ` [diag: ${segments.join(" | ")}]`;
+}
 
 export function useNutritionSearch(
   activeUser: NutritionSearchUser,
@@ -205,11 +227,18 @@ export function useNutritionSearch(
   async function handleBarcodeLookup(code: string) {
     if (!activeUser) return;
 
-    const normalizedCode = normalizeNutritionBarcode(code);
-    setBarcodeQuery(normalizedCode ?? code.trim());
+    const rawCode = code.trim();
+    const normalizedCode = normalizeNutritionBarcode(rawCode);
+    const candidates = normalizedCode
+      ? buildNutritionBarcodeCandidates(normalizedCode)
+      : [];
+
+    setBarcodeQuery(normalizedCode ?? rawCode);
 
     if (!normalizedCode) {
-      setMessage("Leia ou digite um código de barras numérico válido.");
+      setMessage(
+        `Leia ou digite um código de barras numérico válido.${buildBarcodeDebugMessage(rawCode, normalizedCode, candidates, "invalid")}`,
+      );
       resetSearchComposer();
       return;
     }
@@ -240,7 +269,9 @@ export function useNutritionSearch(
         setResultsVisible(false);
         setIsComposerOpen(false);
         setLastSearchSource(payload.source ?? "none");
-        setMessage("Não encontrei esse código de barras no catálogo.");
+        setMessage(
+          `Não encontrei esse código de barras no catálogo.${buildBarcodeDebugMessage(rawCode, normalizedCode, candidates, payload.source ?? "none")}`,
+        );
         return;
       }
 
@@ -266,11 +297,13 @@ export function useNutritionSearch(
         setResultsVisible(false);
         setIsComposerOpen(true);
         setMessage(
-          `${foundItem.displayName ?? foundItem.name} encontrado pelo código de barras.`,
+          `${foundItem.displayName ?? foundItem.name} encontrado pelo código de barras.${buildBarcodeDebugMessage(rawCode, normalizedCode, candidates, payload.source ?? "openfoodfacts")}`,
         );
       } else {
         setLastSearchSource(payload.source ?? "none");
-        setMessage("Não encontrei esse código de barras no catálogo.");
+        setMessage(
+          `Não encontrei esse código de barras no catálogo.${buildBarcodeDebugMessage(rawCode, normalizedCode, candidates, payload.source ?? "none")}`,
+        );
       }
     } catch {
       setMessage(
