@@ -22,11 +22,18 @@ const OPEN_FOOD_FACTS_FIELDS = [
   "nutriments",
 ].join(",");
 
-const OPEN_FOOD_FACTS_TIMEOUT_MS = 2200;
+const OPEN_FOOD_FACTS_TIMEOUT_MS = 5000;
+const OPEN_FOOD_FACTS_BASE_URLS = [
+  "https://world.openfoodfacts.org",
+  "https://openfoodfacts.org",
+];
 
-async function fetchWithTimeout(url: string): Promise<Response | null> {
+async function fetchWithTimeout(
+  url: string,
+  timeoutMs = OPEN_FOOD_FACTS_TIMEOUT_MS,
+): Promise<Response | null> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), OPEN_FOOD_FACTS_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     return await fetch(url, {
@@ -43,9 +50,28 @@ async function fetchWithTimeout(url: string): Promise<Response | null> {
   }
 }
 
-async function fetchOpenFoodFactsSearchTerm(query: string): Promise<FoodItem[]> {
-  const response = await fetchWithTimeout(
-    `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=8&fields=${OPEN_FOOD_FACTS_FIELDS}&lc=pt&cc=br`,
+async function fetchOpenFoodFactsJson(path: string): Promise<Response | null> {
+  for (const baseUrl of OPEN_FOOD_FACTS_BASE_URLS) {
+    const primaryResponse = await fetchWithTimeout(`${baseUrl}${path}`);
+    if (primaryResponse?.ok) {
+      return primaryResponse;
+    }
+
+    // One retry per host to absorb transient OFF latency spikes.
+    const retryResponse = await fetchWithTimeout(`${baseUrl}${path}`);
+    if (retryResponse?.ok) {
+      return retryResponse;
+    }
+  }
+
+  return null;
+}
+
+async function fetchOpenFoodFactsSearchTerm(
+  query: string,
+): Promise<FoodItem[]> {
+  const response = await fetchOpenFoodFactsJson(
+    `/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=8&fields=${OPEN_FOOD_FACTS_FIELDS}&lc=pt&cc=br`,
   );
 
   if (!response?.ok) return [];
@@ -53,7 +79,9 @@ async function fetchOpenFoodFactsSearchTerm(query: string): Promise<FoodItem[]> 
   try {
     const payload = (await response.json()) as { products?: unknown[] };
     return (payload.products ?? [])
-      .map((product) => normalizeOpenFoodFactsProduct(product as Record<string, unknown>))
+      .map((product) =>
+        normalizeOpenFoodFactsProduct(product as Record<string, unknown>),
+      )
       .filter((food): food is FoodItem => Boolean(food));
   } catch {
     return [];
@@ -78,17 +106,21 @@ export async function searchOpenFoodFacts(query: string): Promise<FoodItem[]> {
   return rankOpenFoodFactsResults(query, collectedResults).slice(0, 8);
 }
 
-export async function fetchOpenFoodFactsBarcode(barcode: string): Promise<FoodItem | null> {
+export async function fetchOpenFoodFactsBarcode(
+  barcode: string,
+): Promise<FoodItem | null> {
   if (!barcode.trim()) return null;
 
-  const response = await fetchWithTimeout(
-    `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json?fields=${OPEN_FOOD_FACTS_FIELDS}&lc=pt&cc=br`,
+  const response = await fetchOpenFoodFactsJson(
+    `/api/v2/product/${encodeURIComponent(barcode)}.json?fields=${OPEN_FOOD_FACTS_FIELDS}&lc=pt&cc=br`,
   );
 
   if (!response?.ok) return null;
 
   try {
-    const payload = (await response.json()) as { product?: Record<string, unknown> };
+    const payload = (await response.json()) as {
+      product?: Record<string, unknown>;
+    };
     return normalizeOpenFoodFactsProduct(payload.product ?? {});
   } catch {
     return null;
