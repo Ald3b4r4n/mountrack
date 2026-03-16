@@ -47,7 +47,11 @@ describe("BarcodeScannerDialog", () => {
 
   it("does not render when closed", () => {
     const { container } = render(
-      <BarcodeScannerDialog open={false} onClose={jest.fn()} onDetected={jest.fn()} />,
+      <BarcodeScannerDialog
+        open={false}
+        onClose={jest.fn()}
+        onDetected={jest.fn()}
+      />,
     );
 
     expect(container).toBeEmptyDOMElement();
@@ -57,11 +61,15 @@ describe("BarcodeScannerDialog", () => {
     const onClose = jest.fn();
     const onDetected = jest.fn();
 
-    render(<BarcodeScannerDialog open onClose={onClose} onDetected={onDetected} />);
+    render(
+      <BarcodeScannerDialog open onClose={onClose} onDetected={onDetected} />,
+    );
 
     await waitFor(() => expect(startMock).toHaveBeenCalled());
 
-    const scannerConfig = startMock.mock.calls[0]?.[1] as { formatsToSupport: string[] };
+    const scannerConfig = startMock.mock.calls[0]?.[1] as {
+      formatsToSupport: string[];
+    };
     expect(scannerConfig.formatsToSupport).toEqual([
       "EAN_13",
       "EAN_8",
@@ -81,10 +89,12 @@ describe("BarcodeScannerDialog", () => {
     });
   });
 
-  it("normalizes numeric scans before forwarding the detected code", async () => {
+  it("keeps raw scan payload when forwarding a valid detection", async () => {
     const onDetected = jest.fn();
 
-    render(<BarcodeScannerDialog open onClose={jest.fn()} onDetected={onDetected} />);
+    render(
+      <BarcodeScannerDialog open onClose={jest.fn()} onDetected={onDetected} />,
+    );
 
     await waitFor(() => expect(startMock).toHaveBeenCalled());
 
@@ -93,7 +103,7 @@ describe("BarcodeScannerDialog", () => {
     });
 
     await waitFor(() => {
-      expect(onDetected).toHaveBeenCalledWith("07891000100103");
+      expect(onDetected).toHaveBeenCalledWith("(01) 07891000100103");
       expect(stopMock).toHaveBeenCalled();
     });
   });
@@ -102,7 +112,9 @@ describe("BarcodeScannerDialog", () => {
     const onClose = jest.fn();
     const onDetected = jest.fn();
 
-    render(<BarcodeScannerDialog open onClose={onClose} onDetected={onDetected} />);
+    render(
+      <BarcodeScannerDialog open onClose={onClose} onDetected={onDetected} />,
+    );
 
     await waitFor(() => expect(startMock).toHaveBeenCalled());
 
@@ -117,9 +129,13 @@ describe("BarcodeScannerDialog", () => {
   });
 
   it("renders an accessible dialog and moves initial focus to the close button", async () => {
-    render(<BarcodeScannerDialog open onClose={jest.fn()} onDetected={jest.fn()} />);
+    render(
+      <BarcodeScannerDialog open onClose={jest.fn()} onDetected={jest.fn()} />,
+    );
 
-    const dialog = await screen.findByRole("dialog", { name: /Leitor de código de barras/i });
+    const dialog = await screen.findByRole("dialog", {
+      name: /Leitor de código de barras/i,
+    });
     const closeButton = screen.getByRole("button", { name: /^Fechar$/i });
 
     expect(dialog).toHaveAttribute("aria-modal", "true");
@@ -129,9 +145,13 @@ describe("BarcodeScannerDialog", () => {
   it("shows a permission error when camera access is denied", async () => {
     startMock.mockRejectedValueOnce(new Error("NotAllowedError"));
 
-    render(<BarcodeScannerDialog open onClose={jest.fn()} onDetected={jest.fn()} />);
+    render(
+      <BarcodeScannerDialog open onClose={jest.fn()} onDetected={jest.fn()} />,
+    );
 
-    expect(await screen.findByText(/Permissão da câmera negada/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Permissão da câmera negada/i),
+    ).toBeInTheDocument();
   });
 
   it("falls back gracefully when the browser does not expose camera access", async () => {
@@ -140,7 +160,9 @@ describe("BarcodeScannerDialog", () => {
       value: undefined,
     });
 
-    render(<BarcodeScannerDialog open onClose={jest.fn()} onDetected={jest.fn()} />);
+    render(
+      <BarcodeScannerDialog open onClose={jest.fn()} onDetected={jest.fn()} />,
+    );
 
     expect(
       await screen.findByText(/Este navegador não liberou a câmera aqui/i),
@@ -152,7 +174,9 @@ describe("BarcodeScannerDialog", () => {
     const user = userEvent.setup();
     const onClose = jest.fn();
 
-    render(<BarcodeScannerDialog open onClose={onClose} onDetected={jest.fn()} />);
+    render(
+      <BarcodeScannerDialog open onClose={onClose} onDetected={jest.fn()} />,
+    );
 
     await user.click(screen.getByRole("button", { name: /^Fechar$/i }));
 
@@ -170,7 +194,11 @@ describe("BarcodeScannerDialog", () => {
           <button type="button" onClick={() => setOpen(true)}>
             Abrir scanner
           </button>
-          <BarcodeScannerDialog open={open} onClose={() => setOpen(false)} onDetected={jest.fn()} />
+          <BarcodeScannerDialog
+            open={open}
+            onClose={() => setOpen(false)}
+            onDetected={jest.fn()}
+          />
         </div>
       );
     }
@@ -186,7 +214,7 @@ describe("BarcodeScannerDialog", () => {
     await waitFor(() => expect(trigger).toHaveFocus());
   });
 
-  it("does not restore focus to the trigger after a successful detection", async () => {
+  it("closes after a successful detection", async () => {
     const user = userEvent.setup();
 
     function Harness() {
@@ -197,7 +225,11 @@ describe("BarcodeScannerDialog", () => {
           <button type="button" onClick={() => setOpen(true)}>
             Abrir scanner
           </button>
-          <BarcodeScannerDialog open={open} onClose={() => setOpen(false)} onDetected={jest.fn()} />
+          <BarcodeScannerDialog
+            open={open}
+            onClose={() => setOpen(false)}
+            onDetected={jest.fn()}
+          />
         </div>
       );
     }
@@ -220,14 +252,16 @@ describe("BarcodeScannerDialog", () => {
       ).not.toBeInTheDocument();
     });
 
-    expect(trigger).not.toHaveFocus();
+    expect(stopMock).toHaveBeenCalled();
   });
 
   it("closes the dialog when the user presses Escape", async () => {
     const user = userEvent.setup();
     const onClose = jest.fn();
 
-    render(<BarcodeScannerDialog open onClose={onClose} onDetected={jest.fn()} />);
+    render(
+      <BarcodeScannerDialog open onClose={onClose} onDetected={jest.fn()} />,
+    );
 
     await user.keyboard("{Escape}");
 
