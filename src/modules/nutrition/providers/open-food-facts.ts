@@ -43,7 +43,11 @@ async function fetchWithTimeout(
         "User-Agent": "MounTrack/1.0 (nutrition-catalog)",
       },
     });
-  } catch {
+  } catch (error) {
+    console.error("[OpenFoodFacts] Request failed:", {
+      url,
+      message: error instanceof Error ? error.message : "unknown error",
+    });
     return null;
   } finally {
     clearTimeout(timeoutId);
@@ -111,18 +115,79 @@ export async function fetchOpenFoodFactsBarcode(
 ): Promise<FoodItem | null> {
   if (!barcode.trim()) return null;
 
-  const response = await fetchOpenFoodFactsJson(
+  console.log(`[OpenFoodFacts] Barcode lookup: ${barcode}`);
+
+  const localizedResponse = await fetchOpenFoodFactsJson(
     `/api/v2/product/${encodeURIComponent(barcode)}.json?fields=${OPEN_FOOD_FACTS_FIELDS}&lc=pt&cc=br`,
   );
 
-  if (!response?.ok) return null;
+  if (localizedResponse?.ok) {
+    try {
+      const payload = (await localizedResponse.json()) as {
+        status?: number;
+        product?: Record<string, unknown>;
+      };
+      const localizedFood = normalizeOpenFoodFactsProduct(
+        payload.product ?? {},
+      );
+      if (localizedFood) {
+        console.log(`[OpenFoodFacts] Barcode match (localized): ${barcode}`);
+        return localizedFood;
+      }
+
+      console.log(
+        "[OpenFoodFacts] Localized payload had no normalizable product",
+        {
+          barcode,
+          status: payload.status,
+        },
+      );
+    } catch (error) {
+      console.error(
+        "[OpenFoodFacts] Failed to parse localized barcode payload",
+        {
+          barcode,
+          message: error instanceof Error ? error.message : "unknown error",
+        },
+      );
+    }
+  } else {
+    console.warn(
+      `[OpenFoodFacts] Localized barcode request failed: ${barcode}`,
+    );
+  }
+
+  // Fallback without locale/country hints: some products resolve only in default context.
+  const rawResponse = await fetchOpenFoodFactsJson(
+    `/api/v2/product/${encodeURIComponent(barcode)}.json?fields=${OPEN_FOOD_FACTS_FIELDS}`,
+  );
+
+  if (!rawResponse?.ok) {
+    console.warn(`[OpenFoodFacts] Raw barcode request failed: ${barcode}`);
+    return null;
+  }
 
   try {
-    const payload = (await response.json()) as {
+    const payload = (await rawResponse.json()) as {
+      status?: number;
       product?: Record<string, unknown>;
     };
-    return normalizeOpenFoodFactsProduct(payload.product ?? {});
-  } catch {
+    const food = normalizeOpenFoodFactsProduct(payload.product ?? {});
+    if (!food) {
+      console.log("[OpenFoodFacts] No product from raw barcode payload", {
+        barcode,
+        status: payload.status,
+      });
+      return null;
+    }
+
+    console.log(`[OpenFoodFacts] Barcode match (raw): ${barcode}`);
+    return food;
+  } catch (error) {
+    console.error("[OpenFoodFacts] Failed to parse raw barcode payload", {
+      barcode,
+      message: error instanceof Error ? error.message : "unknown error",
+    });
     return null;
   }
 }
