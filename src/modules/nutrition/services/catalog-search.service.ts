@@ -22,6 +22,10 @@ import {
   fetchOpenFoodFactsBarcode,
   searchOpenFoodFacts,
 } from "@/modules/nutrition/providers/open-food-facts";
+import {
+  fetchFatSecretBarcode,
+  searchFatSecretFoods,
+} from "@/modules/nutrition/providers/fatsecret";
 import { searchUsdaFoods } from "@/modules/nutrition/providers/usda-food-data";
 
 const SEARCH_LIMIT = 8;
@@ -68,6 +72,37 @@ function shouldEnrichFromExternal(
   return true;
 }
 
+function dedupeFoodsById(foods: FoodItem[]): FoodItem[] {
+  const seenIds = new Set<string>();
+  return foods.filter((food) => {
+    if (seenIds.has(food.id)) {
+      return false;
+    }
+
+    seenIds.add(food.id);
+    return true;
+  });
+}
+
+function appendUniqueFoods(
+  baseFoods: FoodItem[],
+  nextFoods: FoodItem[],
+): FoodItem[] {
+  const seen = new Set(baseFoods.map((food) => food.id));
+  const merged = [...baseFoods];
+
+  for (const food of nextFoods) {
+    if (seen.has(food.id)) {
+      continue;
+    }
+
+    seen.add(food.id);
+    merged.push(food);
+  }
+
+  return merged;
+}
+
 function resolveCatalogSource(results: FoodItem[]): string {
   const primaryResult = results[0];
   if (!primaryResult) {
@@ -82,6 +117,10 @@ function resolveCatalogSource(results: FoodItem[]): string {
     return "openfoodfacts";
   }
 
+  if (primaryResult.source === "fatsecret") {
+    return "fatsecret";
+  }
+
   if (primaryResult.source === "custom") {
     return "custom";
   }
@@ -93,32 +132,69 @@ export async function searchNutritionCatalog(
   userId: string,
   query: string,
 ): Promise<{ results: FoodItem[]; source: string; externalPending: boolean }> {
-  const catalogFoods = await listAccessibleFoods(userId, {
-    includeInternal: true,
-  });
+  if (!query.trim()) {
+    return { results: [], source: "none", externalPending: false };
+  }
+
+  const [fatSecretResults, offResults, usdaResults, catalogFoods] =
+    await Promise.all([
+      searchFatSecretFoods(query),
+      searchOpenFoodFacts(query),
+      searchUsdaFoods(query),
+      listAccessibleFoods(userId, {
+        includeInternal: true,
+      }),
+    ]);
+
+  const externalResults = dedupeFoodsById([
+    ...fatSecretResults,
+    ...offResults,
+    ...usdaResults,
+  ]);
+  if (externalResults.length) {
+    await upsertFoods(externalResults);
+  }
+
   const requestedBrand = findSupplementBrandProfile(query);
-  const storedResults = await searchFoodsByQuery(query, {
+  const fatSecretPrimaryResults = await searchFoodsByQuery(query, {
+    internalFoods: fatSecretResults,
+    limit: SEARCH_LIMIT,
+  });
+
+  const secondaryExternalResults = await searchFoodsByQuery(query, {
+    internalFoods: [...offResults, ...usdaResults],
+    limit: SEARCH_LIMIT,
+  });
+
+  const localLastResults = await searchFoodsByQuery(query, {
     internalFoods: catalogFoods,
     limit: SEARCH_LIMIT,
   });
 
+  const prioritizedResults = appendUniqueFoods(
+    appendUniqueFoods(fatSecretPrimaryResults, secondaryExternalResults),
+    localLastResults,
+  ).slice(0, SEARCH_LIMIT);
+
   const externalPending = shouldEnrichFromExternal(
     query,
-    storedResults,
+    prioritizedResults,
     Boolean(requestedBrand),
   );
-  if (!externalPending) {
+
+  if (prioritizedResults.length || !externalPending) {
     return {
-      results: storedResults,
-      source: resolveCatalogSource(storedResults),
-      externalPending: false,
+      results: prioritizedResults,
+      source: resolveCatalogSource(prioritizedResults),
+      externalPending,
     };
   }
+
   await queueMissingFoodLookup({ query, reason: "search_miss" });
 
   return {
-    results: storedResults,
-    source: storedResults.length ? resolveCatalogSource(storedResults) : "none",
+    results: [],
+    source: "none",
     externalPending: true,
   };
 }
@@ -132,6 +208,12 @@ export async function enrichMissingFoodLookup(
 }> {
   try {
     if (lookup.barcode) {
+      const fatSecretMatch = await fetchFatSecretBarcode(lookup.barcode);
+      if (fatSecretMatch) {
+        await upsertFoods([fatSecretMatch]);
+        return { status: "completed", insertedCount: 1 };
+      }
+
       const barcodeMatch = await fetchOpenFoodFactsBarcode(lookup.barcode);
       if (!barcodeMatch) {
         return { status: "no_match", insertedCount: 0 };
@@ -145,11 +227,16 @@ export async function enrichMissingFoodLookup(
       return { status: "no_match", insertedCount: 0 };
     }
 
-    const [offResults, usdaResults] = await Promise.all([
+    const [fatSecretResults, offResults, usdaResults] = await Promise.all([
+      searchFatSecretFoods(lookup.query),
       searchOpenFoodFacts(lookup.query),
       searchUsdaFoods(lookup.query),
     ]);
-    const externalResults = [...offResults, ...usdaResults];
+    const externalResults = dedupeFoodsById([
+      ...fatSecretResults,
+      ...offResults,
+      ...usdaResults,
+    ]);
 
     if (!externalResults.length) {
       return { status: "no_match", insertedCount: 0 };
@@ -229,12 +316,20 @@ export async function lookupNutritionBarcode(
     return { item: null, source: "none" };
   }
 
-  const storedFoods = await listAccessibleFoods(userId, {
-    includeInternal: true,
-  });
-  const storedMatch = findBarcodeMatch(storedFoods, candidates);
-  if (storedMatch) {
-    return { item: storedMatch, source: resolveCatalogSource([storedMatch]) };
+  for (const candidate of candidates) {
+    const fatSecretMatch = await fetchFatSecretBarcode(candidate);
+    if (fatSecretMatch) {
+      await upsertFoods([fatSecretMatch]);
+      return { item: fatSecretMatch, source: "fatsecret" };
+    }
+  }
+
+  for (const candidate of candidates) {
+    const offMatch = await fetchOpenFoodFactsBarcode(candidate);
+    if (offMatch) {
+      await upsertFoods([offMatch]);
+      return { item: offMatch, source: "openfoodfacts" };
+    }
   }
 
   const tbcaCatalogFoods = await listFoods({ includeInternal: true });
@@ -246,12 +341,12 @@ export async function lookupNutritionBarcode(
     };
   }
 
-  for (const candidate of candidates) {
-    const offMatch = await fetchOpenFoodFactsBarcode(candidate);
-    if (offMatch) {
-      await upsertFoods([offMatch]);
-      return { item: offMatch, source: "openfoodfacts" };
-    }
+  const storedFoods = await listAccessibleFoods(userId, {
+    includeInternal: true,
+  });
+  const storedMatch = findBarcodeMatch(storedFoods, candidates);
+  if (storedMatch) {
+    return { item: storedMatch, source: resolveCatalogSource([storedMatch]) };
   }
 
   await queueMissingFoodLookup({

@@ -23,6 +23,10 @@ import {
   fetchOpenFoodFactsBarcode,
   searchOpenFoodFacts,
 } from "@/modules/nutrition/providers/open-food-facts";
+import {
+  fetchFatSecretBarcode,
+  searchFatSecretFoods,
+} from "@/modules/nutrition/providers/fatsecret";
 import { searchUsdaFoods } from "@/modules/nutrition/providers/usda-food-data";
 
 jest.mock("@/modules/nutrition/data/supplement-foods", () => ({
@@ -45,6 +49,11 @@ jest.mock("@/modules/nutrition/providers/open-food-facts", () => ({
   searchOpenFoodFacts: jest.fn(),
 }));
 
+jest.mock("@/modules/nutrition/providers/fatsecret", () => ({
+  fetchFatSecretBarcode: jest.fn(),
+  searchFatSecretFoods: jest.fn(),
+}));
+
 jest.mock("@/modules/nutrition/providers/usda-food-data", () => ({
   searchUsdaFoods: jest.fn(),
 }));
@@ -59,6 +68,8 @@ const mockedRetryMissingFoodLookup = jest.mocked(retryMissingFoodLookup);
 const mockedUpsertFoods = jest.mocked(upsertFoods);
 const mockedFetchOpenFoodFactsBarcode = jest.mocked(fetchOpenFoodFactsBarcode);
 const mockedSearchOpenFoodFacts = jest.mocked(searchOpenFoodFacts);
+const mockedFetchFatSecretBarcode = jest.mocked(fetchFatSecretBarcode);
+const mockedSearchFatSecretFoods = jest.mocked(searchFatSecretFoods);
 const mockedSearchUsdaFoods = jest.mocked(searchUsdaFoods);
 
 function makeFood(id: string, overrides: Partial<FoodItem> = {}): FoodItem {
@@ -107,6 +118,8 @@ describe("catalog search service", () => {
     mockedUpsertFoods.mockReset();
     mockedFetchOpenFoodFactsBarcode.mockReset();
     mockedSearchOpenFoodFacts.mockReset();
+    mockedFetchFatSecretBarcode.mockReset();
+    mockedSearchFatSecretFoods.mockReset();
     mockedSearchUsdaFoods.mockReset();
 
     mockedClaimMissingFoodLookups.mockResolvedValue([]);
@@ -119,10 +132,29 @@ describe("catalog search service", () => {
     mockedUpsertFoods.mockResolvedValue(undefined);
     mockedFetchOpenFoodFactsBarcode.mockResolvedValue(null);
     mockedSearchOpenFoodFacts.mockResolvedValue([]);
+    mockedFetchFatSecretBarcode.mockResolvedValue(null);
+    mockedSearchFatSecretFoods.mockResolvedValue([]);
     mockedSearchUsdaFoods.mockResolvedValue([]);
   });
 
-  it("returns strong local hits without waiting on external providers", async () => {
+  it("uses FatSecret as primary source when it returns results", async () => {
+    mockedSearchFatSecretFoods.mockResolvedValue([
+      makeFood("fatsecret-banana", {
+        source: "fatsecret",
+        name: "Banana Prata",
+        displayName: "Banana Prata",
+        confidenceScore: 1.8,
+      }),
+    ]);
+
+    const result = await searchNutritionCatalog("user-a", "banana prata");
+
+    expect(result.results[0]?.id).toBe("fatsecret-banana");
+    expect(result.source).toBe("fatsecret");
+    expect(mockedSearchFatSecretFoods).toHaveBeenCalledWith("banana prata");
+  });
+
+  it("returns strong local hits when external sources are empty", async () => {
     mockedListAccessibleFoods.mockResolvedValue([
       makeFood("custom-persistencia", {
         source: "custom",
@@ -140,11 +172,10 @@ describe("catalog search service", () => {
     expect(result.source).toBe("custom");
     expect(result.externalPending).toBe(false);
     expect(result.results[0]?.id).toBe("custom-persistencia");
-    expect(mockedSearchOpenFoodFacts).not.toHaveBeenCalled();
-    expect(mockedSearchUsdaFoods).not.toHaveBeenCalled();
+    expect(mockedSearchFatSecretFoods).toHaveBeenCalled();
   });
 
-  it("returns immediately with external pending when local results are absent", async () => {
+  it("returns external pending when all providers miss", async () => {
     const result = await searchNutritionCatalog("user-a", "cuscuz de milho");
 
     expect(result.results).toEqual([]);
@@ -154,8 +185,9 @@ describe("catalog search service", () => {
       query: "cuscuz de milho",
       reason: "search_miss",
     });
-    expect(mockedSearchOpenFoodFacts).not.toHaveBeenCalled();
-    expect(mockedSearchUsdaFoods).not.toHaveBeenCalled();
+    expect(mockedSearchFatSecretFoods).toHaveBeenCalled();
+    expect(mockedSearchOpenFoodFacts).toHaveBeenCalled();
+    expect(mockedSearchUsdaFoods).toHaveBeenCalled();
   });
 
   it("labels tbca foods as catalog results when they are already local", async () => {
@@ -186,7 +218,8 @@ describe("catalog search service", () => {
 
     expect(result.item?.id).toBe("leite-condensado");
     expect(result.source).toBe("catalog");
-    expect(mockedFetchOpenFoodFactsBarcode).not.toHaveBeenCalled();
+    expect(mockedFetchFatSecretBarcode).toHaveBeenCalled();
+    expect(mockedFetchOpenFoodFactsBarcode).toHaveBeenCalled();
   });
 
   it("matches stored foods when scanner returns UPC-A and catalog stores EAN-13", async () => {
@@ -202,28 +235,60 @@ describe("catalog search service", () => {
 
     expect(result.item?.id).toBe("whey-1kg");
     expect(result.source).toBe("catalog");
-    expect(mockedFetchOpenFoodFactsBarcode).not.toHaveBeenCalled();
+    expect(mockedFetchFatSecretBarcode).toHaveBeenCalled();
+    expect(mockedFetchOpenFoodFactsBarcode).toHaveBeenCalled();
   });
 
-  it("checks TBCA/public catalog before Open Food Facts when local list is empty", async () => {
-    mockedListAccessibleFoods.mockResolvedValue([]);
-    mockedListFoods.mockResolvedValue([
-      makeFood("tbca-barcode-hit", {
-        source: "tbca",
+  it("checks Open Food Facts before local catalog when FatSecret misses barcode", async () => {
+    mockedListAccessibleFoods.mockResolvedValue([
+      makeFood("local-late-hit", {
         barcode: "7893596226205",
-        name: "Item TBCA",
-        displayName: "Item TBCA",
+        name: "Item Local",
+        displayName: "Item Local",
       }),
     ]);
+    mockedFetchOpenFoodFactsBarcode.mockResolvedValue(
+      makeFood("off-hit", {
+        source: "openfoodfacts",
+        barcode: "7893596226205",
+        name: "Item OFF",
+        displayName: "Item OFF",
+      }),
+    );
 
     const result = await lookupNutritionBarcode("user-a", "7893596226205");
 
-    expect(result.item?.id).toBe("tbca-barcode-hit");
-    expect(result.source).toBe("catalog");
+    expect(result.item?.id).toBe("off-hit");
+    expect(result.source).toBe("openfoodfacts");
+    expect(mockedFetchFatSecretBarcode).toHaveBeenCalled();
+    expect(mockedListFoods).not.toHaveBeenCalled();
+  });
+
+  it("returns FatSecret barcode match before other providers", async () => {
+    mockedFetchFatSecretBarcode.mockResolvedValue(
+      makeFood("fatsecret-barcode-hit", {
+        source: "fatsecret",
+        barcode: "7893596226205",
+        name: "Item FatSecret",
+        displayName: "Item FatSecret",
+      }),
+    );
+
+    const result = await lookupNutritionBarcode("user-a", "7893596226205");
+
+    expect(result.item?.id).toBe("fatsecret-barcode-hit");
+    expect(result.source).toBe("fatsecret");
     expect(mockedFetchOpenFoodFactsBarcode).not.toHaveBeenCalled();
   });
 
   it("enriches queued query lookups through external providers", async () => {
+    mockedSearchFatSecretFoods.mockResolvedValue([
+      makeFood("fatsecret-cuscuz", {
+        source: "fatsecret",
+        name: "Cuscuz de milho (FatSecret)",
+        displayName: "Cuscuz de milho (FatSecret)",
+      }),
+    ]);
     mockedSearchOpenFoodFacts.mockResolvedValue([
       makeFood("off-cuscuz", {
         source: "openfoodfacts",
@@ -239,11 +304,12 @@ describe("catalog search service", () => {
     });
     const result = await enrichMissingFoodLookup(queuedLookup);
 
+    expect(mockedSearchFatSecretFoods).toHaveBeenCalledWith("cuscuz de milho");
     expect(mockedSearchOpenFoodFacts).toHaveBeenCalledWith("cuscuz de milho");
     expect(mockedSearchUsdaFoods).toHaveBeenCalledWith("cuscuz de milho");
     expect(mockedUpsertFoods).toHaveBeenCalled();
     expect(result.status).toBe("completed");
-    expect(result.insertedCount).toBe(1);
+    expect(result.insertedCount).toBe(2);
   });
 
   it("requeues transient failures before the retry budget is exhausted", async () => {
