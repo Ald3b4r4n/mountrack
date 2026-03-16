@@ -1,4 +1,5 @@
 import type { FoodItem } from "@/modules/nutrition/domain/types";
+import { buildNutritionBarcodeCandidates } from "@/modules/nutrition/barcode";
 import { findSupplementBrandProfile } from "@/modules/nutrition/data/supplement-brands";
 import {
   completeMissingFoodLookup,
@@ -174,20 +175,29 @@ export async function processQueuedFoodLookups(limit = 5): Promise<{
 }
 
 export async function lookupNutritionBarcode(userId: string, code: string): Promise<{ item: FoodItem | null; source: string }> {
+  const candidates = buildNutritionBarcodeCandidates(code);
+  if (!candidates.length) {
+    return { item: null, source: "none" };
+  }
+
   const storedFoods = await listAccessibleFoods(userId, { includeInternal: true });
-  const storedMatch = storedFoods.find((food) => food.barcode === code) ?? null;
+  const storedMatch = storedFoods.find((food) => food.barcode && candidates.includes(food.barcode)) ?? null;
   if (storedMatch) {
     return { item: storedMatch, source: resolveCatalogSource([storedMatch]) };
   }
 
-  const offMatch = await fetchOpenFoodFactsBarcode(code);
-  if (offMatch) {
-    await upsertFoods([offMatch]);
-    return { item: offMatch, source: "openfoodfacts" };
+  for (const candidate of candidates) {
+    const offMatch = await fetchOpenFoodFactsBarcode(candidate);
+    if (offMatch) {
+      await upsertFoods([offMatch]);
+      return { item: offMatch, source: "openfoodfacts" };
+    }
   }
 
-  await queueMissingFoodLookup({ barcode: code, reason: "barcode_miss" });
+  await queueMissingFoodLookup({ barcode: candidates[0], reason: "barcode_miss" });
 
-  const fallbackMatch = (await listAccessibleFoods(userId, { includeInternal: true })).find((food) => food.barcode === code) ?? null;
+  const fallbackMatch = (await listAccessibleFoods(userId, { includeInternal: true })).find(
+    (food) => food.barcode && candidates.includes(food.barcode),
+  ) ?? null;
   return { item: fallbackMatch, source: fallbackMatch ? "fallback" : "none" };
 }
