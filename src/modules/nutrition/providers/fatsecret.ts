@@ -5,6 +5,19 @@ const FATSECRET_TOKEN_URL = "https://oauth.fatsecret.com/connect/token";
 const FATSECRET_API_URL = "https://platform.fatsecret.com/rest/server.api";
 const FATSECRET_TIMEOUT_MS = 2400;
 
+function getFatSecretProxyConfig(): {
+  baseUrl: string;
+  sharedSecret?: string;
+} | null {
+  const baseUrl = process.env.FATSECRET_PROXY_BASE_URL?.trim() ?? "";
+  if (!baseUrl) {
+    return null;
+  }
+
+  const sharedSecret = process.env.FATSECRET_PROXY_SHARED_SECRET?.trim();
+  return { baseUrl: baseUrl.replace(/\/+$/, ""), sharedSecret };
+}
+
 type FatSecretTokenCache = {
   accessToken: string;
   expiresAt: number;
@@ -162,6 +175,50 @@ async function callFatSecretApi(
   method: string,
   params: Record<string, string>,
 ): Promise<unknown | null> {
+  const proxyConfig = getFatSecretProxyConfig();
+  if (proxyConfig) {
+    const startedAt = Date.now();
+    const proxyHeaders: HeadersInit = {
+      "Content-Type": "application/json",
+    };
+
+    if (proxyConfig.sharedSecret) {
+      proxyHeaders["x-proxy-secret"] = proxyConfig.sharedSecret;
+    }
+
+    const proxyResponse = await fetchWithTimeout(
+      `${proxyConfig.baseUrl}/fatsecret/call`,
+      {
+        method: "POST",
+        headers: proxyHeaders,
+        body: JSON.stringify({ method, params }),
+      },
+      FATSECRET_TIMEOUT_MS + 2200,
+    );
+
+    if (proxyResponse?.ok) {
+      try {
+        const proxyPayload = (await proxyResponse.json()) as unknown;
+        const durationMs = Date.now() - startedAt;
+        console.log(
+          `[FatSecret] Proxy response for ${method} in ${durationMs}ms`,
+        );
+        return proxyPayload;
+      } catch (error) {
+        console.error("[FatSecret] Proxy payload parse error:", error);
+      }
+    } else {
+      console.warn(
+        `[FatSecret] Proxy request failed for ${method}: ${proxyResponse?.status ?? "no-response"}`,
+      );
+    }
+
+    console.warn(
+      `[FatSecret] Falling back to direct FatSecret call for method: ${method}`,
+    );
+  }
+
+  const startedAt = Date.now();
   const accessToken = await getFatSecretAccessToken();
   if (!accessToken) {
     console.warn(`[FatSecret] No access token for method: ${method}`);
@@ -183,6 +240,8 @@ async function callFatSecretApi(
     body,
   });
 
+  const durationMs = Date.now() - startedAt;
+
   if (!response?.ok) {
     console.error(
       `[FatSecret] Request failed for method ${method}:`,
@@ -194,7 +253,9 @@ async function callFatSecretApi(
 
   try {
     const payload = (await response.json()) as unknown;
-    console.debug(`[FatSecret] Got response for method: ${method}`);
+    console.log(
+      `[FatSecret] Got response for method: ${method} in ${durationMs}ms`,
+    );
     return payload;
   } catch (error) {
     console.error(
