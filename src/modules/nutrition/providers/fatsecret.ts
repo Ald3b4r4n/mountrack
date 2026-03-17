@@ -147,7 +147,17 @@ function parseFoodsFromPayload(payload: unknown): FoodItem[] {
     return [];
   }
 
-  const foodsNode = (payload as { foods?: { food?: unknown } }).foods?.food;
+  // Handle v3 API response structure: foods_search.results.food
+  const v3Payload = payload as {
+    foods_search?: { results?: { food?: unknown } };
+  };
+  let foodsNode = v3Payload.foods_search?.results?.food;
+
+  // Fallback to basic API response structure: foods.food
+  if (!foodsNode) {
+    foodsNode = (payload as { foods?: { food?: unknown } }).foods?.food;
+  }
+
   if (!foodsNode) {
     console.log(
       "[FatSecret] No foods node in payload. Full payload:",

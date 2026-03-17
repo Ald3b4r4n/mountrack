@@ -22,7 +22,7 @@ const OPEN_FOOD_FACTS_FIELDS = [
   "nutriments",
 ].join(",");
 
-const OPEN_FOOD_FACTS_TIMEOUT_MS = 4000;
+const OPEN_FOOD_FACTS_TIMEOUT_MS = 2500;
 const OPEN_FOOD_FACTS_BASE_URLS = [
   "https://world.openfoodfacts.org",
   "https://openfoodfacts.org",
