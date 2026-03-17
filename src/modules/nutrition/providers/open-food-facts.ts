@@ -60,12 +60,7 @@ async function fetchOpenFoodFactsJson(path: string): Promise<Response | null> {
     if (primaryResponse?.ok) {
       return primaryResponse;
     }
-
-    // One retry per host to absorb transient OFF latency spikes.
-    const retryResponse = await fetchWithTimeout(`${baseUrl}${path}`);
-    if (retryResponse?.ok) {
-      return retryResponse;
-    }
+    // Don't retry if timeout occurred - fail fast
   }
 
   return null;

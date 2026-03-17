@@ -136,31 +136,67 @@ export async function searchNutritionCatalog(
     return { results: [], source: "none", externalPending: false };
   }
 
-  const [fatSecretResults, offResults, usdaResults, catalogFoods] =
-    await Promise.all([
-      searchFatSecretFoods(query),
-      searchOpenFoodFacts(query),
-      searchUsdaFoods(query),
-      listAccessibleFoods(userId, {
-        includeInternal: true,
-      }),
-    ]);
+  // FatSecret is our primary provider - get results immediately
+  const fatSecretResults = await searchFatSecretFoods(query);
+  const catalogFoods = await listAccessibleFoods(userId, {
+    includeInternal: true,
+  });
 
-  const externalResults = dedupeFoodsById([
-    ...fatSecretResults,
-    ...offResults,
-    ...usdaResults,
+  // If FatSecret has good results, return immediately
+  // OFF and USDA run in background (fire-and-forget) for deduplication
+  if (fatSecretResults.length > 0) {
+    const fatSecretPrimaryResults = await searchFoodsByQuery(query, {
+      internalFoods: fatSecretResults,
+      limit: SEARCH_LIMIT,
+    });
+
+    const localLastResults = await searchFoodsByQuery(query, {
+      internalFoods: catalogFoods,
+      limit: SEARCH_LIMIT,
+    });
+
+    const prioritizedResults = appendUniqueFoods(
+      fatSecretPrimaryResults,
+      localLastResults,
+    ).slice(0, SEARCH_LIMIT);
+
+    // Upsert FatSecret results immediately
+    await upsertFoods(fatSecretResults);
+
+    // Background caching: fetch OFF/USDA but don't wait for them
+    Promise.all([searchOpenFoodFacts(query), searchUsdaFoods(query)])
+      .then(([offResults, usdaResults]) => {
+        const externalResults = dedupeFoodsById([
+          ...offResults,
+          ...usdaResults,
+        ]);
+        if (externalResults.length) {
+          upsertFoods(externalResults);
+        }
+      })
+      .catch(() => {
+        // Silently ignore OFF/USDA errors
+      });
+
+    return {
+      results: prioritizedResults,
+      source: "fatsecret-primary",
+      externalPending: false,
+    };
+  }
+
+  // Fallback to parallel search if FatSecret has no results
+  const [offResults, usdaResults] = await Promise.all([
+    searchOpenFoodFacts(query),
+    searchUsdaFoods(query),
   ]);
+
+  const externalResults = dedupeFoodsById([...offResults, ...usdaResults]);
   if (externalResults.length) {
     await upsertFoods(externalResults);
   }
 
   const requestedBrand = findSupplementBrandProfile(query);
-  const fatSecretPrimaryResults = await searchFoodsByQuery(query, {
-    internalFoods: fatSecretResults,
-    limit: SEARCH_LIMIT,
-  });
-
   const secondaryExternalResults = await searchFoodsByQuery(query, {
     internalFoods: [...offResults, ...usdaResults],
     limit: SEARCH_LIMIT,
@@ -172,7 +208,7 @@ export async function searchNutritionCatalog(
   });
 
   const prioritizedResults = appendUniqueFoods(
-    appendUniqueFoods(fatSecretPrimaryResults, secondaryExternalResults),
+    secondaryExternalResults,
     localLastResults,
   ).slice(0, SEARCH_LIMIT);
 
