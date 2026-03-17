@@ -442,19 +442,6 @@ function MobileSummaryStrip({
                 : `Faltam ${formatMilliliters(Math.max(summary.targetWaterMl - summary.waterIntakeMl, 0))}`}
             </span>
           </div>
-          <div className="min-w-0 rounded-[0.95rem] border border-white/7 bg-[linear-gradient(180deg,rgba(7,18,35,0.92),rgba(6,17,30,0.72))] p-3">
-            <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
-              Alvo kcal
-            </span>
-            <strong className="mt-2 block text-[1rem] text-[var(--text-primary)]">
-              {formatCalories(summary.targetCalories)}
-            </strong>
-            <span className="mt-2 block text-[0.78rem] text-[var(--text-secondary)]">
-              {summary.remainingCalories > 0
-                ? `${formatCalories(summary.remainingCalories)} livres`
-                : "Meta fechada"}
-            </span>
-          </div>
         </div>
         <div className="mt-2.5 grid gap-2">
           <MobileMacroRail
