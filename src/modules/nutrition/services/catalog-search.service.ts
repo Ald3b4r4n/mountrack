@@ -141,6 +141,7 @@ export async function searchNutritionCatalog(
   const catalogFoods = await listAccessibleFoods(userId, {
     includeInternal: true,
   });
+  const requestedBrand = findSupplementBrandProfile(query);
 
   // If FatSecret has good results, return immediately
   // OFF and USDA run in background (fire-and-forget) for deduplication
@@ -196,7 +197,6 @@ export async function searchNutritionCatalog(
     await upsertFoods(externalResults);
   }
 
-  const requestedBrand = findSupplementBrandProfile(query);
   const secondaryExternalResults = await searchFoodsByQuery(query, {
     internalFoods: [...offResults, ...usdaResults],
     limit: SEARCH_LIMIT,
