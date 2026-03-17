@@ -79,11 +79,10 @@ describe("NutritionHeader", () => {
     expect(screen.getByText(/Iogurte natural/i)).toBeInTheDocument();
     expect(screen.getByText(/^26%$/i)).toBeInTheDocument();
     expect(screen.getByText(/^Livre$/i)).toBeInTheDocument();
-    expect(screen.getByText(/Hidratação/i)).toBeInTheDocument();
-    expect(screen.getByText(/^Água$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^Água e metas$/i)).toBeInTheDocument();
     expect(screen.getByText(/Café da manhã em foco/i)).toBeInTheDocument();
-    expect(screen.getByText(/0% da meta/i)).toBeInTheDocument();
-    expect(screen.getByText(/Metas e macros/i)).toBeInTheDocument();
+    expect(screen.getByText(/Água 0%/i)).toBeInTheDocument();
+    expect(screen.getByText(/Kcal 26%/i)).toBeInTheDocument();
     expect(screen.getByText(/1482 kcal livres/i)).toBeInTheDocument();
     expect(screen.getByText(/Meta 140 g/i)).toBeInTheDocument();
 
