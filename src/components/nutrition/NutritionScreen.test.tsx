@@ -9,10 +9,17 @@ import { useNutritionDashboard } from "@/modules/nutrition/hooks/useNutritionDas
 import { useNutritionSearch } from "@/modules/nutrition/hooks/useNutritionSearch";
 import { useNutritionScreenActions } from "@/components/nutrition/useNutritionScreenActions";
 import { saveNutritionFocusedMealToBrowser } from "@/modules/nutrition/client-storage";
-import type { DailySummary, NutritionGoal } from "@/modules/nutrition/domain/types";
+import type {
+  DailySummary,
+  NutritionGoal,
+} from "@/modules/nutrition/domain/types";
 
 jest.mock("@/components/nutrition/NutritionScreenPreviewGate", () => ({
-  NutritionScreenPreviewGate: ({ render }: { render: (isPreview: boolean) => React.ReactNode }) => <>{render(true)}</>,
+  NutritionScreenPreviewGate: ({
+    render,
+  }: {
+    render: (isPreview: boolean) => React.ReactNode;
+  }) => <>{render(true)}</>,
 }));
 
 jest.mock("@/components/nutrition/NutritionScreenShell", () => ({
@@ -200,22 +207,33 @@ describe("NutritionScreen", () => {
     jest.clearAllMocks();
   });
 
-  it("opens with the time-based meal in focus and hides add after entering search", async () => {
+  it("opens with the time-based meal in focus and keeps add button in search", async () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 
     render(<NutritionScreen />);
 
     expect(await screen.findByText(/Almoço em foco/i)).toBeInTheDocument();
 
-    const addButton = await screen.findByRole("button", { name: /^Adicionar$/i });
-    expect(screen.getByRole("button", { name: "Hoje" })).toHaveAttribute("aria-pressed", "true");
+    const addButton = await screen.findByRole("button", {
+      name: /^Adicionar$/i,
+    });
+    expect(screen.getByRole("button", { name: "Hoje" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
 
     await user.click(addButton);
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Buscar" })).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("button", { name: "Buscar" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
     });
-    expect(screen.queryByRole("button", { name: /^Adicionar$/i })).not.toBeInTheDocument();
+    // Button remains visible in search for continued food additions
+    expect(
+      screen.getByRole("button", { name: /^Adicionar$/i }),
+    ).toBeInTheDocument();
   });
 
   it("prefers the last focused meal over the hour fallback", async () => {

@@ -1,7 +1,14 @@
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, ChevronRight } from "lucide-react";
-import type { DailySummary, NutritionGoal } from "@/modules/nutrition/domain/types";
-import { formatCalories, formatGrams, formatMilliliters } from "@/modules/nutrition/ui-helpers";
+import type {
+  DailySummary,
+  NutritionGoal,
+} from "@/modules/nutrition/domain/types";
+import {
+  formatCalories,
+  formatGrams,
+  formatMilliliters,
+} from "@/modules/nutrition/ui-helpers";
 
 function CompactMetricCard({
   label,
@@ -18,7 +25,9 @@ function CompactMetricCard({
       style={{ borderTopColor: accent }}
     >
       <p className="stat-label mb-[0.55rem]">{label}</p>
-      <strong className="block text-[1.18rem] text-[var(--text-primary)]">{value}</strong>
+      <strong className="block text-[1.18rem] text-[var(--text-primary)]">
+        {value}
+      </strong>
     </article>
   );
 }
@@ -39,7 +48,9 @@ function DesktopMacroStatusCard({
   return (
     <div className="glass-panel static-panel min-h-full rounded-[1rem] bg-[#020b1c]/75 p-3">
       <div className="mb-[0.45rem] flex items-center justify-between gap-2">
-        <span className="text-[0.74rem] uppercase tracking-[0.06em] text-[var(--text-muted)]">{label}</span>
+        <span className="text-[0.74rem] uppercase tracking-[0.06em] text-[var(--text-muted)]">
+          {label}
+        </span>
         <span className="text-[0.78rem] text-[var(--text-secondary)]">
           {target > 0 ? `${formatGrams(target)} alvo` : "Sem alvo"}
         </span>
@@ -56,7 +67,9 @@ function DesktopMacroStatusCard({
           }}
         />
       </div>
-      <span className="text-[0.78rem] text-[var(--text-secondary)]">{Math.round(ratio)}% do objetivo</span>
+      <span className="text-[0.78rem] text-[var(--text-secondary)]">
+        {Math.round(ratio)}% do objetivo
+      </span>
     </div>
   );
 }
@@ -75,14 +88,33 @@ function DesktopMacroHero({
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="stat-label mb-[0.35rem]">Macros do dia</p>
-          <strong className="block text-[1.15rem] text-[var(--text-primary)]">Distribuição nutricional</strong>
+          <strong className="block text-[1.15rem] text-[var(--text-primary)]">
+            Distribuição nutricional
+          </strong>
         </div>
-        <span className="badge badge-success">{Math.round(consumedRatio)}% da meta kcal</span>
+        <span className="badge badge-success">
+          {Math.round(consumedRatio)}% da meta kcal
+        </span>
       </div>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-[0.6rem]">
-        <DesktopMacroStatusCard label="Proteína" current={summary.protein} target={goal.targetProtein ?? 0} accent="#34d399" />
-        <DesktopMacroStatusCard label="Carboidrato" current={summary.carbs} target={goal.targetCarbs ?? 0} accent="#22d3ee" />
-        <DesktopMacroStatusCard label="Gordura" current={summary.fat} target={goal.targetFat ?? 0} accent="#fb7185" />
+        <DesktopMacroStatusCard
+          label="Proteína"
+          current={summary.protein}
+          target={goal.targetProtein ?? 0}
+          accent="#34d399"
+        />
+        <DesktopMacroStatusCard
+          label="Carboidrato"
+          current={summary.carbs}
+          target={goal.targetCarbs ?? 0}
+          accent="#22d3ee"
+        />
+        <DesktopMacroStatusCard
+          label="Gordura"
+          current={summary.fat}
+          target={goal.targetFat ?? 0}
+          accent="#fb7185"
+        />
       </div>
     </article>
   );
@@ -123,18 +155,29 @@ function MobileSummaryTile({
   const content = (
     <>
       <div className="flex min-w-0 items-start justify-between gap-2">
-        <span className="block min-w-0 truncate text-[0.66rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">{label}</span>
+        <span className="block min-w-0 truncate text-[0.66rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+          {label}
+        </span>
         {meta ? (
           <span className="shrink-0 rounded-full border border-white/8 bg-white/4 px-2 py-0.5 text-[0.68rem] text-[var(--text-secondary)]">
             {meta}
           </span>
         ) : null}
       </div>
-      <strong className={`mt-1.5 block text-[1rem] leading-none ${accentClass}`}>{value}</strong>
+      <strong
+        className={`mt-1.5 block text-[1rem] leading-none ${accentClass}`}
+      >
+        {value}
+      </strong>
       {hint ? (
         <span className="mt-2 flex min-w-0 items-center gap-1 text-[0.76rem] text-[var(--text-secondary)]">
           <span className="min-w-0 truncate">{hint}</span>
-          {onClick ? <ChevronRight size={14} className="shrink-0 text-[var(--accent-primary)]" /> : null}
+          {onClick ? (
+            <ChevronRight
+              size={14}
+              className="shrink-0 text-[var(--accent-primary)]"
+            />
+          ) : null}
         </span>
       ) : null}
     </>
@@ -148,9 +191,7 @@ function MobileSummaryTile({
     );
   }
 
-  return (
-    <article className={tileClassName}>{content}</article>
-  );
+  return <article className={tileClassName}>{content}</article>;
 }
 
 function MobileActiveMealCard({
@@ -171,13 +212,19 @@ function MobileActiveMealCard({
   return (
     <article
       className={`min-w-0 overflow-hidden rounded-[1rem] border bg-[linear-gradient(145deg,rgba(6,21,39,0.92),rgba(4,16,30,0.82))] p-3 shadow-[0_18px_36px_rgba(4,20,38,0.18)] ${
-        recentlyLoggedFoodLabel ? "border-[#34d399]/26 shadow-[0_18px_40px_rgba(8,64,52,0.22)]" : "border-[#34d399]/14"
+        recentlyLoggedFoodLabel
+          ? "border-[#34d399]/26 shadow-[0_18px_40px_rgba(8,64,52,0.22)]"
+          : "border-[#34d399]/14"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[0.7rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Agora</p>
-          <strong className="mt-1 block truncate text-[1rem] text-[var(--text-primary)]">{mealLabel}</strong>
+          <p className="text-[0.7rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+            Agora
+          </p>
+          <strong className="mt-1 block truncate text-[1rem] text-[var(--text-primary)]">
+            {mealLabel}
+          </strong>
           <div className="mt-2 flex flex-wrap gap-2">
             <span className="rounded-full border border-white/8 bg-white/4 px-2.5 py-1 text-[0.74rem] text-[var(--text-secondary)]">
               {mealItemsCount > 0 ? `${mealItemsCount} item(ns)` : "Sem itens"}
@@ -189,7 +236,9 @@ function MobileActiveMealCard({
             ) : null}
           </div>
         </div>
-        <span className="badge badge-success shrink-0 whitespace-nowrap">{formatCalories(mealCalories)}</span>
+        <span className="badge badge-success shrink-0 whitespace-nowrap">
+          {formatCalories(mealCalories)}
+        </span>
       </div>
       {recentlyLoggedFoodLabel ? (
         <div className="mt-3 flex min-w-0 items-center gap-2.5 overflow-hidden rounded-[0.9rem] border border-[#34d399]/18 bg-[#062032]/88 px-3 py-2">
@@ -197,21 +246,33 @@ function MobileActiveMealCard({
             <CheckCircle2 size={15} />
           </span>
           <div className="min-w-0">
-            <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[#86efac]">Registrado agora</span>
+            <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[#86efac]">
+              Registrado agora
+            </span>
             <strong className="mt-0.5 block truncate text-[0.9rem] text-[var(--text-primary)]">
               {recentlyLoggedFoodLabel}
             </strong>
           </div>
         </div>
       ) : null}
-      <div className={`mt-3 grid gap-2 ${onOpenMeal && onAddToMeal ? "grid-cols-2" : "grid-cols-1"}`}>
+      <div
+        className={`mt-3 grid gap-2 ${onOpenMeal && onAddToMeal ? "grid-cols-2" : "grid-cols-1"}`}
+      >
         {onOpenMeal ? (
-          <button type="button" onClick={onOpenMeal} className="btn-outline min-h-[2.85rem] min-w-0 w-full">
+          <button
+            type="button"
+            onClick={onOpenMeal}
+            className="btn-outline min-h-[2.85rem] min-w-0 w-full"
+          >
             Ver refeição
           </button>
         ) : null}
         {onAddToMeal ? (
-          <button type="button" onClick={onAddToMeal} className="btn-primary min-h-[2.85rem] min-w-0 w-full">
+          <button
+            type="button"
+            onClick={onAddToMeal}
+            className="btn-primary min-h-[2.85rem] min-w-0 w-full"
+          >
             Adicionar
           </button>
         ) : null}
@@ -237,13 +298,18 @@ function MobileMacroRail({
   return (
     <article className="rounded-[0.95rem] border border-white/7 bg-[linear-gradient(180deg,rgba(7,18,35,0.92),rgba(6,17,30,0.72))] p-3">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">{label}</span>
+        <span className="text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+          {label}
+        </span>
         <span className="rounded-full border border-white/8 bg-white/4 px-2 py-0.5 text-[0.68rem] text-[var(--text-secondary)]">
           {hasTarget ? `${Math.round(ratio)}%` : "Livre"}
         </span>
       </div>
       <div className="mt-2 flex items-end justify-between gap-3">
-        <strong className="text-[0.98rem] leading-none" style={{ color: accent }}>
+        <strong
+          className="text-[0.98rem] leading-none"
+          style={{ color: accent }}
+        >
           {formatGrams(current)}
         </strong>
         <span className="text-[0.76rem] text-[var(--text-secondary)]">
@@ -274,6 +340,7 @@ function MobileSummaryStrip({
   onOpenConsumedSummary,
   onAddToActiveMeal,
   recentlyLoggedFoodLabel,
+  onAdjustWater,
 }: {
   summary: DailySummary;
   goal: NutritionGoal;
@@ -285,6 +352,7 @@ function MobileSummaryStrip({
   onOpenConsumedSummary?: () => void;
   onAddToActiveMeal?: () => void;
   recentlyLoggedFoodLabel?: string | null;
+  onAdjustWater?: (amount: number) => void;
 }) {
   return (
     <div className="grid min-w-0 gap-2.5">
@@ -318,8 +386,12 @@ function MobileSummaryStrip({
       <div className="glass-panel static-panel min-w-0 overflow-hidden rounded-[1rem] border-[#34d399]/14 bg-[linear-gradient(145deg,rgba(5,20,38,0.9),rgba(6,22,45,0.7))] p-3.5">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[0.7rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Hoje</p>
-            <strong className="block text-[1rem] text-[var(--text-primary)]">Água e metas</strong>
+            <p className="text-[0.7rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+              Hoje
+            </p>
+            <strong className="block text-[1rem] text-[var(--text-primary)]">
+              Água e metas
+            </strong>
             <span className="mt-1.5 inline-flex max-w-full items-center overflow-hidden rounded-full border border-white/8 bg-white/4 px-2.5 py-1 text-[0.74rem] text-[var(--text-secondary)]">
               <span className="truncate">{activeMealLabel} em foco</span>
             </span>
@@ -338,7 +410,8 @@ function MobileSummaryStrip({
             <div className="mb-1.5 flex items-center justify-between gap-3 text-[0.78rem] text-[var(--text-secondary)]">
               <span>Água</span>
               <span className="shrink-0 text-right">
-                {formatMilliliters(summary.waterIntakeMl)} / {formatMilliliters(summary.targetWaterMl)}
+                {formatMilliliters(summary.waterIntakeMl)} /{" "}
+                {formatMilliliters(summary.targetWaterMl)}
               </span>
             </div>
             <div className="progress-track h-[0.42rem]">
@@ -347,6 +420,22 @@ function MobileSummaryStrip({
                 style={{ width: `${waterRatio}%` }}
               />
             </div>
+            {onAdjustWater ? (
+              <div className="mt-2 grid grid-cols-2 gap-1.5">
+                <button
+                  onClick={() => onAdjustWater(250)}
+                  className="rounded-[0.7rem] bg-[#38bdf8]/18 px-2 py-1 text-[0.7rem] font-medium text-sky-200 transition-colors hover:bg-[#38bdf8]/28"
+                >
+                  +250 ml
+                </button>
+                <button
+                  onClick={() => onAdjustWater(500)}
+                  className="rounded-[0.7rem] bg-[#38bdf8]/18 px-2 py-1 text-[0.7rem] font-medium text-sky-200 transition-colors hover:bg-[#38bdf8]/28"
+                >
+                  +500 ml
+                </button>
+              </div>
+            ) : null}
             <span className="mt-2 block text-[0.78rem] text-[var(--text-secondary)]">
               {summary.waterIntakeMl >= summary.targetWaterMl
                 ? "Meta alcançada"
@@ -354,19 +443,38 @@ function MobileSummaryStrip({
             </span>
           </div>
           <div className="min-w-0 rounded-[0.95rem] border border-white/7 bg-[linear-gradient(180deg,rgba(7,18,35,0.92),rgba(6,17,30,0.72))] p-3">
-            <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Alvo kcal</span>
+            <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+              Alvo kcal
+            </span>
             <strong className="mt-2 block text-[1rem] text-[var(--text-primary)]">
               {formatCalories(summary.targetCalories)}
             </strong>
             <span className="mt-2 block text-[0.78rem] text-[var(--text-secondary)]">
-              {summary.remainingCalories > 0 ? `${formatCalories(summary.remainingCalories)} livres` : "Meta fechada"}
+              {summary.remainingCalories > 0
+                ? `${formatCalories(summary.remainingCalories)} livres`
+                : "Meta fechada"}
             </span>
           </div>
         </div>
         <div className="mt-2.5 grid gap-2">
-          <MobileMacroRail label="Proteína" current={summary.protein} target={goal.targetProtein ?? 0} accent="#6ee7b7" />
-          <MobileMacroRail label="Carbo" current={summary.carbs} target={goal.targetCarbs ?? 0} accent="#67e8f9" />
-          <MobileMacroRail label="Gordura" current={summary.fat} target={goal.targetFat ?? 0} accent="#fda4af" />
+          <MobileMacroRail
+            label="Proteína"
+            current={summary.protein}
+            target={goal.targetProtein ?? 0}
+            accent="#6ee7b7"
+          />
+          <MobileMacroRail
+            label="Carbo"
+            current={summary.carbs}
+            target={goal.targetCarbs ?? 0}
+            accent="#67e8f9"
+          />
+          <MobileMacroRail
+            label="Gordura"
+            current={summary.fat}
+            target={goal.targetFat ?? 0}
+            accent="#fda4af"
+          />
         </div>
       </div>
     </div>
@@ -386,6 +494,7 @@ interface NutritionHeaderProps {
   onOpenConsumedSummary?: () => void;
   onAddToActiveMeal?: () => void;
   recentlyLoggedFoodLabel?: string | null;
+  onAdjustWater?: (amount: number) => void;
 }
 
 export function NutritionHeader({
@@ -401,6 +510,7 @@ export function NutritionHeader({
   onOpenConsumedSummary,
   onAddToActiveMeal,
   recentlyLoggedFoodLabel,
+  onAdjustWater,
 }: NutritionHeaderProps) {
   return (
     <header
@@ -412,33 +522,48 @@ export function NutritionHeader({
       {!isMobileLayout ? (
         <div
           className="absolute -right-16 -top-14 h-60 w-60 rounded-full blur-md"
-          style={{ background: "radial-gradient(circle, rgba(52, 211, 153, 0.18), transparent 68%)" }}
+          style={{
+            background:
+              "radial-gradient(circle, rgba(52, 211, 153, 0.18), transparent 68%)",
+          }}
         />
       ) : null}
 
       <div className="relative grid gap-4">
-        <div className={`flex flex-wrap justify-between ${isMobileLayout ? "gap-3" : "gap-4"}`}>
+        <div
+          className={`flex flex-wrap justify-between ${isMobileLayout ? "gap-3" : "gap-4"}`}
+        >
           <div className={isMobileLayout ? "max-w-none" : "max-w-[42rem]"}>
-            <div className={`flex flex-wrap items-center justify-between gap-2 ${isMobileLayout ? "mb-2" : "mb-3"}`}>
+            <div
+              className={`flex flex-wrap items-center justify-between gap-2 ${isMobileLayout ? "mb-2" : "mb-3"}`}
+            >
               <span className="badge badge-success">Nutrição</span>
               {isMobileLayout ? (
-                <Link href="/" className="inline-flex items-center gap-1 rounded-full border border-white/8 bg-white/4 px-2.5 py-1 text-[0.76rem] text-[var(--text-secondary)] transition-colors duration-200 hover:border-[#34d399]/18 hover:text-[var(--text-primary)]">
+                <Link
+                  href="/"
+                  className="inline-flex items-center gap-1 rounded-full border border-white/8 bg-white/4 px-2.5 py-1 text-[0.76rem] text-[var(--text-secondary)] transition-colors duration-200 hover:border-[#34d399]/18 hover:text-[var(--text-primary)]"
+                >
                   <ArrowLeft size={13} />
                   Painel
                 </Link>
               ) : null}
             </div>
-            <h1 className={`glow-text mb-1 ${isMobileLayout ? "text-[clamp(1.55rem,6.2vw,1.85rem)]" : "text-[clamp(2rem,4vw,3rem)]"}`}>
+            <h1
+              className={`glow-text mb-1 ${isMobileLayout ? "text-[clamp(1.55rem,6.2vw,1.85rem)]" : "text-[clamp(2rem,4vw,3rem)]"}`}
+            >
               {isMobileLayout ? "Hoje" : "Diário nutricional"}
             </h1>
-            <p className={`page-subtitle ${isMobileLayout ? "max-w-[30ch] text-[0.92rem]" : "max-w-[58ch]"}`}>
+            <p
+              className={`page-subtitle ${isMobileLayout ? "max-w-[30ch] text-[0.92rem]" : "max-w-[58ch]"}`}
+            >
               {isMobileLayout
                 ? "Diário, água e metas no mesmo fluxo."
                 : "Registre refeições, acompanhe água, ajuste metas e organize seu plano alimentar."}
             </p>
             {!isMobileLayout && isPreview ? (
               <p className="mt-2 text-[0.85rem] text-[var(--accent-secondary)]">
-                Preview local ativo. O fluxo real continua disponível com login normal.
+                Preview local ativo. O fluxo real continua disponível com login
+                normal.
               </p>
             ) : null}
           </div>
@@ -463,17 +588,30 @@ export function NutritionHeader({
             onOpenConsumedSummary={onOpenConsumedSummary}
             onAddToActiveMeal={onAddToActiveMeal}
             recentlyLoggedFoodLabel={recentlyLoggedFoodLabel}
+            onAdjustWater={onAdjustWater}
           />
         ) : (
           <div className="grid grid-cols-12 gap-[0.7rem]">
             <div className="col-span-3">
-              <CompactMetricCard label="Meta diaria" value={formatCalories(summary.targetCalories)} accent="var(--accent-primary)" />
+              <CompactMetricCard
+                label="Meta diaria"
+                value={formatCalories(summary.targetCalories)}
+                accent="var(--accent-primary)"
+              />
             </div>
             <div className="col-span-3">
-              <CompactMetricCard label="Consumido" value={formatCalories(summary.consumedCalories)} accent="var(--accent-warm)" />
+              <CompactMetricCard
+                label="Consumido"
+                value={formatCalories(summary.consumedCalories)}
+                accent="var(--accent-warm)"
+              />
             </div>
             <div className="col-span-3">
-              <CompactMetricCard label="Restante" value={formatCalories(summary.remainingCalories)} accent="var(--accent-secondary)" />
+              <CompactMetricCard
+                label="Restante"
+                value={formatCalories(summary.remainingCalories)}
+                accent="var(--accent-secondary)"
+              />
             </div>
             <article className="glass-panel static-panel col-span-3 min-h-full rounded-[1rem] bg-gradient-to-br from-[#06162d]/70 to-[#0d253d]/80 p-[0.95rem]">
               <div className="mb-[0.6rem] flex flex-wrap items-start justify-between gap-3">
@@ -488,12 +626,21 @@ export function NutritionHeader({
                 </span>
               </div>
               <div className="progress-track mb-[0.45rem]">
-                <div className="progress-fill bg-gradient-to-br from-[#38bdf8] to-[#22d3ee]" style={{ width: `${waterRatio}%` }} />
+                <div
+                  className="progress-fill bg-gradient-to-br from-[#38bdf8] to-[#22d3ee]"
+                  style={{ width: `${waterRatio}%` }}
+                />
               </div>
-              <span className="block text-[0.82rem] text-[var(--text-secondary)]">{Math.round(waterRatio)}% da meta diária</span>
+              <span className="block text-[0.82rem] text-[var(--text-secondary)]">
+                {Math.round(waterRatio)}% da meta diária
+              </span>
             </article>
             <div className="col-span-full">
-              <DesktopMacroHero summary={summary} goal={goal} consumedRatio={consumedRatio} />
+              <DesktopMacroHero
+                summary={summary}
+                goal={goal}
+                consumedRatio={consumedRatio}
+              />
             </div>
           </div>
         )}
