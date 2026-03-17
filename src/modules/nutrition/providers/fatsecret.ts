@@ -208,14 +208,11 @@ async function callFatSecretApi(
         console.error("[FatSecret] Proxy payload parse error:", error);
       }
     } else {
-      console.warn(
-        `[FatSecret] Proxy request failed for ${method}: ${proxyResponse?.status ?? "no-response"}`,
+      console.error(
+        `[FatSecret] Proxy request failed for ${method}: ${proxyResponse?.status ?? "no-response"}. Not falling back to direct call (proxy required).`,
       );
+      return null;
     }
-
-    console.warn(
-      `[FatSecret] Falling back to direct FatSecret call for method: ${method}`,
-    );
   }
 
   const startedAt = Date.now();
