@@ -496,7 +496,7 @@ function MobileSummaryStrip({
                 className="flex flex-col items-center justify-center rounded-xl border border-white/5 bg-white/5 py-3 transition-all active:scale-95 active:bg-white/10"
               >
                 <span className="text-sky-400">🥛</span>
-                <span className="mt-1 text-[0.75rem] font-black text-[var(--text-primary)]">250</span>
+                <span className="mt-1 text-[0.75rem] font-black text-[var(--text-primary)]">250 ML</span>
               </button>
               <button 
                 onClick={() => {
@@ -506,7 +506,7 @@ function MobileSummaryStrip({
                 className="flex flex-col items-center justify-center rounded-xl border border-white/5 bg-white/5 py-3 transition-all active:scale-95 active:bg-white/10"
               >
                 <span className="text-sky-400">🥛🥛</span>
-                <span className="mt-1 text-[0.75rem] font-black text-[var(--text-primary)]">500</span>
+                <span className="mt-1 text-[0.75rem] font-black text-[var(--text-primary)]">500 ML</span>
               </button>
               <button 
                 onClick={onOpenCustomWater}
