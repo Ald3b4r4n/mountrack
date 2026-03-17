@@ -23,7 +23,10 @@ import {
   loadNutritionFocusedMealFromBrowser,
   saveNutritionFocusedMealToBrowser,
 } from "@/modules/nutrition/client-storage";
-import type { MealType, NutritionObjective } from "@/modules/nutrition/domain/types";
+import type {
+  MealType,
+  NutritionObjective,
+} from "@/modules/nutrition/domain/types";
 import { useHydration } from "@/modules/nutrition/hooks/useHydration";
 import { useNutritionDashboard } from "@/modules/nutrition/hooks/useNutritionDashboard";
 import { useNutritionSearch } from "@/modules/nutrition/hooks/useNutritionSearch";
@@ -81,9 +84,15 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     setMealPlanDraft,
     setPlanCalories,
   } = useNutritionScreenUiState();
-  const canUseBrowserPersistence = Boolean(activeUser && !("devBypass" in activeUser && activeUser.devBypass));
+  const canUseBrowserPersistence = Boolean(
+    activeUser && !("devBypass" in activeUser && activeUser.devBypass),
+  );
 
-  const dashboardHook = useNutritionDashboard(activeUser, today, canUseBrowserPersistence);
+  const dashboardHook = useNutritionDashboard(
+    activeUser,
+    today,
+    canUseBrowserPersistence,
+  );
   const searchHook = useNutritionSearch(activeUser, canUseBrowserPersistence);
   const hydrationHook = useHydration();
 
@@ -104,8 +113,22 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     isHistoryLoading,
     historyTotalPages,
   } = dState;
-  const { setSummary, setMealPlan, setGoal, setDiaryMealDefinitions, setHistoryPage } = dSetters;
-  const { resolveRequestError, loadDashboard, loadBrowserDashboard, hydrateDashboard, loadHistory, loadBrowserHistory, hydrateHistory } = dActions;
+  const {
+    setSummary,
+    setMealPlan,
+    setGoal,
+    setDiaryMealDefinitions,
+    setHistoryPage,
+  } = dSetters;
+  const {
+    resolveRequestError,
+    loadDashboard,
+    loadBrowserDashboard,
+    hydrateDashboard,
+    loadHistory,
+    loadBrowserHistory,
+    hydrateHistory,
+  } = dActions;
 
   const {
     isSearching,
@@ -176,7 +199,10 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
   );
   const groupedDiaryItems = useMemo(() => {
     const groupedItems = Object.fromEntries(
-      mealDefinitions.map((definition) => [definition.key, [] as typeof diaryItems]),
+      mealDefinitions.map((definition) => [
+        definition.key,
+        [] as typeof diaryItems,
+      ]),
     ) as Record<string, typeof diaryItems>;
 
     for (const item of diaryItems) {
@@ -321,10 +347,13 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
   }, [dispatchUiState]);
 
   useEffect(() => {
-    const fallbackMeal = mealDefinitions[0]?.key ?? getDefaultMealDefinitions()[0].key;
+    const fallbackMeal =
+      mealDefinitions[0]?.key ?? getDefaultMealDefinitions()[0].key;
     const nextState: Partial<NutritionScreenUiState> = {};
 
-    if (!mealDefinitions.some((definition) => definition.key === activeDiaryMeal)) {
+    if (
+      !mealDefinitions.some((definition) => definition.key === activeDiaryMeal)
+    ) {
       nextState.activeDiaryMeal = fallbackMeal;
     }
 
@@ -366,7 +395,10 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     }
 
     const preferredMeal = loadNutritionFocusedMealFromBrowser(activeUser.uid);
-    if (preferredMeal && mealDefinitions.some((definition) => definition.key === preferredMeal)) {
+    if (
+      preferredMeal &&
+      mealDefinitions.some((definition) => definition.key === preferredMeal)
+    ) {
       dispatchUiState({
         type: "patch",
         value: {
@@ -380,11 +412,16 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
   }, [activeUser, dispatchUiState, isLoading, mealDefinitions]);
 
   useEffect(() => {
-    if (!activeUser || mealPreferenceReadyForUserRef.current !== activeUser.uid) {
+    if (
+      !activeUser ||
+      mealPreferenceReadyForUserRef.current !== activeUser.uid
+    ) {
       return;
     }
 
-    if (!mealDefinitions.some((definition) => definition.key === activeDiaryMeal)) {
+    if (
+      !mealDefinitions.some((definition) => definition.key === activeDiaryMeal)
+    ) {
       return;
     }
 
@@ -462,17 +499,28 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     if (!selectedFood) return null;
     const parsedQuantity = parseInputNumber(quantity);
     if (parsedQuantity == null) return null;
-    return calculateNutritionForQuantity({ food: selectedFood, quantity: parsedQuantity, unit });
+    return calculateNutritionForQuantity({
+      food: selectedFood,
+      quantity: parsedQuantity,
+      unit,
+    });
   }, [selectedFood, quantity, unit]);
 
-  const activeDiaryItems = useMemo(() => groupedDiaryItems[activeDiaryMeal] ?? [], [groupedDiaryItems, activeDiaryMeal]);
-  const activeDiaryMealDefinition =
-    mealDefinitions.find((meal) => meal.key === activeDiaryMeal) ?? {
-      key: activeDiaryMeal,
-      label: String(activeDiaryMeal),
-      isDefault: true,
-    };
-  const diaryTotalPages = Math.max(1, Math.ceil(activeDiaryItems.length / DIARY_PAGE_SIZE));
+  const activeDiaryItems = useMemo(
+    () => groupedDiaryItems[activeDiaryMeal] ?? [],
+    [groupedDiaryItems, activeDiaryMeal],
+  );
+  const activeDiaryMealDefinition = mealDefinitions.find(
+    (meal) => meal.key === activeDiaryMeal,
+  ) ?? {
+    key: activeDiaryMeal,
+    label: String(activeDiaryMeal),
+    isDefault: true,
+  };
+  const diaryTotalPages = Math.max(
+    1,
+    Math.ceil(activeDiaryItems.length / DIARY_PAGE_SIZE),
+  );
   const pagedDiaryItems = useMemo(() => {
     const offset = (diaryPage - 1) * DIARY_PAGE_SIZE;
     return activeDiaryItems.slice(offset, offset + DIARY_PAGE_SIZE);
@@ -486,16 +534,31 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     });
   }, [diaryTotalPages, dispatchUiState]);
 
-  const consumedRatio = summary.targetCalories > 0 ? Math.min((summary.consumedCalories / summary.targetCalories) * 100, 100) : 0;
-  const waterRatio = summary.targetWaterMl > 0 ? Math.min((summary.waterIntakeMl / summary.targetWaterMl) * 100, 100) : 0;
+  const consumedRatio =
+    summary.targetCalories > 0
+      ? Math.min((summary.consumedCalories / summary.targetCalories) * 100, 100)
+      : 0;
+  const waterRatio =
+    summary.targetWaterMl > 0
+      ? Math.min((summary.waterIntakeMl / summary.targetWaterMl) * 100, 100)
+      : 0;
   const displayedMealPlan = mealPlanDraft ?? mealPlan;
-  const planTotals = useMemo(() => (displayedMealPlan ? summarizeMealPlan(displayedMealPlan) : null), [displayedMealPlan]);
-  const requestedPlanCalories = parseInputNumber(planCalories) ?? goal.targetCalories;
-  const planDelta = displayedMealPlan ? roundValue(displayedMealPlan.totalCalories - requestedPlanCalories) : 0;
+  const planTotals = useMemo(
+    () => (displayedMealPlan ? summarizeMealPlan(displayedMealPlan) : null),
+    [displayedMealPlan],
+  );
+  const requestedPlanCalories =
+    parseInputNumber(planCalories) ?? goal.targetCalories;
+  const planDelta = displayedMealPlan
+    ? roundValue(displayedMealPlan.totalCalories - requestedPlanCalories)
+    : 0;
   const successMealDefinition = diarySuccessFeedback
-    ? mealDefinitions.find((meal) => meal.key === diarySuccessFeedback.mealType) ?? null
+    ? (mealDefinitions.find(
+        (meal) => meal.key === diarySuccessFeedback.mealType,
+      ) ?? null)
     : null;
-  const successMealLabel = successMealDefinition?.label ?? diarySuccessFeedback?.mealLabel ?? null;
+  const successMealLabel =
+    successMealDefinition?.label ?? diarySuccessFeedback?.mealLabel ?? null;
   const successMealItemsCount = diarySuccessFeedback
     ? (groupedDiaryItems[diarySuccessFeedback.mealType]?.length ?? 0)
     : 0;
@@ -503,7 +566,9 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     ? (summary.meals[diarySuccessFeedback.mealType] ?? 0)
     : 0;
   const activeMealRecentlyLoggedFoodLabel =
-    diarySuccessFeedback?.mealType === activeDiaryMeal ? diarySuccessFeedback.foodLabel : null;
+    diarySuccessFeedback?.mealType === activeDiaryMeal
+      ? diarySuccessFeedback.foodLabel
+      : null;
   const searchCatalogBadge =
     storageMode === "database"
       ? "Catálogo sincronizado"
@@ -533,7 +598,8 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
           text:
             isSearching || isEnrichingExternal
               ? "Estou procurando no catálogo e preparando novas referências quando fizer sentido."
-              : searchMessage ?? "Digite um nome, use um código de barras ou crie um alimento manual para começar.",
+              : (searchMessage ??
+                "Digite um nome, use um código de barras ou crie um alimento manual para começar."),
         };
   const planningTabs = (
     <div className="flex flex-wrap gap-[0.55rem]">
@@ -542,7 +608,9 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
           key={tab.key}
           active={planningTab === tab.key}
           label={tab.label}
-          meta={tab.key === "goal" ? undefined : displayedMealPlan?.meals.length}
+          meta={
+            tab.key === "goal" ? undefined : displayedMealPlan?.meals.length
+          }
           onClick={() => setPlanningTab(tab.key)}
         />
       ))}
@@ -591,7 +659,9 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     onLoadHistory: (page: number) => void loadHistory(page),
     onManageMeal: openManageMealDialog,
     recentlyLoggedFoodLabel:
-      activeArea === "today" && isMobileLayout ? activeMealRecentlyLoggedFoodLabel : null,
+      activeArea === "today" && isMobileLayout
+        ? activeMealRecentlyLoggedFoodLabel
+        : null,
     mealsSectionOpen: todayMealsSectionOpen,
     onMealsSectionOpenChange: handleTodayMealsSectionOpenChange,
     mealsSectionRef: todayMealsSectionRef,
@@ -768,9 +838,13 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
         activeMealCalories: summary.meals[activeDiaryMeal] ?? 0,
         activeMealItemsCount: activeDiaryItems.length,
         recentlyLoggedFoodLabel:
-          activeArea === "today" && isMobileLayout ? activeMealRecentlyLoggedFoodLabel : null,
-        onOpenConsumedSummary: isMobileLayout ? handleOpenConsumedSummary : undefined,
-        onAddToActiveMeal: isMobileLayout && activeArea !== "search"
+          activeArea === "today" && isMobileLayout
+            ? activeMealRecentlyLoggedFoodLabel
+            : null,
+        onOpenConsumedSummary: isMobileLayout
+          ? handleOpenConsumedSummary
+          : undefined,
+        onAddToActiveMeal: isMobileLayout
           ? () => {
               openSearchForMeal(activeDiaryMeal);
             }
