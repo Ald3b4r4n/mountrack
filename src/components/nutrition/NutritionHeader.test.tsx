@@ -1,7 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NutritionHeader } from "@/components/nutrition/NutritionHeader";
-import type { DailySummary, NutritionGoal } from "@/modules/nutrition/domain/types";
+import type {
+  DailySummary,
+  NutritionGoal,
+} from "@/modules/nutrition/domain/types";
 
 const summary: DailySummary = {
   date: "2026-03-10",
@@ -57,9 +60,13 @@ describe("NutritionHeader", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { name: /^Hoje$/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /^Hoje$/i }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Painel/i })).toBeInTheDocument();
-    expect(screen.getByText(/Diário, água e metas no mesmo fluxo./i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Diário, água e metas no mesmo fluxo./i),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Consumido/i }));
 
@@ -72,10 +79,11 @@ describe("NutritionHeader", () => {
     expect(screen.getByText(/Iogurte natural/i)).toBeInTheDocument();
     expect(screen.getByText(/^26%$/i)).toBeInTheDocument();
     expect(screen.getByText(/^Livre$/i)).toBeInTheDocument();
-    expect(screen.getByText(/^Água e metas$/i)).toBeInTheDocument();
+    expect(screen.getByText(/Hidratação/i)).toBeInTheDocument();
+    expect(screen.getByText(/^Água$/i)).toBeInTheDocument();
     expect(screen.getByText(/Café da manhã em foco/i)).toBeInTheDocument();
-    expect(screen.getByText(/Água 0%/i)).toBeInTheDocument();
-    expect(screen.getByText(/Kcal 26%/i)).toBeInTheDocument();
+    expect(screen.getByText(/0% da meta/i)).toBeInTheDocument();
+    expect(screen.getByText(/Metas e macros/i)).toBeInTheDocument();
     expect(screen.getByText(/1482 kcal livres/i)).toBeInTheDocument();
     expect(screen.getByText(/Meta 140 g/i)).toBeInTheDocument();
 
