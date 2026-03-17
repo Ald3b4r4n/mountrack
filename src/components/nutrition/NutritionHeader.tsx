@@ -726,28 +726,64 @@ export function NutritionHeader({
           />
         ) : (
           <div className="grid grid-cols-12 gap-[0.7rem]">
-            <div className="col-span-3">
+            <div className="col-span-2">
               <CompactMetricCard
                 label="Meta diaria"
                 value={formatCalories(summary.targetCalories)}
                 accent="var(--accent-primary)"
               />
             </div>
-            <div className="col-span-3">
+            <div className="col-span-2">
               <CompactMetricCard
                 label="Consumido"
                 value={formatCalories(summary.consumedCalories)}
                 accent="var(--accent-warm)"
               />
             </div>
-            <div className="col-span-3">
+            <div className="col-span-2">
               <CompactMetricCard
                 label="Restante"
                 value={formatCalories(summary.remainingCalories)}
                 accent="var(--accent-secondary)"
               />
             </div>
-            <article className="glass-panel static-panel col-span-3 min-h-full rounded-[1rem] bg-gradient-to-br from-[#06162d]/70 to-[#0d253d]/80 p-[0.95rem]">
+
+            <article className="glass-panel static-panel col-span-3 min-h-full rounded-[1.2rem] border border-white/10 bg-gradient-to-br from-[#041225]/82 to-[#0b1f37]/88 p-[1rem]">
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[0.68rem] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)] opacity-60">
+                    Refeição em foco
+                  </p>
+                  <strong className="mt-1 block text-[1.08rem] font-black text-[var(--text-primary)]">
+                    {recentlyLoggedFoodLabel ?? activeMealLabel}
+                  </strong>
+                  <span className="mt-1 block text-[0.82rem] text-[var(--text-secondary)]">
+                    {formatCalories(activeMealCalories)}
+                  </span>
+                </div>
+                <span className="badge badge-success shrink-0">Agora</span>
+              </div>
+
+              <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/6">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#34d399] to-[#86efac]"
+                  style={{
+                    width: `${Math.max(
+                      8,
+                      Math.min(
+                        100,
+                        goal.targetCalories > 0
+                          ? (activeMealCalories / (goal.targetCalories / 4)) *
+                              100
+                          : 0,
+                      ),
+                    )}%`,
+                  }}
+                />
+              </div>
+            </article>
+
+            <article className="glass-panel static-panel col-span-3 min-h-full rounded-[1.2rem] bg-gradient-to-br from-[#06162d]/70 to-[#0d253d]/80 p-[0.95rem]">
               <div className="mb-[0.6rem] flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-[1_1_10rem]">
                   <p className="stat-label mb-[0.35rem]">Água hoje</p>
@@ -768,6 +804,30 @@ export function NutritionHeader({
               <span className="block text-[0.82rem] text-[var(--text-secondary)]">
                 {Math.round(waterRatio)}% da meta diária
               </span>
+
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onAdjustWater?.(250)}
+                  className="rounded-[0.75rem] border border-white/8 bg-white/5 px-2 py-1.5 text-[0.75rem] font-bold text-sky-200 transition-colors hover:bg-white/10"
+                >
+                  +250 ml
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onAdjustWater?.(500)}
+                  className="rounded-[0.75rem] border border-white/8 bg-white/5 px-2 py-1.5 text-[0.75rem] font-bold text-sky-200 transition-colors hover:bg-white/10"
+                >
+                  +500 ml
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenCustomWater}
+                  className="rounded-[0.75rem] border border-white/8 bg-white/5 px-2 py-1.5 text-[0.75rem] font-bold text-[var(--text-secondary)] transition-colors hover:bg-white/10"
+                >
+                  Custom
+                </button>
+              </div>
             </article>
             <div className="col-span-full">
               <DesktopMacroHero

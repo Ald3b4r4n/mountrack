@@ -1,4 +1,8 @@
-import { formatGrams, formatHistoryDate } from "@/modules/nutrition/ui-helpers";
+import {
+  formatGrams,
+  formatHistoryDate,
+  getFoodLabel,
+} from "@/modules/nutrition/ui-helpers";
 
 describe("nutrition ui helpers", () => {
   it("keeps useful decimal precision for gram values", () => {
@@ -38,5 +42,18 @@ describe("nutrition ui helpers", () => {
       .replace(".", "");
 
     expect(formatHistoryDate("2026-03-14T12:00:00.000Z")).toBe(expected);
+  });
+
+  it("sanitizes mojibake artifacts in food labels", () => {
+    expect(
+      getFoodLabel({
+        id: "food-1",
+        source: "tbca",
+        name: "Frango, filé, �� milanesa",
+        baseUnit: "g",
+        confidenceScore: 1,
+        mealCategories: [],
+      }),
+    ).toBe("Frango, filé, à milanesa");
   });
 });

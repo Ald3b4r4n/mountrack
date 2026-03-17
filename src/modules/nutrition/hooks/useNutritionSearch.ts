@@ -9,6 +9,7 @@ import {
   getNutritionErrorMessage,
 } from "@/modules/nutrition/client";
 import type { FoodItem } from "@/modules/nutrition/domain/types";
+import { getFoodLabel } from "@/modules/nutrition/ui-helpers";
 import {
   resolveUiStorageMode,
   type NutritionUiStorageMode,
@@ -195,9 +196,7 @@ export function useNutritionSearch(
       if (results.length === 1) {
         setSelectedFood(results[0]);
         setIsComposerOpen(false);
-        setMessage(
-          `${results[0].displayName ?? results[0].name} pronto para registro.`,
-        );
+        setMessage(`${getFoodLabel(results[0])} pronto para registro.`);
       } else if (payload.externalPending) {
         setIsEnrichingExternal(true);
         if (!results.length) {
@@ -298,7 +297,7 @@ export function useNutritionSearch(
         setResultsVisible(false);
         setIsComposerOpen(true);
         setMessage(
-          `${foundItem.displayName ?? foundItem.name} encontrado pelo código de barras.${buildBarcodeDebugMessage(rawCode, normalizedCode, candidates, payload.source ?? "fatsecret")}`,
+          `${getFoodLabel(foundItem)} encontrado pelo código de barras.${buildBarcodeDebugMessage(rawCode, normalizedCode, candidates, payload.source ?? "fatsecret")}`,
         );
       } else {
         setLastSearchSource(payload.source ?? "none");
@@ -326,7 +325,7 @@ export function useNutritionSearch(
     setSelectedFood(food);
     setResultsVisible(!hideResults);
     setIsComposerOpen(openComposer);
-    setMessage(`${food.displayName ?? food.name} pronto para registro.`);
+    setMessage(`${getFoodLabel(food)} pronto para registro.`);
   }
 
   function openSelectedFoodComposer() {

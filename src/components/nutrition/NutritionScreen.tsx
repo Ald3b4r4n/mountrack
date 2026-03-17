@@ -10,6 +10,7 @@ import {
   getDefaultFocusedMeal,
   parseInputNumber,
   roundValue,
+  summarizeMealPlan,
 } from "@/components/nutrition/nutrition-screen-helpers";
 import {
   type NutritionScreenUiState,

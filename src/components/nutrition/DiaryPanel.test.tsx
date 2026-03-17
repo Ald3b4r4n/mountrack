@@ -52,7 +52,6 @@ function renderDiaryPanel({
 } = {}) {
   const setActiveDiaryView = jest.fn();
   const setDiaryPage = jest.fn();
-  const handleSelectHydrationMode = jest.fn();
   const onOpenSearchForMeal = jest.fn();
   const onOpenMealChooser = jest.fn();
   const loadHistory = jest.fn();
@@ -76,12 +75,8 @@ function renderDiaryPanel({
         consumedCalories: 518,
       }}
       waterRatio={55}
-      hydrationMode="increment"
-      handleSelectHydrationMode={handleSelectHydrationMode}
       isMobileLayout
       handleAdjustWater={jest.fn()}
-      waterDraft="250"
-      setWaterDraft={jest.fn()}
       isUpdatingWater={false}
       mealDefinitions={mealDefinitions}
       activeDiaryMeal="custom:ceia"
@@ -108,7 +103,6 @@ function renderDiaryPanel({
   return {
     setActiveDiaryView,
     setDiaryPage,
-    handleSelectHydrationMode,
     onOpenSearchForMeal,
     onOpenMealChooser,
     loadHistory,
@@ -133,16 +127,6 @@ describe("DiaryPanel", () => {
 
     expect(setActiveDiaryView).toHaveBeenCalledWith("history");
     expect(setDiaryPage).toHaveBeenCalledWith(1);
-  });
-
-  it("switches mobile hydration into correction mode from the compact action", async () => {
-    const user = userEvent.setup();
-    const { handleSelectHydrationMode } = renderDiaryPanel();
-
-    await user.click(screen.getByRole("button", { name: /Registro do dia/i }));
-    await user.click(screen.getByRole("button", { name: /Corrigir total/i }));
-
-    expect(handleSelectHydrationMode).toHaveBeenCalledWith("absolute", 1200);
   });
 
   it("offers a direct add-food action from the selected meal card on mobile", async () => {

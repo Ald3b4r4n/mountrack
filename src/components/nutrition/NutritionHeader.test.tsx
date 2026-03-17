@@ -53,7 +53,6 @@ describe("NutritionHeader", () => {
         consumedRatio={26}
         activeMealLabel="Café da manhã"
         activeMealCalories={185}
-        activeMealItemsCount={2}
         recentlyLoggedFoodLabel="Iogurte natural"
         onOpenConsumedSummary={onOpenConsumedSummary}
         onAddToActiveMeal={onAddToActiveMeal}
@@ -71,10 +70,8 @@ describe("NutritionHeader", () => {
     await user.click(screen.getByRole("button", { name: /Consumido/i }));
 
     expect(onOpenConsumedSummary).toHaveBeenCalledTimes(1);
-    expect(screen.getByText(/Ver refeição/i)).toBeInTheDocument();
     expect(screen.getByText(/^Agora$/i)).toBeInTheDocument();
-    expect(screen.getByText(/2 item\(ns\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/Atualizado/i)).toBeInTheDocument();
+    expect(screen.getByText(/Sugerido/i)).toBeInTheDocument();
     expect(screen.getByText(/Registrado agora/i)).toBeInTheDocument();
     expect(screen.getByText(/Iogurte natural/i)).toBeInTheDocument();
     expect(screen.getByText(/^26%$/i)).toBeInTheDocument();
