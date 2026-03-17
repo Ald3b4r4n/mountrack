@@ -150,7 +150,7 @@ describe("catalog search service", () => {
     const result = await searchNutritionCatalog("user-a", "banana prata");
 
     expect(result.results[0]?.id).toBe("fatsecret-banana");
-    expect(result.source).toBe("fatsecret");
+    expect(result.source).toBe("fatsecret-primary");
     expect(mockedSearchFatSecretFoods).toHaveBeenCalledWith("banana prata");
   });
 
