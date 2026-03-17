@@ -7,6 +7,7 @@ import { NutritionLayout } from "@/components/nutrition/NutritionLayout";
 import { NutritionStatusBanners } from "@/components/nutrition/NutritionStatusBanners";
 import { NutritionWorkspaceNav } from "@/components/nutrition/NutritionWorkspaceNav";
 import { CustomFoodDialog } from "./CustomFoodDialog";
+import { CustomWaterDialog } from "./CustomWaterDialog";
 
 interface NutritionScreenShellProps {
   isPreview: boolean;
@@ -16,6 +17,7 @@ interface NutritionScreenShellProps {
   customMealDialogKey: string;
   customMealDialogProps: ComponentProps<typeof CustomMealDialog>;
   customFoodDialogProps: ComponentProps<typeof CustomFoodDialog>;
+  customWaterDialogProps: ComponentProps<typeof CustomWaterDialog>;
   headerProps: ComponentProps<typeof NutritionHeader>;
   navProps: ComponentProps<typeof NutritionWorkspaceNav>;
   statusBannersProps: ComponentProps<typeof NutritionStatusBanners>;
@@ -29,6 +31,7 @@ export function NutritionScreenShell({
   customMealDialogKey,
   customMealDialogProps,
   customFoodDialogProps,
+  customWaterDialogProps,
   headerProps,
   navProps,
   statusBannersProps,
@@ -38,6 +41,7 @@ export function NutritionScreenShell({
       <BarcodeScannerDialog {...barcodeScannerProps} />
       <CustomMealDialog key={customMealDialogKey} {...customMealDialogProps} />
       <CustomFoodDialog {...customFoodDialogProps} />
+      <CustomWaterDialog {...customWaterDialogProps} />
       <NutritionHeader {...headerProps} />
       <NutritionWorkspaceNav {...navProps} />
       <NutritionStatusBanners {...statusBannersProps} />

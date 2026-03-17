@@ -28,6 +28,10 @@ export function NutritionWorkspaceContent({
   const searchWorkspaceContent = <NutritionSearchWorkspace {...searchProps} />;
   const planningWorkspaceContent = <NutritionPlanningWorkspace {...planningProps} />;
 
+  if (activeArea === "none") {
+    return null;
+  }
+
   const activeWorkspaceContent =
     activeArea === "today"
       ? isMobileLayout

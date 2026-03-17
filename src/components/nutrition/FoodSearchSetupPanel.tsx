@@ -114,6 +114,7 @@ export function FoodSearchSetupPanel({
                 }
               }}
               placeholder="Ex.: banana prata, arroz cozido, iogurte"
+              autoFocus
             />
             <div className={`grid gap-2.5 ${isMobileLayout ? "grid-cols-2" : "grid-cols-[auto]"}`}>
               <button type="button" onClick={onSearch} className="btn-primary" disabled={isSearching}>

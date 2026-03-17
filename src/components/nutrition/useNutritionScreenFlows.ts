@@ -40,7 +40,7 @@ interface NutritionScreenFlowsDeps {
   historyPage: number;
   setMealType: (value: MealType | ((current: MealType) => MealType)) => void;
   setActiveDiaryMeal: (value: MealType | ((current: MealType) => MealType)) => void;
-  setActiveArea: (value: "today" | "search" | "planning" | ((current: "today" | "search" | "planning") => "today" | "search" | "planning")) => void;
+  setActiveArea: (value: "none" | "today" | "search" | "planning" | ((current: "none" | "today" | "search" | "planning") => "none" | "today" | "search" | "planning")) => void;
   setActiveDiaryView: (value: "today" | "history" | ((current: "today" | "history") => "today" | "history")) => void;
   setDiaryPage: (value: number | ((current: number) => number)) => void;
   setTodayMealsSectionOpen: (value: boolean | ((current: boolean) => boolean)) => void;
@@ -52,6 +52,7 @@ interface NutritionScreenFlowsDeps {
       | ((current: DiarySuccessFeedback | null) => DiarySuccessFeedback | null),
   ) => void;
   setCustomMealOpen: (value: boolean | ((current: boolean) => boolean)) => void;
+  setCustomWaterOpen: (value: boolean | ((current: boolean) => boolean)) => void;
   setEditingMeal: (
     value: MealDefinition | null | ((current: MealDefinition | null) => MealDefinition | null),
   ) => void;
@@ -89,6 +90,7 @@ export function useNutritionScreenFlows({
   setTodayDiarySectionOpen,
   setDiarySuccessFeedback,
   setCustomMealOpen,
+  setCustomWaterOpen,
   setEditingMeal,
   setMessage,
   loadBrowserDashboard,
@@ -112,11 +114,16 @@ export function useNutritionScreenFlows({
     );
   }
 
-  function handleChangeArea(nextArea: "today" | "search" | "planning") {
-    if (nextArea !== "today") {
-      setDiarySuccessFeedback(null);
-    }
-    setActiveArea(nextArea);
+  function handleChangeArea(nextArea: "none" | "today" | "search" | "planning") {
+    setActiveArea((current) => {
+      if (current === nextArea) {
+        return "none";
+      }
+      if (nextArea !== "today") {
+        setDiarySuccessFeedback(null);
+      }
+      return nextArea;
+    });
   }
 
   function scrollNutritionViewToTop() {

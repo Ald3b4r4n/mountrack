@@ -22,12 +22,9 @@ interface NutritionTodayWorkspaceSectionProps {
     consumedCalories: number;
   };
   waterRatio: number;
-  hydrationMode: "increment" | "absolute";
-  onSelectHydrationMode: (mode: "increment" | "absolute", currentWater: number) => void;
   isMobileLayout: boolean;
   onAdjustWater: (amount: number) => void;
-  waterDraft: string;
-  onWaterDraftChange: (value: string) => void;
+  onOpenCustomWater: () => void;
   onSaveWater: () => void;
   isUpdatingWater: boolean;
   mealDefinitions: MealDefinition[];
@@ -65,12 +62,9 @@ export function NutritionTodayWorkspaceSection({
   onChangeDiaryPage,
   summary,
   waterRatio,
-  hydrationMode,
-  onSelectHydrationMode,
   isMobileLayout,
   onAdjustWater,
-  waterDraft,
-  onWaterDraftChange,
+  onOpenCustomWater,
   onSaveWater,
   isUpdatingWater,
   mealDefinitions,
@@ -123,12 +117,9 @@ export function NutritionTodayWorkspaceSection({
         setDiaryPage={onChangeDiaryPage}
         summary={summary}
         waterRatio={waterRatio}
-        hydrationMode={hydrationMode}
-        handleSelectHydrationMode={onSelectHydrationMode}
         isMobileLayout={isMobileLayout}
         handleAdjustWater={onAdjustWater}
-        waterDraft={waterDraft}
-        setWaterDraft={onWaterDraftChange}
+        onOpenCustomWater={onOpenCustomWater}
         handleSaveWater={onSaveWater}
         isUpdatingWater={isUpdatingWater}
         mealDefinitions={mealDefinitions}

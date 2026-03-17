@@ -82,7 +82,6 @@ describe("NutritionHeader", () => {
     expect(screen.getByText(/^Água e metas$/i)).toBeInTheDocument();
     expect(screen.getByText(/Café da manhã em foco/i)).toBeInTheDocument();
     expect(screen.getByText(/Água 0%/i)).toBeInTheDocument();
-    expect(screen.getByText(/Kcal 26%/i)).toBeInTheDocument();
     expect(screen.getByText(/Meta 140 g/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /^Adicionar$/i }));

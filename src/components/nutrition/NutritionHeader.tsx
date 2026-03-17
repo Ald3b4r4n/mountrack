@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, ChevronRight } from "lucide-react";
+import { ArrowLeft, ChevronRight } from "lucide-react";
 import type {
   DailySummary,
   NutritionGoal,
@@ -9,6 +9,61 @@ import {
   formatGrams,
   formatMilliliters,
 } from "@/modules/nutrition/ui-helpers";
+
+function CircularProgress({ ratio, color, size = 48, strokeWidth = 4, children }: { ratio: number; color: string; size?: number; strokeWidth?: number; children?: React.ReactNode }) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const offset = circumference - (ratio / 100) * circumference;
+
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="transparent"
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          className="text-white/5"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="transparent"
+          stroke={color}
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          className="transition-all duration-700 ease-out"
+          style={{ filter: `drop-shadow(0 0 4px ${color}80)` }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function WaveIcon({ color, className }: { color: string; className?: string }) {
+  return (
+    <svg viewBox="0 0 100 25" className={className} preserveAspectRatio="none">
+      <path
+        d="M0 15 C 20 5, 40 5, 60 15 C 80 25, 90 25, 100 15 V 25 H 0 Z"
+        fill={`url(#wave-grad-${color.replace('#', '')})`}
+      />
+      <defs>
+        <linearGradient id={`wave-grad-${color.replace('#', '')}`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor={color} stopOpacity="0.4" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.1" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
 
 function CompactMetricCard({
   label,
@@ -123,159 +178,137 @@ function DesktopMacroHero({
 function MobileSummaryTile({
   label,
   value,
-  accentClass,
-  hint,
   meta,
   onClick,
   tone = "default",
+  ratio = 0,
 }: {
   label: string;
   value: string;
-  accentClass: string;
-  hint?: string;
   meta?: string;
   onClick?: () => void;
   tone?: "default" | "accent" | "calm";
+  ratio?: number;
 }) {
-  const toneClassName =
-    tone === "accent"
-      ? "border-[#34d399]/18 bg-[linear-gradient(180deg,rgba(5,26,36,0.96),rgba(6,18,31,0.78))] shadow-[0_18px_36px_rgba(4,20,38,0.24),inset_0_1px_0_rgba(255,255,255,0.04)]"
-      : tone === "calm"
-        ? "border-[#38bdf8]/12 bg-[linear-gradient(180deg,rgba(8,20,36,0.92),rgba(6,17,30,0.72))] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
-        : "border-white/7 bg-[linear-gradient(180deg,rgba(7,18,35,0.92),rgba(6,17,30,0.72))] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]";
-  const tileClassName = [
-    `min-w-0 overflow-hidden rounded-[1rem] border p-3 ${toneClassName}`,
-    onClick
-      ? "w-full text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#34d399]/35 active:scale-[0.985]"
-      : "",
-  ]
-    .join(" ")
-    .trim();
-
-  const content = (
-    <>
-      <div className="flex min-w-0 items-start justify-between gap-2">
-        <span className="block min-w-0 truncate text-[0.66rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
-          {label}
-        </span>
-        {meta ? (
-          <span className="shrink-0 rounded-full border border-white/8 bg-white/4 px-2 py-0.5 text-[0.68rem] text-[var(--text-secondary)]">
-            {meta}
+  const color = tone === "accent" ? "#34d399" : tone === "calm" ? "#0ea5e9" : "#94a3b8";
+  
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!onClick}
+      className={`relative flex min-w-0 flex-1 flex-col rounded-[1.25rem] border border-white/10 bg-[#050f1d]/60 p-4 text-left transition-all ${onClick ? 'active:scale-95' : ''}`}
+    >
+      <div className="flex items-start justify-between w-full">
+        <div className="min-w-0">
+          <span className="text-[0.65rem] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)] opacity-60">
+            {label}
           </span>
-        ) : null}
+          <strong className="mt-2 text-[1.15rem] font-black tracking-tight text-[var(--text-primary)] block">
+            {value}
+          </strong>
+          {meta && (
+            <div className="mt-2 flex items-center gap-1 text-[0.75rem] font-bold text-[#34d399]">
+              <span className="truncate">{meta}</span>
+              <ChevronRight size={12} className="shrink-0" />
+            </div>
+          )}
+        </div>
+        <CircularProgress ratio={ratio} color={color} size={42} strokeWidth={4}>
+          <span className="text-[0.6rem] font-bold text-[var(--text-primary)]">
+            {tone === "calm" ? "Livre" : `${Math.round(ratio)}%`}
+          </span>
+        </CircularProgress>
       </div>
-      <strong
-        className={`mt-1.5 block text-[1rem] leading-none ${accentClass}`}
-      >
-        {value}
-      </strong>
-      {hint ? (
-        <span className="mt-2 flex min-w-0 items-center gap-1 text-[0.76rem] text-[var(--text-secondary)]">
-          <span className="min-w-0 truncate">{hint}</span>
-          {onClick ? (
-            <ChevronRight
-              size={14}
-              className="shrink-0 text-[var(--accent-primary)]"
-            />
-          ) : null}
-        </span>
-      ) : null}
-    </>
+    </button>
   );
-
-  if (onClick) {
-    return (
-      <button type="button" onClick={onClick} className={tileClassName}>
-        {content}
-      </button>
-    );
-  }
-
-  return <article className={tileClassName}>{content}</article>;
 }
 
 function MobileActiveMealCard({
   mealLabel,
   mealCalories,
-  mealItemsCount,
   onOpenMeal,
   onAddToMeal,
   recentlyLoggedFoodLabel,
+  suggestedCalories = 0,
 }: {
   mealLabel: string;
   mealCalories: number;
-  mealItemsCount: number;
   onOpenMeal?: () => void;
   onAddToMeal?: () => void;
   recentlyLoggedFoodLabel?: string | null;
+  suggestedCalories?: number;
 }) {
+  const getMealTheme = (label: string) => {
+    const l = label.toLowerCase();
+    if (l.includes("café") || l.includes("breakfast")) return { icon: "☕", color: "#f59e0b", label: "Café" };
+    if (l.includes("almoço") || l.includes("lunch")) return { icon: "🥗", color: "#10b981", label: "Almoço" };
+    if (l.includes("lanche") || l.includes("snack")) return { icon: "🍎", color: "#0ea5e9", label: "Lanche" };
+    if (l.includes("jantar") || l.includes("dinner")) return { icon: "🍽️", color: "#6366f1", label: "Jantar" };
+    return { icon: "🍱", color: "#34d399", label: "Refeição" };
+  };
+
+  const theme = getMealTheme(mealLabel);
+
   return (
-    <article
-      className={`min-w-0 overflow-hidden rounded-[1rem] border bg-[linear-gradient(145deg,rgba(6,21,39,0.92),rgba(4,16,30,0.82))] p-3 shadow-[0_18px_36px_rgba(4,20,38,0.18)] ${
-        recentlyLoggedFoodLabel
-          ? "border-[#34d399]/26 shadow-[0_18px_40px_rgba(8,64,52,0.22)]"
-          : "border-[#34d399]/14"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-[0.7rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
-            Agora
-          </p>
-          <strong className="mt-1 block truncate text-[1rem] text-[var(--text-primary)]">
-            {mealLabel}
-          </strong>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <span className="rounded-full border border-white/8 bg-white/4 px-2.5 py-1 text-[0.74rem] text-[var(--text-secondary)]">
-              {mealItemsCount > 0 ? `${mealItemsCount} item(ns)` : "Sem itens"}
-            </span>
-            {recentlyLoggedFoodLabel ? (
-              <span className="rounded-full border border-[#34d399]/18 bg-[#34d399]/10 px-2.5 py-1 text-[0.74rem] text-[#86efac]">
-                Atualizado
-              </span>
-            ) : null}
-          </div>
-        </div>
-        <span className="badge badge-success shrink-0 whitespace-nowrap">
-          {formatCalories(mealCalories)}
-        </span>
-      </div>
-      {recentlyLoggedFoodLabel ? (
-        <div className="mt-3 flex min-w-0 items-center gap-2.5 overflow-hidden rounded-[0.9rem] border border-[#34d399]/18 bg-[#062032]/88 px-3 py-2">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#34d399]/12 text-[#86efac]">
-            <CheckCircle2 size={15} />
+    <article className="relative mt-2 overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#050f1d]/80 p-5 shadow-2xl">
+      <div className="flex items-start justify-between">
+        <div>
+          <span className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)] opacity-50">
+            AGORA
           </span>
-          <div className="min-w-0">
-            <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[#86efac]">
-              Registrado agora
-            </span>
-            <strong className="mt-0.5 block truncate text-[0.9rem] text-[var(--text-primary)]">
-              {recentlyLoggedFoodLabel}
-            </strong>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-2xl drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">{theme.icon}</span>
+            <h3 className="text-[1.45rem] font-black tracking-tight text-[var(--text-primary)]">
+              {recentlyLoggedFoodLabel || mealLabel}
+            </h3>
+          </div>
+          {suggestedCalories > 0 && (
+            <div className="mt-2 flex items-center gap-2">
+              <div 
+                className="h-1.5 w-1.5 rounded-full animate-pulse"
+                style={{ backgroundColor: theme.color, boxShadow: `0 0 8px ${theme.color}` }}
+              />
+              <p className="text-[0.8rem] font-bold text-[var(--text-secondary)] opacity-90">
+                Sugerido: <span className="text-[var(--text-primary)]">{formatCalories(suggestedCalories)}</span>
+              </p>
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col items-end gap-2.5">
+          <span 
+            className="rounded-full px-4 py-1.5 text-[0.8rem] font-black text-[#050f1d] transition-all duration-500"
+            style={{ 
+              backgroundColor: theme.color, 
+              boxShadow: `0 0 20px ${theme.color}44` 
+            }}
+          >
+            {formatCalories(mealCalories)}
+          </span>
+          <div className="flex items-center gap-1.5 opacity-60">
+             <WaveIcon color={theme.color} className="h-5 w-14" />
           </div>
         </div>
-      ) : null}
-      <div
-        className={`mt-3 grid gap-2 ${onOpenMeal && onAddToMeal ? "grid-cols-2" : "grid-cols-1"}`}
-      >
-        {onOpenMeal ? (
-          <button
-            type="button"
-            onClick={onOpenMeal}
-            className="btn-outline min-h-[2.85rem] min-w-0 w-full"
-          >
-            Ver refeição
-          </button>
-        ) : null}
-        {onAddToMeal ? (
-          <button
-            type="button"
-            onClick={onAddToMeal}
-            className="btn-primary min-h-[2.85rem] min-w-0 w-full"
-          >
-            Adicionar
-          </button>
-        ) : null}
+      </div>
+      
+      <div className="relative mt-6 h-2 w-full overflow-hidden rounded-full bg-white/5">
+        <div
+          className="absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ease-out"
+          style={{
+            width: suggestedCalories > 0 ? `${Math.min((mealCalories / suggestedCalories) * 100, 100)}%` : "0%",
+            background: `linear-gradient(90deg, ${theme.color}, #ffffff55)`,
+            boxShadow: `0 0 15px ${theme.color}88`
+          }}
+        />
+      </div>
+
+      <div className="mt-6 grid grid-cols-2 gap-3">
+        <button onClick={onOpenMeal} className="btn-outline min-h-[3.2rem] rounded-xl text-[0.85rem] font-bold border-white/10 hover:bg-white/5">
+          Detalhes
+        </button>
+        <button onClick={onAddToMeal} className="btn-primary min-h-[3.2rem] rounded-xl text-[0.85rem] font-black shadow-lg">
+          Adicionar
+        </button>
       </div>
     </article>
   );
@@ -292,36 +325,39 @@ function MobileMacroRail({
   target: number;
   accent: string;
 }) {
-  const hasTarget = target > 0;
   const ratio = target > 0 ? Math.min((current / target) * 100, 100) : 0;
 
   return (
-    <article className="rounded-[0.95rem] border border-white/7 bg-[linear-gradient(180deg,rgba(7,18,35,0.92),rgba(6,17,30,0.72))] p-3">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
-          {label}
-        </span>
-        <span className="rounded-full border border-white/8 bg-white/4 px-2 py-0.5 text-[0.68rem] text-[var(--text-secondary)]">
-          {hasTarget ? `${Math.round(ratio)}%` : "Livre"}
-        </span>
+    <article className="relative overflow-hidden rounded-[1.25rem] border border-white/10 bg-[#050f1d]/80 p-5 shadow-xl">
+      <div className="flex items-start justify-between">
+        <div>
+          <span className="text-[0.6rem] font-bold uppercase tracking-[0.15em] text-[var(--text-muted)] opacity-50">
+            {label}
+          </span>
+          <div className="mt-1 flex items-baseline gap-2">
+            <strong className="text-[1.3rem] font-black tracking-tight" style={{ color: accent }}>
+              {formatGrams(current)}
+            </strong>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <CircularProgress ratio={ratio} color={accent} size={38} strokeWidth={3}>
+             <span className="text-[0.55rem] font-bold text-[var(--text-primary)]">{Math.round(ratio)}%</span>
+          </CircularProgress>
+          <div className="flex items-center gap-1.5 opacity-60">
+             <WaveIcon color={accent} className="h-5 w-12" />
+             <span className="text-[0.65rem] font-bold text-[var(--text-secondary)]">Meta {formatGrams(target)}</span>
+          </div>
+        </div>
       </div>
-      <div className="mt-2 flex items-end justify-between gap-3">
-        <strong
-          className="text-[0.98rem] leading-none"
-          style={{ color: accent }}
-        >
-          {formatGrams(current)}
-        </strong>
-        <span className="text-[0.76rem] text-[var(--text-secondary)]">
-          {hasTarget ? `Meta ${formatGrams(target)}` : "Sem alvo"}
-        </span>
-      </div>
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/6">
+      
+      <div className="mt-5 h-1.5 w-full overflow-hidden rounded-full bg-white/5">
         <div
-          className="h-full rounded-full"
+          className="h-full rounded-full transition-all duration-1000 ease-out"
           style={{
             width: `${ratio}%`,
-            background: `linear-gradient(90deg, ${accent}, rgba(255,255,255,0.92))`,
+            backgroundColor: accent,
+            boxShadow: `0 0 12px ${accent}`
           }}
         />
       </div>
@@ -336,11 +372,12 @@ function MobileSummaryStrip({
   consumedRatio,
   activeMealLabel,
   activeMealCalories,
-  activeMealItemsCount,
   onOpenConsumedSummary,
   onAddToActiveMeal,
   recentlyLoggedFoodLabel,
   onAdjustWater,
+  onSaveWater,
+  onOpenCustomWater,
 }: {
   summary: DailySummary;
   goal: NutritionGoal;
@@ -348,120 +385,160 @@ function MobileSummaryStrip({
   consumedRatio: number;
   activeMealLabel: string;
   activeMealCalories: number;
-  activeMealItemsCount: number;
   onOpenConsumedSummary?: () => void;
   onAddToActiveMeal?: () => void;
   recentlyLoggedFoodLabel?: string | null;
   onAdjustWater?: (amount: number) => void;
+  onSaveWater?: () => void;
+  onOpenCustomWater?: () => void;
 }) {
+  const suggestedCalories = Math.round((goal.targetCalories || 0) / 4);
   return (
     <div className="grid min-w-0 gap-2.5">
       <div className="grid min-w-0 grid-cols-2 gap-2.5">
-        <MobileSummaryTile
-          label="Consumido"
-          value={formatCalories(summary.consumedCalories)}
-          accentClass="text-[var(--text-primary)]"
-          hint={activeMealLabel}
-          meta={`${Math.round(consumedRatio)}%`}
-          onClick={onOpenConsumedSummary}
-          tone="accent"
+          <MobileSummaryTile
+            label="Consumido"
+            value={formatCalories(summary.consumedCalories)}
+            meta={`${Math.round(consumedRatio)}%`}
+            onClick={onOpenConsumedSummary}
+            tone="accent"
+            ratio={consumedRatio}
+          />
+          <MobileSummaryTile
+            label="Restante"
+            value={formatCalories(summary.remainingCalories)}
+            meta={summary.remainingCalories > 0 ? "Livre" : "Meta"}
+            tone="calm"
+            ratio={100 - consumedRatio}
+          />
+        </div>
+        <MobileActiveMealCard
+          mealLabel={activeMealLabel}
+          mealCalories={activeMealCalories}
+          onOpenMeal={onOpenConsumedSummary}
+          onAddToMeal={onAddToActiveMeal}
+          recentlyLoggedFoodLabel={recentlyLoggedFoodLabel}
+          suggestedCalories={suggestedCalories}
         />
-        <MobileSummaryTile
-          label="Restante"
-          value={formatCalories(summary.remainingCalories)}
-          accentClass="text-[var(--text-primary)]"
-          hint={summary.remainingCalories > 0 ? "Hoje" : "Fechado"}
-          meta={summary.remainingCalories > 0 ? "Livre" : "Meta"}
-          tone="calm"
-        />
-      </div>
-      <MobileActiveMealCard
-        mealLabel={activeMealLabel}
-        mealCalories={activeMealCalories}
-        mealItemsCount={activeMealItemsCount}
-        onOpenMeal={onOpenConsumedSummary}
-        onAddToMeal={onAddToActiveMeal}
-        recentlyLoggedFoodLabel={recentlyLoggedFoodLabel}
-      />
-      <div className="glass-panel static-panel min-w-0 overflow-hidden rounded-[1rem] border-[#34d399]/14 bg-[linear-gradient(145deg,rgba(5,20,38,0.9),rgba(6,22,45,0.7))] p-3.5">
-        <div className="mb-3 flex items-start justify-between gap-3">
+      <div className="glass-panel static-panel min-w-0 overflow-hidden rounded-[1.25rem] border-white/5 bg-[#050f1d] p-4 shadow-2xl">
+        <div className="mb-5 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[0.7rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+            <p className="text-[0.72rem] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)] opacity-50">
               Hoje
             </p>
-            <strong className="block text-[1rem] text-[var(--text-primary)]">
+            <h2 className="mt-1 text-[1.2rem] font-black tracking-tight text-[var(--text-primary)]">
               Água e metas
-            </strong>
-            <span className="mt-1.5 inline-flex max-w-full items-center overflow-hidden rounded-full border border-white/8 bg-white/4 px-2.5 py-1 text-[0.74rem] text-[var(--text-secondary)]">
-              <span className="truncate">{activeMealLabel} em foco</span>
-            </span>
-          </div>
-          <div className="flex shrink-0 flex-col items-end gap-1.5">
-            <span className="rounded-full border border-[#38bdf8]/18 bg-[#38bdf8]/10 px-2.5 py-1 text-[0.72rem] text-sky-200">
-              Água {Math.round(waterRatio)}%
-            </span>
-            <span className="rounded-full border border-[#34d399]/18 bg-[#34d399]/10 px-2.5 py-1 text-[0.72rem] text-[#86efac]">
-              Kcal {Math.round(consumedRatio)}%
-            </span>
-          </div>
-        </div>
-        <div className="grid min-w-0 grid-cols-[minmax(0,1.25fr)_minmax(0,0.95fr)] gap-2.5">
-          <div className="min-w-0 rounded-[0.95rem] border border-white/7 bg-[linear-gradient(180deg,rgba(7,18,35,0.92),rgba(6,17,30,0.72))] p-3">
-            <div className="mb-1.5 flex items-center justify-between gap-3 text-[0.78rem] text-[var(--text-secondary)]">
-              <span>Água</span>
-              <span className="shrink-0 text-right">
-                {formatMilliliters(summary.waterIntakeMl)} /{" "}
-                {formatMilliliters(summary.targetWaterMl)}
+            </h2>
+            <div className="mt-3">
+              <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[0.74rem] font-semibold text-[var(--text-secondary)]">
+                {activeMealLabel} em foco
               </span>
             </div>
-            <div className="progress-track h-[0.42rem]">
-              <div
-                className="progress-fill bg-gradient-to-br from-[#38bdf8] to-[#22d3ee]"
-                style={{ width: `${waterRatio}%` }}
-              />
-            </div>
-            {onAdjustWater ? (
-              <div className="mt-2 grid grid-cols-2 gap-1.5">
-                <button
-                  onClick={() => onAdjustWater(250)}
-                  className="rounded-[0.7rem] bg-[#38bdf8]/18 px-2 py-1 text-[0.7rem] font-medium text-sky-200 transition-colors hover:bg-[#38bdf8]/28"
-                >
-                  +250 ml
-                </button>
-                <button
-                  onClick={() => onAdjustWater(500)}
-                  className="rounded-[0.7rem] bg-[#38bdf8]/18 px-2 py-1 text-[0.7rem] font-medium text-sky-200 transition-colors hover:bg-[#38bdf8]/28"
-                >
-                  +500 ml
-                </button>
-              </div>
-            ) : null}
-            <span className="mt-2 block text-[0.78rem] text-[var(--text-secondary)]">
-              {summary.waterIntakeMl >= summary.targetWaterMl
-                ? "Meta alcançada"
-                : `Faltam ${formatMilliliters(Math.max(summary.targetWaterMl - summary.waterIntakeMl, 0))}`}
+          </div>
+          <div className="shrink-0">
+            <span className="inline-flex h-9 items-center justify-center rounded-full border border-sky-400/20 bg-sky-400/10 px-4 text-[0.8rem] font-bold text-sky-200">
+              Água {Math.round(waterRatio)}%
             </span>
           </div>
         </div>
-        <div className="mt-2.5 grid gap-2">
-          <MobileMacroRail
-            label="Proteína"
-            current={summary.protein}
-            target={goal.targetProtein ?? 0}
-            accent="#6ee7b7"
-          />
-          <MobileMacroRail
-            label="Carbo"
-            current={summary.carbs}
-            target={goal.targetCarbs ?? 0}
-            accent="#67e8f9"
-          />
-          <MobileMacroRail
-            label="Gordura"
-            current={summary.fat}
-            target={goal.targetFat ?? 0}
-            accent="#fda4af"
-          />
+
+        <div className="grid gap-3">
+          {/* Water Card */}
+          <article className="relative overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#050f1d]/80 p-5 shadow-2xl">
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)] opacity-50">
+                  ÁGUA
+                </span>
+                <div className="mt-1 flex items-baseline gap-2">
+                  <strong className="text-[1.3rem] font-black text-[var(--text-primary)]">
+                    {summary.waterIntakeMl} ml
+                  </strong>
+                  <span className="text-[0.8rem] font-bold text-[var(--text-muted)] opacity-60">
+                    / {summary.targetWaterMl} ml
+                  </span>
+                </div>
+              </div>
+              <CircularProgress ratio={waterRatio} color="#0ea5e9" size={42} strokeWidth={4}>
+                 <span className="text-[0.6rem] font-bold text-[var(--text-primary)]">{Math.round(waterRatio)}%</span>
+              </CircularProgress>
+            </div>
+
+            <div className="mt-6 flex items-center gap-6">
+              {/* Simple Pitcher Representation */}
+              <div className="relative h-20 w-16 overflow-hidden rounded-b-xl border-2 border-white/20">
+                <div 
+                  className="absolute bottom-0 w-full bg-gradient-to-t from-sky-500 to-sky-300 transition-all duration-1000 ease-in-out"
+                  style={{ height: `${Math.min(waterRatio, 100)}%`, boxShadow: '0 0 15px #0ea5e980' }}
+                />
+                <div className="absolute inset-x-2 top-2 h-1 rounded-full bg-white/10" />
+              </div>
+
+              <div className="flex-1">
+                <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+                  <div 
+                    className="h-full bg-sky-400 transition-all duration-700"
+                    style={{ width: `${Math.min(waterRatio, 100)}%` }}
+                  />
+                </div>
+                <p className="mt-3 text-[0.75rem] font-bold text-[var(--text-secondary)] opacity-80 leading-relaxed">
+                  Lembre-se de beber água regularmente!
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-8 grid grid-cols-3 gap-2.5">
+              <button 
+                onClick={() => {
+                  onAdjustWater?.(250);
+                  setTimeout(() => onSaveWater?.(), 0);
+                }}
+                className="flex flex-col items-center justify-center rounded-xl border border-white/5 bg-white/5 py-3 transition-all active:scale-95 active:bg-white/10"
+              >
+                <span className="text-sky-400">🥛</span>
+                <span className="mt-1 text-[0.75rem] font-black text-[var(--text-primary)]">250</span>
+              </button>
+              <button 
+                onClick={() => {
+                  onAdjustWater?.(500);
+                  setTimeout(() => onSaveWater?.(), 0);
+                }}
+                className="flex flex-col items-center justify-center rounded-xl border border-white/5 bg-white/5 py-3 transition-all active:scale-95 active:bg-white/10"
+              >
+                <span className="text-sky-400">🥛🥛</span>
+                <span className="mt-1 text-[0.75rem] font-black text-[var(--text-primary)]">500</span>
+              </button>
+              <button 
+                onClick={onOpenCustomWater}
+                className="flex flex-col items-center justify-center rounded-xl border border-white/5 bg-white/5 py-3 transition-all active:scale-95 active:bg-white/10"
+              >
+                <span className="text-[1.1rem] text-[var(--text-muted)]">+</span>
+                <span className="mt-0.5 text-[0.65rem] font-bold text-[var(--text-muted)]">Personalizado</span>
+              </button>
+            </div>
+          </article>
+
+          {/* Macro Cards */}
+          <div className="grid gap-2.5">
+            <MobileMacroRail
+              label="Proteína"
+              current={summary.protein}
+              target={goal.targetProtein ?? 0}
+              accent="#34d399"
+            />
+            <MobileMacroRail
+              label="Carbo"
+              current={summary.carbs}
+              target={goal.targetCarbs ?? 0}
+              accent="#22d3ee"
+            />
+            <MobileMacroRail
+              label="Gordura"
+              current={summary.fat}
+              target={goal.targetFat ?? 0}
+              accent="#fb7185"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -477,11 +554,12 @@ interface NutritionHeaderProps {
   consumedRatio: number;
   activeMealLabel: string;
   activeMealCalories: number;
-  activeMealItemsCount: number;
   onOpenConsumedSummary?: () => void;
   onAddToActiveMeal?: () => void;
   recentlyLoggedFoodLabel?: string | null;
   onAdjustWater?: (amount: number) => void;
+  onOpenCustomWater?: () => void;
+  onSaveWater?: () => void;
 }
 
 export function NutritionHeader({
@@ -493,12 +571,14 @@ export function NutritionHeader({
   consumedRatio,
   activeMealLabel,
   activeMealCalories,
-  activeMealItemsCount,
   onOpenConsumedSummary,
   onAddToActiveMeal,
   recentlyLoggedFoodLabel,
   onAdjustWater,
+  onOpenCustomWater,
+  onSaveWater,
 }: NutritionHeaderProps) {
+
   return (
     <header
       className={`glass-panel static-panel anim-enter relative mb-[0.9rem] overflow-hidden ${
@@ -571,11 +651,12 @@ export function NutritionHeader({
             consumedRatio={consumedRatio}
             activeMealLabel={activeMealLabel}
             activeMealCalories={activeMealCalories}
-            activeMealItemsCount={activeMealItemsCount}
             onOpenConsumedSummary={onOpenConsumedSummary}
             onAddToActiveMeal={onAddToActiveMeal}
             recentlyLoggedFoodLabel={recentlyLoggedFoodLabel}
             onAdjustWater={onAdjustWater}
+            onSaveWater={onSaveWater}
+            onOpenCustomWater={onOpenCustomWater}
           />
         ) : (
           <div className="grid grid-cols-12 gap-[0.7rem]">

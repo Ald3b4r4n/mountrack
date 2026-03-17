@@ -15,7 +15,7 @@ export function buildNextWaterIntake(
   draft: string,
   mode: HydrationInputMode,
 ): number | null {
-  const parsed = Number(draft);
+  const parsed = Number(draft.replace(",", "."));
   if (Number.isNaN(parsed)) return null;
 
   if (mode === "absolute") {
@@ -23,8 +23,9 @@ export function buildNextWaterIntake(
     return parsed;
   }
 
-  if (parsed <= 0 || parsed > 5000) return null;
-  return Math.min(15000, currentIntake + parsed);
+  // Allow negative adjustments, but limit the range of a single entry to something reasonable
+  if (Math.abs(parsed) > 5000) return null;
+  return Math.max(0, Math.min(15000, currentIntake + parsed));
 }
 
 export function useHydration() {

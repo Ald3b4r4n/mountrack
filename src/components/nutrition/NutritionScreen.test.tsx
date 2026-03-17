@@ -219,7 +219,7 @@ describe("NutritionScreen", () => {
     });
     expect(screen.getByRole("button", { name: "Hoje" })).toHaveAttribute(
       "aria-pressed",
-      "true",
+      "false",
     );
 
     await user.click(addButton);

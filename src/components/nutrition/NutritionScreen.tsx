@@ -83,6 +83,8 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     setGoalInputsDirty,
     setMealPlanDraft,
     setPlanCalories,
+    setCustomWaterOpen,
+    setIsUpdatingWater,
   } = useNutritionScreenUiState();
   const canUseBrowserPersistence = Boolean(
     activeUser && !("devBypass" in activeUser && activeUser.devBypass),
@@ -156,8 +158,8 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
   } = sActions;
 
   const { waterDraft, isUpdatingWater, hydrationMode } = hState;
-  const { setWaterDraft, setIsUpdatingWater } = hSetters;
-  const { handleSelectHydrationMode, handleAdjustWater } = hActions;
+  const { setWaterDraft } = hSetters;
+  const { handleAdjustWater } = hActions;
 
   const {
     planRejectedFoods,
@@ -187,6 +189,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     planCalories,
     workspaceMinHeight,
     planningPanelMinHeight,
+    customWaterOpen,
   } = uiState;
 
   const activeWorkspaceRef = useRef<HTMLDivElement | null>(null);
@@ -248,6 +251,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     mealType,
     historyPage,
     setMealType,
+    setCustomWaterOpen,
     setActiveDiaryMeal,
     setActiveArea,
     setActiveDiaryView,
@@ -278,6 +282,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     handleChangeMealPlanItemQuantity,
     handleRejectMealPlanItem,
     handleExportMealPlanPdf,
+    handleSaveCustomWater,
   } = useNutritionScreenActions({
     activeUser,
     today,
@@ -318,6 +323,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     setPlanRejectedFoods,
     setIsGeneratingPlan,
     setIsExportingPdf,
+    setCustomWaterOpen,
     loadBrowserDashboard,
     loadBrowserHistory,
     hydrateDashboard,
@@ -622,13 +628,13 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     onChangeDiaryPage: setDiaryPage,
     summary,
     waterRatio,
-    hydrationMode,
-    onSelectHydrationMode: handleSelectHydrationMode,
     isMobileLayout,
-    onAdjustWater: handleAdjustWater,
-    waterDraft,
-    onWaterDraftChange: setWaterDraft,
+    onAdjustWater: (amount: number) => {
+      handleAdjustWater(amount);
+      window.setTimeout(() => void handleSaveWater(), 50);
+    },
     onSaveWater: () => void handleSaveWater(),
+    onOpenCustomWater: () => setCustomWaterOpen(true),
     isUpdatingWater,
     mealDefinitions,
     activeDiaryMeal,
@@ -827,6 +833,15 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
           applyFoodSelection(food);
         },
       }}
+      customWaterDialogProps={{
+        open: customWaterOpen,
+        onClose: () => setCustomWaterOpen(false),
+        onSave: (amount, mode) => {
+          void handleSaveCustomWater(amount, mode);
+        },
+        isSaving: isUpdatingWater,
+        initialMode: "increment",
+      }}
       headerProps={{
         isMobileLayout,
         isPreview,
@@ -836,7 +851,6 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
         consumedRatio,
         activeMealLabel: activeDiaryMealDefinition.label,
         activeMealCalories: summary.meals[activeDiaryMeal] ?? 0,
-        activeMealItemsCount: activeDiaryItems.length,
         recentlyLoggedFoodLabel:
           activeArea === "today" && isMobileLayout
             ? activeMealRecentlyLoggedFoodLabel
@@ -849,7 +863,19 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
               openSearchForMeal(activeDiaryMeal);
             }
           : undefined,
-        onAdjustWater: handleAdjustWater,
+        onAdjustWater: (amount) => {
+          // If amount is null or special, we could open modal, 
+          // but shortcuts (+250, +500) will still call this with numbers.
+          handleAdjustWater(amount);
+          // Wait for state sync then save
+          window.setTimeout(() => {
+            void handleSaveWater();
+          }, 50);
+        },
+        onOpenCustomWater: () => setCustomWaterOpen(true),
+        onSaveWater: () => {
+          void handleSaveWater();
+        },
       }}
       navProps={{
         activeArea,

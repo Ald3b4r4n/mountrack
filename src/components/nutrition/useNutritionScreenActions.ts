@@ -81,6 +81,7 @@ interface NutritionScreenActionsDeps {
   setPlanRejectedFoods: StateSetter<string[]>;
   setIsGeneratingPlan: StateSetter<boolean>;
   setIsExportingPdf: StateSetter<boolean>;
+  setCustomWaterOpen: StateSetter<boolean>;
   loadBrowserDashboard: () => NutritionDashboardSnapshot | null;
   loadBrowserHistory: (page: number) => NutritionHistorySnapshot | null;
   hydrateDashboard: (snapshot: Partial<NutritionDashboardSnapshot>) => void;
@@ -130,6 +131,7 @@ export function useNutritionScreenActions({
   setPlanRejectedFoods,
   setIsGeneratingPlan,
   setIsExportingPdf,
+  setCustomWaterOpen,
   loadBrowserDashboard,
   loadBrowserHistory,
   hydrateDashboard,
@@ -393,6 +395,61 @@ export function useNutritionScreenActions({
     }
   }
 
+  async function handleSaveCustomWater(amount: number, mode: "increment" | "absolute") {
+    if (!activeUser) return;
+
+    let nextWaterIntake: number;
+    if (mode === "absolute") {
+      nextWaterIntake = amount;
+    } else {
+      nextWaterIntake = Math.max(0, summary.waterIntakeMl + amount);
+    }
+
+    setIsUpdatingWater(true);
+    setMessage(null);
+    try {
+      if (storageMode === "volatile" && canUseBrowserPersistence) {
+        saveNutritionWaterToBrowser(
+          activeUser.uid,
+          today,
+          {
+            ...goal,
+            userId: activeUser.uid,
+            targetWaterMl: goal.targetWaterMl ?? DEFAULT_WATER_TARGET,
+          },
+          nextWaterIntake,
+        );
+
+        const browserDashboard = loadBrowserDashboard();
+        const browserHistory = loadBrowserHistory(historyPage);
+        if (browserDashboard) hydrateDashboard(browserDashboard);
+        if (browserHistory) hydrateHistory(browserHistory);
+        setCustomWaterOpen(false);
+        setMessage(mode === "absolute" ? "Total de água corrigido." : "Ingestão de água atualizada.");
+        return;
+      }
+
+      const response = await authorizedNutritionFetch(activeUser, `/api/nutrition/diaries/${today}`, {
+        method: "PATCH",
+        body: JSON.stringify({ waterIntakeMl: nextWaterIntake }),
+      });
+      if (!response.ok) {
+        await resolveRequestError(response, "Não foi possível atualizar a água do dia.");
+        return;
+      }
+
+      const payload = (await response.json()) as Partial<NutritionDashboardSnapshot>;
+      hydrateDashboard(payload);
+      setCustomWaterOpen(false);
+      setMessage(mode === "absolute" ? "Total de água corrigido." : "Ingestão de água atualizada.");
+      await loadHistory(historyPage);
+    } catch {
+      setMessage("Não foi possível atualizar a água do dia.");
+    } finally {
+      setIsUpdatingWater(false);
+    }
+  }
+
   async function handleDiscardMealPlan() {
     if (!activeUser) return;
 
@@ -570,5 +627,6 @@ export function useNutritionScreenActions({
     handleChangeMealPlanItemQuantity,
     handleRejectMealPlanItem,
     handleExportMealPlanPdf,
+    handleSaveCustomWater,
   };
 }

@@ -1,6 +1,6 @@
 import { CalendarDays, Search, SlidersHorizontal } from "lucide-react";
 
-export type NutritionArea = "today" | "search" | "planning";
+export type NutritionArea = "none" | "today" | "search" | "planning";
 
 const AREA_ITEMS: Array<{
   key: NutritionArea;
@@ -54,31 +54,39 @@ function AreaButton({
       type="button"
       onClick={onClick}
       className={[
-        "group rounded-[1.1rem] border transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#34d399]/35 active:scale-[0.985]",
+        "group relative overflow-hidden rounded-[1.25rem] border transition-all duration-300 ease-out focus-visible:outline-none active:scale-[0.97]",
         compact
-          ? "flex min-h-[4.5rem] flex-1 flex-col items-center justify-center gap-1.5 px-3 py-2"
-          : "flex min-h-[5.5rem] flex-1 items-center gap-3 px-4 py-3 text-left",
+          ? "flex min-h-[4.2rem] flex-1 flex-col items-center justify-center gap-1 px-2 py-1.5"
+          : "flex min-h-[5.8rem] flex-1 items-center gap-4 px-5 py-4 text-left",
         active
-          ? "border-[#34d399]/30 bg-[linear-gradient(135deg,rgba(52,211,153,0.14),rgba(6,182,212,0.08))] text-[var(--text-primary)] shadow-[0_14px_32px_rgba(4,20,38,0.24)]"
-          : "border-[var(--border-glass)] bg-[#071121]/72 text-[var(--text-secondary)] hover:border-[#34d399]/18 hover:bg-[#08182d]/82 hover:text-[var(--text-primary)] hover:shadow-[0_14px_32px_rgba(4,20,38,0.18)]",
+          ? "border-[#34d399]/40 bg-gradient-to-br from-[#34d399]/20 to-[#0ea5e9]/15 text-[var(--text-primary)] shadow-[0_8px_32px_rgba(52,211,153,0.18)]"
+          : "border-white/5 bg-[#050f1d]/40 text-[var(--text-secondary)] hover:border-white/15 hover:bg-[#050f1d]/60 hover:text-[var(--text-primary)]",
       ].join(" ")}
       aria-pressed={active}
     >
+      {/* Active Indicator Glow */}
+      {active && (
+        <div className="absolute -inset-1 blur-2xl opacity-20 bg-gradient-to-r from-[#34d399] to-[#0ea5e9]" />
+      )}
+      
       <span
         className={[
-          "flex shrink-0 items-center justify-center rounded-full border",
-          compact ? "h-9 w-9" : "h-11 w-11",
+          "relative flex shrink-0 items-center justify-center rounded-2xl border transition-all duration-300",
+          compact ? "h-8 w-8" : "h-12 w-12",
           active
-            ? "border-[#34d399]/25 bg-[#34d399]/12 text-[var(--accent-primary)]"
-            : "border-[var(--border-glass)] bg-white/5 text-[var(--text-secondary)] transition-colors duration-200 group-hover:border-[#34d399]/18 group-hover:text-[var(--accent-primary)]",
+            ? "border-[#34d399]/30 bg-[#34d399]/20 text-[#34d399] shadow-[0_0_15px_rgba(52,211,153,0.3)]"
+            : "border-white/10 bg-white/5 text-[var(--text-muted)] group-hover:border-[#34d399]/30 group-hover:text-[var(--text-primary)]",
         ].join(" ")}
       >
-        <Icon size={compact ? 18 : 20} />
+        <Icon size={compact ? 16 : 22} strokeWidth={active ? 2.5 : 1.5} />
       </span>
-      <span className={compact ? "text-[0.78rem] font-semibold" : "min-w-0"}>
-        <span className="block font-['Outfit',sans-serif] text-[0.98rem] leading-tight">{label}</span>
+      
+      <span className={compact ? "relative text-[0.72rem] font-bold uppercase tracking-wider" : "relative min-w-0"}>
+        <span className={`block font-['Outfit',sans-serif] ${compact ? '' : 'text-[1.05rem] font-black tracking-tight'} leading-tight`}>
+          {label}
+        </span>
         {!compact ? (
-          <span className="mt-1 block text-[0.82rem] leading-snug text-[var(--text-secondary)]">
+          <span className="mt-1 block text-[0.82rem] leading-snug text-[var(--text-secondary)] opacity-60">
             {description}
           </span>
         ) : null}
@@ -94,8 +102,8 @@ export function NutritionWorkspaceNav({
 }: NutritionWorkspaceNavProps) {
   if (isMobileLayout) {
     return (
-      <section className="sticky top-3 z-30 mb-4">
-        <nav className="glass-panel static-panel flex items-center gap-2 rounded-[1.35rem] border border-[#34d399]/12 bg-[#04101e]/92 p-2 shadow-[0_12px_30px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+      <section className="sticky top-3 z-30 mb-5">
+        <nav className="flex items-center gap-2 rounded-[1.6rem] border border-white/10 bg-[#050f1d]/85 p-1.5 shadow-[0_20px_40px_rgba(0,0,0,0.4)] backdrop-blur-2xl">
           {AREA_ITEMS.map((item) => (
             <AreaButton
               key={item.key}
@@ -113,7 +121,7 @@ export function NutritionWorkspaceNav({
   }
 
   return (
-    <section className="mb-5 grid gap-3 md:grid-cols-3">
+    <section className="mb-6 grid gap-4 md:grid-cols-3">
       {AREA_ITEMS.map((item) => (
         <AreaButton
           key={item.key}

@@ -22,12 +22,9 @@ interface DiaryPanelProps {
     consumedCalories: number;
   };
   waterRatio: number;
-  hydrationMode: "increment" | "absolute";
-  handleSelectHydrationMode: (mode: "increment" | "absolute", currentWater: number) => void;
   isMobileLayout: boolean;
   handleAdjustWater: (amount: number) => void;
-  waterDraft: string;
-  setWaterDraft: (val: string) => void;
+  onOpenCustomWater?: () => void;
   handleSaveWater: () => void;
   isUpdatingWater: boolean;
   mealDefinitions: MealDefinition[];
@@ -60,12 +57,9 @@ export function DiaryPanel({
   setDiaryPage,
   summary,
   waterRatio,
-  hydrationMode,
-  handleSelectHydrationMode,
   isMobileLayout,
   handleAdjustWater,
-  waterDraft,
-  setWaterDraft,
+  onOpenCustomWater,
   handleSaveWater,
   isUpdatingWater,
   mealDefinitions,
@@ -177,12 +171,9 @@ export function DiaryPanel({
         <DiaryTodayView
           summary={summary}
           waterRatio={waterRatio}
-          hydrationMode={hydrationMode}
-          handleSelectHydrationMode={handleSelectHydrationMode}
           isMobileLayout={isMobileLayout}
           handleAdjustWater={handleAdjustWater}
-          waterDraft={waterDraft}
-          setWaterDraft={setWaterDraft}
+          onOpenCustomWater={onOpenCustomWater}
           handleSaveWater={handleSaveWater}
           isUpdatingWater={isUpdatingWater}
           mealDefinitions={mealDefinitions}

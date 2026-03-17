@@ -58,6 +58,8 @@ export interface NutritionScreenUiState {
   planCalories: string;
   workspaceMinHeight: number;
   planningPanelMinHeight: number;
+  customWaterOpen: boolean;
+  isUpdatingWater: boolean;
 }
 
 type NutritionScreenUiAction =
@@ -95,7 +97,7 @@ function createInitialNutritionScreenUiState(): NutritionScreenUiState {
     quantity: "100",
     unit: "g",
     mealType: defaultFocusedMeal,
-    activeArea: "today",
+    activeArea: "none",
     planningTab: "goal",
     activeDiaryView: "today",
     activeDiaryMeal: defaultFocusedMeal,
@@ -119,6 +121,8 @@ function createInitialNutritionScreenUiState(): NutritionScreenUiState {
     planCalories: "2000",
     workspaceMinHeight: 0,
     planningPanelMinHeight: 0,
+    customWaterOpen: false,
+    isUpdatingWater: false,
   };
 }
 
@@ -253,5 +257,9 @@ export function useNutritionScreenUiState() {
       setUiStateField("mealPlanDraft", value),
     setPlanCalories: (value: string | ((current: string) => string)) =>
       setUiStateField("planCalories", value),
+    setCustomWaterOpen: (value: boolean | ((current: boolean) => boolean)) =>
+      setUiStateField("customWaterOpen", value),
+    setIsUpdatingWater: (value: boolean | ((current: boolean) => boolean)) =>
+      setUiStateField("isUpdatingWater", value),
   };
 }

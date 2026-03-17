@@ -1,6 +1,6 @@
 import { CheckCircle2 } from "lucide-react";
 import type { DiaryItemSnapshot, MealDefinition, MealType } from "@/modules/nutrition/domain/types";
-import { EmptyState, Field, PaginationControls, SegmentButton } from "./CommonUI";
+import { EmptyState, PaginationControls, SegmentButton } from "./CommonUI";
 import { MobilePaginationControls, MobileStatusCard } from "./DiaryPanelShared";
 import { formatCalories, formatMilliliters } from "@/modules/nutrition/ui-helpers";
 
@@ -11,18 +11,15 @@ interface DiaryTodayViewProps {
     meals: Record<string, number>;
   };
   waterRatio: number;
-  hydrationMode: "increment" | "absolute";
-  handleSelectHydrationMode: (mode: "increment" | "absolute", currentWater: number) => void;
   isMobileLayout: boolean;
   handleAdjustWater: (amount: number) => void;
-  waterDraft: string;
-  setWaterDraft: (val: string) => void;
   handleSaveWater: () => void;
   isUpdatingWater: boolean;
   mealDefinitions: MealDefinition[];
   activeDiaryMeal: MealType;
   setActiveDiaryMeal: (meal: MealType) => void;
   setDiaryPage: (page: number) => void;
+  onOpenCustomWater?: () => void;
   onOpenSearchForMeal?: (meal: MealType) => void;
   onOpenMealChooser?: () => void;
   groupedDiaryItems: Record<string, DiaryItemSnapshot[]>;
@@ -39,18 +36,15 @@ interface DiaryTodayViewProps {
 export function DiaryTodayView({
   summary,
   waterRatio,
-  hydrationMode,
-  handleSelectHydrationMode,
   isMobileLayout,
   handleAdjustWater,
-  waterDraft,
-  setWaterDraft,
   handleSaveWater,
   isUpdatingWater,
   mealDefinitions,
   activeDiaryMeal,
   setActiveDiaryMeal,
   setDiaryPage,
+  onOpenCustomWater,
   onOpenSearchForMeal,
   onOpenMealChooser,
   groupedDiaryItems,
@@ -75,7 +69,15 @@ export function DiaryTodayView({
       <div className="glass-panel static-panel bg-[#040f20]/70 p-[0.95rem]">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Água</span>
+            <div className="flex items-center gap-2">
+              <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Água</span>
+              {isUpdatingWater && (
+                <span className="inline-flex items-center gap-1 text-[0.6rem] font-bold text-sky-400">
+                  <span className="h-1 w-1 animate-ping rounded-full bg-current" />
+                  Sincronizando...
+                </span>
+              )}
+            </div>
             <strong className="mt-1 block text-[1.08rem] text-[var(--text-primary)]">
               {formatMilliliters(summary.waterIntakeMl)}
             </strong>
@@ -96,146 +98,47 @@ export function DiaryTodayView({
             style={{ width: `${waterRatio}%` }}
           />
         </div>
-        {isMobileLayout ? (
-          <div className="grid gap-3">
-            <div className="rounded-[0.95rem] border border-white/7 bg-[#071223]/72 p-2.5">
-              <div className="grid grid-cols-2 gap-2">
-                <SegmentButton
-                  active={hydrationMode === "increment"}
-                  label="Somar"
-                  onClick={() => handleSelectHydrationMode("increment", summary.waterIntakeMl)}
-                />
-                <SegmentButton
-                  active={hydrationMode === "absolute"}
-                  label="Corrigir total"
-                  onClick={() => handleSelectHydrationMode("absolute", summary.waterIntakeMl)}
-                />
-              </div>
-              <span className="mt-2 block text-[0.8rem] text-[var(--text-secondary)]">
-                {hydrationMode === "absolute"
-                  ? "Ajuste o total final do dia."
-                  : "Use atalhos rápidos ou lance manualmente."}
-              </span>
-            </div>
-            {hydrationMode === "increment" ? (
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => handleAdjustWater(250)}
-                  className="btn-outline min-h-[2.8rem] w-full rounded-[0.95rem]"
-                >
-                  +250 ml
-                </button>
-                <button
-                  onClick={() => handleAdjustWater(500)}
-                  className="btn-outline min-h-[2.8rem] w-full rounded-[0.95rem]"
-                >
-                  +500 ml
-                </button>
-              </div>
-            ) : null}
-            <div className="rounded-[0.95rem] border border-white/7 bg-[#071223]/58 p-2.5">
-              <div className="grid gap-2">
-                <Field label={hydrationMode === "absolute" ? "Total correto do dia (ml)" : "Adicionar (ml)"}>
-                  <input
-                    className="input-field"
-                    value={waterDraft}
-                    onChange={(event) => setWaterDraft(event.target.value)}
-                    inputMode="decimal"
-                    placeholder={hydrationMode === "absolute" ? "Ex.: 1800" : "Ex.: 250"}
-                  />
-                </Field>
-                <button
-                  onClick={() => void handleSaveWater()}
-                  className="btn-primary min-h-[3rem] w-full rounded-[0.95rem]"
-                  disabled={isUpdatingWater}
-                >
-                  {isUpdatingWater
-                    ? "Salvando..."
-                    : hydrationMode === "absolute"
-                      ? "Salvar total"
-                      : "Adicionar água"}
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="mb-[0.7rem] flex flex-wrap gap-[0.55rem]">
-              <SegmentButton
-                active={hydrationMode === "increment"}
-                label="Somar"
-                onClick={() => handleSelectHydrationMode("increment", summary.waterIntakeMl)}
-              />
-              <SegmentButton
-                active={hydrationMode === "absolute"}
-                label="Corrigir total"
-                onClick={() => handleSelectHydrationMode("absolute", summary.waterIntakeMl)}
-              />
-            </div>
-            {hydrationMode === "absolute" ? (
-              <p className="mb-[0.7rem] text-[0.8rem] text-[var(--text-secondary)]">
-                Use este modo para corrigir o total do dia quando houver erro no lançamento.
-              </p>
-            ) : null}
-            <div
-              className={`grid items-end gap-[0.6rem] ${
-                hydrationMode === "increment"
-                  ? "grid-cols-4"
-                  : "grid-cols-[minmax(0,2fr)_minmax(220px,1fr)]"
-              }`}
-            >
-              {hydrationMode === "increment" ? (
-                <button onClick={() => handleAdjustWater(250)} className="btn-outline w-full">
-                  +250 ml
-                </button>
-              ) : null}
-              {hydrationMode === "increment" ? (
-                <button onClick={() => handleAdjustWater(500)} className="btn-outline w-full">
-                  +500 ml
-                </button>
-              ) : null}
-              <div className="min-w-0">
-                <Field label={hydrationMode === "absolute" ? "Total correto do dia (ml)" : "Adicionar (ml)"}>
-                  <input
-                    className="input-field"
-                    value={waterDraft}
-                    onChange={(event) => setWaterDraft(event.target.value)}
-                    inputMode="decimal"
-                    placeholder={hydrationMode === "absolute" ? "Ex.: 1800" : "Ex.: 250"}
-                  />
-                </Field>
-              </div>
-              <div className="grid">
-                <button
-                  onClick={() => void handleSaveWater()}
-                  className="btn-primary min-h-[3rem] w-full"
-                  disabled={isUpdatingWater}
-                >
-                  {isUpdatingWater
-                    ? "Salvando..."
-                    : hydrationMode === "absolute"
-                      ? "Salvar total"
-                      : "Adicionar água"}
-                </button>
-              </div>
-            </div>
-          </>
-        )}
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            onClick={() => {
+              handleAdjustWater(250);
+              setTimeout(() => handleSaveWater?.(), 0);
+            }}
+            className="btn-outline min-h-[2.8rem] rounded-[0.95rem] text-sky-300"
+          >
+            <span className="mr-1">🥛</span> 250
+          </button>
+          <button
+            onClick={() => {
+              handleAdjustWater(500);
+              setTimeout(() => handleSaveWater?.(), 0);
+            }}
+            className="btn-outline min-h-[2.8rem] rounded-[0.95rem] text-sky-300"
+          >
+            <span className="mr-1">🏺</span> 500
+          </button>
+          <button
+            onClick={onOpenCustomWater}
+            className="btn-outline min-h-[2.8rem] rounded-[0.95rem] text-[var(--text-muted)]"
+          >
+            Personalizado
+          </button>
+        </div>
       </div>
 
       {isMobileLayout ? (
-        <div className="glass-panel static-panel bg-[#040f20]/74 p-3.5">
+        <div className="glass-panel static-panel bg-[#050f1d]/80 p-4 border-white/5 shadow-xl rounded-[1.25rem]">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                Refeição atual
+              <span className="block text-[0.65rem] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)] opacity-50">
+                REFEIÇÃO EM FOCO
               </span>
-              <strong className="mt-1 block text-[1rem] text-[var(--text-primary)]">{activeMealLabel}</strong>
-              <span className="mt-1 block text-[0.82rem] text-[var(--text-secondary)]">
-                {activeDiaryItems.length} item(ns) nesta refeição.
-              </span>
+              <strong className="mt-1 block text-[1.2rem] font-black tracking-tight text-[var(--text-primary)]">{activeMealLabel}</strong>
+              <p className="mt-1 text-[0.8rem] font-medium text-[var(--text-secondary)] opacity-70">
+                {activeDiaryItems.length} item(ns) registrados agora.
+              </p>
             </div>
-            <span className="badge badge-success whitespace-nowrap">{formatCalories(activeMealCalories)}</span>
+            <span className="badge badge-success px-3 py-1.5 font-black ring-1 ring-white/10">{formatCalories(activeMealCalories)}</span>
           </div>
           {recentlyLoggedFoodLabel ? (
             <div className="mt-3 flex items-center gap-3 rounded-[0.9rem] border border-[#34d399]/18 bg-[#062032]/88 px-3 py-2.5">
