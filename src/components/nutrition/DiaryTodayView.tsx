@@ -1,8 +1,15 @@
 import { CheckCircle2 } from "lucide-react";
-import type { DiaryItemSnapshot, MealDefinition, MealType } from "@/modules/nutrition/domain/types";
+import type {
+  DiaryItemSnapshot,
+  MealDefinition,
+  MealType,
+} from "@/modules/nutrition/domain/types";
 import { EmptyState, PaginationControls, SegmentButton } from "./CommonUI";
 import { MobilePaginationControls, MobileStatusCard } from "./DiaryPanelShared";
-import { formatCalories, formatMilliliters } from "@/modules/nutrition/ui-helpers";
+import {
+  formatCalories,
+  formatMilliliters,
+} from "@/modules/nutrition/ui-helpers";
 
 interface DiaryTodayViewProps {
   summary: {
@@ -13,7 +20,6 @@ interface DiaryTodayViewProps {
   waterRatio: number;
   isMobileLayout: boolean;
   handleAdjustWater: (amount: number) => void;
-  handleSaveWater: () => void;
   isUpdatingWater: boolean;
   mealDefinitions: MealDefinition[];
   activeDiaryMeal: MealType;
@@ -38,7 +44,6 @@ export function DiaryTodayView({
   waterRatio,
   isMobileLayout,
   handleAdjustWater,
-  handleSaveWater,
   isUpdatingWater,
   mealDefinitions,
   activeDiaryMeal,
@@ -57,12 +62,17 @@ export function DiaryTodayView({
   onManageMeal,
   recentlyLoggedFoodLabel,
 }: DiaryTodayViewProps) {
-  const activeMealDefinition =
-    mealDefinitions.find((meal) => meal.key === activeDiaryMeal) ?? { key: activeDiaryMeal, label: String(activeDiaryMeal) };
+  const activeMealDefinition = mealDefinitions.find(
+    (meal) => meal.key === activeDiaryMeal,
+  ) ?? { key: activeDiaryMeal, label: String(activeDiaryMeal) };
   const activeMealLabel = activeMealDefinition.label;
-  const canManageActiveMeal = activeMealDefinition.isDefault === false && Boolean(onManageMeal);
+  const canManageActiveMeal =
+    activeMealDefinition.isDefault === false && Boolean(onManageMeal);
   const activeMealCalories = summary.meals[activeDiaryMeal] ?? 0;
-  const remainingWaterMl = Math.max(summary.targetWaterMl - summary.waterIntakeMl, 0);
+  const remainingWaterMl = Math.max(
+    summary.targetWaterMl - summary.waterIntakeMl,
+    0,
+  );
 
   return (
     <div className="grid gap-[0.85rem]">
@@ -70,7 +80,9 @@ export function DiaryTodayView({
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">Água</span>
+              <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                Água
+              </span>
               {isUpdatingWater && (
                 <span className="inline-flex items-center gap-1 text-[0.6rem] font-bold text-sky-400">
                   <span className="h-1 w-1 animate-ping rounded-full bg-current" />
@@ -86,9 +98,13 @@ export function DiaryTodayView({
             </span>
           </div>
           <div className="shrink-0 text-right">
-            <span className="badge badge-success">{Math.round(waterRatio)}%</span>
+            <span className="badge badge-success">
+              {Math.round(waterRatio)}%
+            </span>
             <span className="mt-1 block text-[0.78rem] text-[var(--text-secondary)]">
-              {remainingWaterMl > 0 ? `Faltam ${formatMilliliters(remainingWaterMl)}` : "Meta batida"}
+              {remainingWaterMl > 0
+                ? `Faltam ${formatMilliliters(remainingWaterMl)}`
+                : "Meta batida"}
             </span>
           </div>
         </div>
@@ -100,19 +116,13 @@ export function DiaryTodayView({
         </div>
         <div className="grid grid-cols-3 gap-2">
           <button
-            onClick={() => {
-              handleAdjustWater(250);
-              setTimeout(() => handleSaveWater?.(), 0);
-            }}
+            onClick={() => handleAdjustWater(250)}
             className="btn-outline min-h-[2.8rem] rounded-[0.95rem] text-sky-300"
           >
             <span className="mr-1">🥛</span> 250
           </button>
           <button
-            onClick={() => {
-              handleAdjustWater(500);
-              setTimeout(() => handleSaveWater?.(), 0);
-            }}
+            onClick={() => handleAdjustWater(500)}
             className="btn-outline min-h-[2.8rem] rounded-[0.95rem] text-sky-300"
           >
             <span className="mr-1">🏺</span> 500
@@ -133,12 +143,16 @@ export function DiaryTodayView({
               <span className="block text-[0.65rem] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)] opacity-50">
                 REFEIÇÃO EM FOCO
               </span>
-              <strong className="mt-1 block text-[1.2rem] font-black tracking-tight text-[var(--text-primary)]">{activeMealLabel}</strong>
+              <strong className="mt-1 block text-[1.2rem] font-black tracking-tight text-[var(--text-primary)]">
+                {activeMealLabel}
+              </strong>
               <p className="mt-1 text-[0.8rem] font-medium text-[var(--text-secondary)] opacity-70">
                 {activeDiaryItems.length} item(ns) registrados agora.
               </p>
             </div>
-            <span className="badge badge-success px-3 py-1.5 font-black ring-1 ring-white/10">{formatCalories(activeMealCalories)}</span>
+            <span className="badge badge-success px-3 py-1.5 font-black ring-1 ring-white/10">
+              {formatCalories(activeMealCalories)}
+            </span>
           </div>
           {recentlyLoggedFoodLabel ? (
             <div className="mt-3 flex items-center gap-3 rounded-[0.9rem] border border-[#34d399]/18 bg-[#062032]/88 px-3 py-2.5">
@@ -146,11 +160,15 @@ export function DiaryTodayView({
                 <CheckCircle2 size={16} />
               </span>
               <div className="min-w-0">
-                <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[#86efac]">Registrado agora</span>
+                <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[#86efac]">
+                  Registrado agora
+                </span>
                 <strong className="mt-0.5 block truncate text-[0.9rem] text-[var(--text-primary)]">
                   {recentlyLoggedFoodLabel}
                 </strong>
-                <span className="mt-0.5 block text-[0.78rem] text-[var(--text-secondary)]">{activeMealLabel}</span>
+                <span className="mt-0.5 block text-[0.78rem] text-[var(--text-secondary)]">
+                  {activeMealLabel}
+                </span>
               </div>
             </div>
           ) : null}
@@ -165,7 +183,9 @@ export function DiaryTodayView({
               </button>
             ) : null}
             {onOpenMealChooser || canManageActiveMeal ? (
-              <div className={`grid gap-2 ${canManageActiveMeal ? "grid-cols-2" : "grid-cols-1"}`}>
+              <div
+                className={`grid gap-2 ${canManageActiveMeal ? "grid-cols-2" : "grid-cols-1"}`}
+              >
                 {onOpenMealChooser ? (
                   <button
                     onClick={onOpenMealChooser}
@@ -209,12 +229,16 @@ export function DiaryTodayView({
             <div>
               <strong className="block">{activeMealLabel}</strong>
               <span className="text-[0.84rem] text-[var(--text-secondary)]">
-                {activeDiaryItems.length} item(ns) - {formatCalories(activeMealCalories)}
+                {activeDiaryItems.length} item(ns) -{" "}
+                {formatCalories(activeMealCalories)}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {canManageActiveMeal ? (
-                <button onClick={() => onManageMeal?.(activeMealDefinition)} className="btn-outline px-3 py-2 text-[0.8rem]">
+                <button
+                  onClick={() => onManageMeal?.(activeMealDefinition)}
+                  className="btn-outline px-3 py-2 text-[0.8rem]"
+                >
                   Gerenciar refeição
                 </button>
               ) : null}
@@ -228,14 +252,22 @@ export function DiaryTodayView({
 
       {isLoading ? (
         isMobileLayout ? (
-          <MobileStatusCard eyebrow="Sincronizando" title="Atualizando registros" text="Os itens desta refeição aparecem aqui em instantes." />
+          <MobileStatusCard
+            eyebrow="Sincronizando"
+            title="Atualizando registros"
+            text="Os itens desta refeição aparecem aqui em instantes."
+          />
         ) : (
           <p className="text-[var(--text-secondary)]">Carregando diário...</p>
         )
       ) : null}
       {!isLoading && activeDiaryItems.length === 0 ? (
         <EmptyState
-          title={isMobileLayout ? "Nada nesta refeição ainda" : "Sem itens nesta refeição"}
+          title={
+            isMobileLayout
+              ? "Nada nesta refeição ainda"
+              : "Sem itens nesta refeição"
+          }
           text={
             isMobileLayout
               ? "Toque em Adicionar para lançar o primeiro item desta refeição."
@@ -250,7 +282,9 @@ export function DiaryTodayView({
             <div
               key={item.id}
               className={`glass-panel static-panel flex justify-between gap-[0.85rem] p-3 px-3.5 ${
-                isMobileLayout ? "items-start rounded-[1rem] bg-[#051120]/82" : "items-center"
+                isMobileLayout
+                  ? "items-start rounded-[1rem] bg-[#051120]/82"
+                  : "items-center"
               }`}
             >
               <div className="min-w-0 flex-1">
@@ -266,7 +300,8 @@ export function DiaryTodayView({
                   </div>
                 ) : (
                   <span className="text-[0.84rem] text-[var(--text-secondary)]">
-                    {item.quantity} {item.unit} - {formatCalories(item.calories)}
+                    {item.quantity} {item.unit} -{" "}
+                    {formatCalories(item.calories)}
                   </span>
                 )}
               </div>
@@ -283,9 +318,17 @@ export function DiaryTodayView({
 
       {activeDiaryItems.length > 0 && diaryTotalPages > 1 ? (
         isMobileLayout ? (
-          <MobilePaginationControls page={diaryPage} totalPages={diaryTotalPages} onPageChange={setDiaryPage} />
+          <MobilePaginationControls
+            page={diaryPage}
+            totalPages={diaryTotalPages}
+            onPageChange={setDiaryPage}
+          />
         ) : (
-          <PaginationControls page={diaryPage} totalPages={diaryTotalPages} onPageChange={setDiaryPage} />
+          <PaginationControls
+            page={diaryPage}
+            totalPages={diaryTotalPages}
+            onPageChange={setDiaryPage}
+          />
         )
       ) : null}
     </div>

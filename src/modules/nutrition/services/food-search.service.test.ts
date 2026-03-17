@@ -1,7 +1,10 @@
 import type { FoodItem } from "@/modules/nutrition/domain/types";
 import { INTERNAL_FOODS } from "@/modules/nutrition/data/internal-foods";
 import { SUPPLEMENT_FOODS } from "@/modules/nutrition/data/supplement-foods";
-import { hasStrongFoodSearchResult, searchFoodsByQuery } from "@/modules/nutrition/services/food-search.service";
+import {
+  hasStrongFoodSearchResult,
+  searchFoodsByQuery,
+} from "@/modules/nutrition/services/food-search.service";
 
 const SEARCHABLE_FOODS = [...INTERNAL_FOODS, ...SUPPLEMENT_FOODS];
 
@@ -145,7 +148,9 @@ describe("food search service", () => {
     });
 
     expect(results).toHaveLength(1);
-    expect(hasStrongFoodSearchResult("Zz Persistencia Privada 2026", results[0])).toBe(true);
+    expect(
+      hasStrongFoodSearchResult("Zz Persistencia Privada 2026", results[0]),
+    ).toBe(true);
   });
 
   it("does not keep accidental substring matches when only one weak token overlaps", async () => {
@@ -423,5 +428,45 @@ describe("food search service", () => {
     expect(macaResults[0]?.id).toBe("maca");
     expect(acaiResults[0]?.id).toBe("acai");
     expect(acucarResults[0]?.id).toBe("acai");
+  });
+
+  it("ignores brand-only matches for generic one-word queries", async () => {
+    const results = await searchFoodsByQuery("frango", {
+      internalFoods: [
+        {
+          id: "frango-peito",
+          source: "fatsecret",
+          name: "Peito de frango grelhado",
+          displayName: "Peito de frango grelhado",
+          baseUnit: "g",
+          caloriesPer100: 165,
+          proteinPer100: 31,
+          carbsPer100: 0,
+          fatPer100: 3.6,
+          confidenceScore: 1,
+          mealCategories: ["lunch", "dinner"],
+        },
+        {
+          id: "mint-choco-brand-frango",
+          source: "fatsecret",
+          name: "Mint Chocolates",
+          displayName: "Mint Chocolates",
+          brand: "Frango",
+          baseUnit: "g",
+          caloriesPer100: 525,
+          proteinPer100: 4,
+          carbsPer100: 58,
+          fatPer100: 31,
+          confidenceScore: 1,
+          mealCategories: ["snack"],
+        },
+      ],
+      externalResults: [],
+    });
+
+    expect(results.some((item) => item.id === "mint-choco-brand-frango")).toBe(
+      false,
+    );
+    expect(results[0]?.id).toBe("frango-peito");
   });
 });

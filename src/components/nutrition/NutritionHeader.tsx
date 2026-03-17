@@ -10,14 +10,34 @@ import {
   formatMilliliters,
 } from "@/modules/nutrition/ui-helpers";
 
-function CircularProgress({ ratio, color, size = 48, strokeWidth = 4, children }: { ratio: number; color: string; size?: number; strokeWidth?: number; children?: React.ReactNode }) {
+function CircularProgress({
+  ratio,
+  color,
+  size = 48,
+  strokeWidth = 4,
+  children,
+}: {
+  ratio: number;
+  color: string;
+  size?: number;
+  strokeWidth?: number;
+  children?: React.ReactNode;
+}) {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const offset = circumference - (ratio / 100) * circumference;
 
   return (
-    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
+    <div
+      className="relative flex items-center justify-center"
+      style={{ width: size, height: size }}
+    >
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        className="-rotate-90"
+      >
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -53,10 +73,16 @@ function WaveIcon({ color, className }: { color: string; className?: string }) {
     <svg viewBox="0 0 100 25" className={className} preserveAspectRatio="none">
       <path
         d="M0 15 C 20 5, 40 5, 60 15 C 80 25, 90 25, 100 15 V 25 H 0 Z"
-        fill={`url(#wave-grad-${color.replace('#', '')})`}
+        fill={`url(#wave-grad-${color.replace("#", "")})`}
       />
       <defs>
-        <linearGradient id={`wave-grad-${color.replace('#', '')}`} x1="0%" y1="0%" x2="0%" y2="100%">
+        <linearGradient
+          id={`wave-grad-${color.replace("#", "")}`}
+          x1="0%"
+          y1="0%"
+          x2="0%"
+          y2="100%"
+        >
           <stop offset="0%" stopColor={color} stopOpacity="0.4" />
           <stop offset="100%" stopColor={color} stopOpacity="0.1" />
         </linearGradient>
@@ -190,14 +216,15 @@ function MobileSummaryTile({
   tone?: "default" | "accent" | "calm";
   ratio?: number;
 }) {
-  const color = tone === "accent" ? "#34d399" : tone === "calm" ? "#0ea5e9" : "#94a3b8";
-  
+  const color =
+    tone === "accent" ? "#34d399" : tone === "calm" ? "#0ea5e9" : "#94a3b8";
+
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={!onClick}
-      className={`relative flex min-w-0 flex-1 flex-col rounded-[1.25rem] border border-white/10 bg-[#050f1d]/60 p-4 text-left transition-all ${onClick ? 'active:scale-95' : ''}`}
+      className={`relative flex min-w-0 flex-1 flex-col rounded-[1.25rem] border border-white/10 bg-[#050f1d]/60 p-4 text-left transition-all ${onClick ? "active:scale-95" : ""}`}
     >
       <div className="flex items-start justify-between w-full">
         <div className="min-w-0">
@@ -241,10 +268,14 @@ function MobileActiveMealCard({
 }) {
   const getMealTheme = (label: string) => {
     const l = label.toLowerCase();
-    if (l.includes("café") || l.includes("breakfast")) return { icon: "☕", color: "#f59e0b", label: "Café" };
-    if (l.includes("almoço") || l.includes("lunch")) return { icon: "🥗", color: "#10b981", label: "Almoço" };
-    if (l.includes("lanche") || l.includes("snack")) return { icon: "🍎", color: "#0ea5e9", label: "Lanche" };
-    if (l.includes("jantar") || l.includes("dinner")) return { icon: "🍽️", color: "#6366f1", label: "Jantar" };
+    if (l.includes("café") || l.includes("breakfast"))
+      return { icon: "☕", color: "#f59e0b", label: "Café" };
+    if (l.includes("almoço") || l.includes("lunch"))
+      return { icon: "🥗", color: "#10b981", label: "Almoço" };
+    if (l.includes("lanche") || l.includes("snack"))
+      return { icon: "🍎", color: "#0ea5e9", label: "Lanche" };
+    if (l.includes("jantar") || l.includes("dinner"))
+      return { icon: "🍽️", color: "#6366f1", label: "Jantar" };
     return { icon: "🍱", color: "#34d399", label: "Refeição" };
   };
 
@@ -258,55 +289,72 @@ function MobileActiveMealCard({
             AGORA
           </span>
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-2xl drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">{theme.icon}</span>
+            <span className="text-2xl drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">
+              {theme.icon}
+            </span>
             <h3 className="text-[1.45rem] font-black tracking-tight text-[var(--text-primary)]">
               {recentlyLoggedFoodLabel || mealLabel}
             </h3>
           </div>
           {suggestedCalories > 0 && (
             <div className="mt-2 flex items-center gap-2">
-              <div 
+              <div
                 className="h-1.5 w-1.5 rounded-full animate-pulse"
-                style={{ backgroundColor: theme.color, boxShadow: `0 0 8px ${theme.color}` }}
+                style={{
+                  backgroundColor: theme.color,
+                  boxShadow: `0 0 8px ${theme.color}`,
+                }}
               />
               <p className="text-[0.8rem] font-bold text-[var(--text-secondary)] opacity-90">
-                Sugerido: <span className="text-[var(--text-primary)]">{formatCalories(suggestedCalories)}</span>
+                Sugerido:{" "}
+                <span className="text-[var(--text-primary)]">
+                  {formatCalories(suggestedCalories)}
+                </span>
               </p>
             </div>
           )}
         </div>
         <div className="flex flex-col items-end gap-2.5">
-          <span 
+          <span
             className="rounded-full px-4 py-1.5 text-[0.8rem] font-black text-[#050f1d] transition-all duration-500"
-            style={{ 
-              backgroundColor: theme.color, 
-              boxShadow: `0 0 20px ${theme.color}44` 
+            style={{
+              backgroundColor: theme.color,
+              boxShadow: `0 0 20px ${theme.color}44`,
             }}
           >
             {formatCalories(mealCalories)}
           </span>
           <div className="flex items-center gap-1.5 opacity-60">
-             <WaveIcon color={theme.color} className="h-5 w-14" />
+            <WaveIcon color={theme.color} className="h-5 w-14" />
           </div>
         </div>
       </div>
-      
+
       <div className="relative mt-6 h-2 w-full overflow-hidden rounded-full bg-white/5">
         <div
           className="absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ease-out"
           style={{
-            width: suggestedCalories > 0 ? `${Math.min((mealCalories / suggestedCalories) * 100, 100)}%` : "0%",
+            width:
+              suggestedCalories > 0
+                ? `${Math.min((mealCalories / suggestedCalories) * 100, 100)}%`
+                : "0%",
             background: `linear-gradient(90deg, ${theme.color}, #ffffff55)`,
-            boxShadow: `0 0 15px ${theme.color}88`
+            boxShadow: `0 0 15px ${theme.color}88`,
           }}
         />
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-3">
-        <button onClick={onOpenMeal} className="btn-outline min-h-[3.2rem] rounded-xl text-[0.85rem] font-bold border-white/10 hover:bg-white/5">
+        <button
+          onClick={onOpenMeal}
+          className="btn-outline min-h-[3.2rem] rounded-xl text-[0.85rem] font-bold border-white/10 hover:bg-white/5"
+        >
           Detalhes
         </button>
-        <button onClick={onAddToMeal} className="btn-primary min-h-[3.2rem] rounded-xl text-[0.85rem] font-black shadow-lg">
+        <button
+          onClick={onAddToMeal}
+          className="btn-primary min-h-[3.2rem] rounded-xl text-[0.85rem] font-black shadow-lg"
+        >
           Adicionar
         </button>
       </div>
@@ -335,29 +383,41 @@ function MobileMacroRail({
             {label}
           </span>
           <div className="mt-1 flex items-baseline gap-2">
-            <strong className="text-[1.3rem] font-black tracking-tight" style={{ color: accent }}>
+            <strong
+              className="text-[1.3rem] font-black tracking-tight"
+              style={{ color: accent }}
+            >
               {formatGrams(current)}
             </strong>
           </div>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <CircularProgress ratio={ratio} color={accent} size={38} strokeWidth={3}>
-             <span className="text-[0.55rem] font-bold text-[var(--text-primary)]">{Math.round(ratio)}%</span>
+          <CircularProgress
+            ratio={ratio}
+            color={accent}
+            size={38}
+            strokeWidth={3}
+          >
+            <span className="text-[0.55rem] font-bold text-[var(--text-primary)]">
+              {Math.round(ratio)}%
+            </span>
           </CircularProgress>
           <div className="flex items-center gap-1.5 opacity-60">
-             <WaveIcon color={accent} className="h-5 w-12" />
-             <span className="text-[0.65rem] font-bold text-[var(--text-secondary)]">Meta {formatGrams(target)}</span>
+            <WaveIcon color={accent} className="h-5 w-12" />
+            <span className="text-[0.65rem] font-bold text-[var(--text-secondary)]">
+              Meta {formatGrams(target)}
+            </span>
           </div>
         </div>
       </div>
-      
+
       <div className="mt-5 h-1.5 w-full overflow-hidden rounded-full bg-white/5">
         <div
           className="h-full rounded-full transition-all duration-1000 ease-out"
           style={{
             width: `${ratio}%`,
             backgroundColor: accent,
-            boxShadow: `0 0 12px ${accent}`
+            boxShadow: `0 0 12px ${accent}`,
           }}
         />
       </div>
@@ -376,7 +436,6 @@ function MobileSummaryStrip({
   onAddToActiveMeal,
   recentlyLoggedFoodLabel,
   onAdjustWater,
-  onSaveWater,
   onOpenCustomWater,
 }: {
   summary: DailySummary;
@@ -389,37 +448,36 @@ function MobileSummaryStrip({
   onAddToActiveMeal?: () => void;
   recentlyLoggedFoodLabel?: string | null;
   onAdjustWater?: (amount: number) => void;
-  onSaveWater?: () => void;
   onOpenCustomWater?: () => void;
 }) {
   const suggestedCalories = Math.round((goal.targetCalories || 0) / 4);
   return (
     <div className="grid min-w-0 gap-2.5">
       <div className="grid min-w-0 grid-cols-2 gap-2.5">
-          <MobileSummaryTile
-            label="Consumido"
-            value={formatCalories(summary.consumedCalories)}
-            meta={`${Math.round(consumedRatio)}%`}
-            onClick={onOpenConsumedSummary}
-            tone="accent"
-            ratio={consumedRatio}
-          />
-          <MobileSummaryTile
-            label="Restante"
-            value={formatCalories(summary.remainingCalories)}
-            meta={summary.remainingCalories > 0 ? "Livre" : "Meta"}
-            tone="calm"
-            ratio={100 - consumedRatio}
-          />
-        </div>
-        <MobileActiveMealCard
-          mealLabel={activeMealLabel}
-          mealCalories={activeMealCalories}
-          onOpenMeal={onOpenConsumedSummary}
-          onAddToMeal={onAddToActiveMeal}
-          recentlyLoggedFoodLabel={recentlyLoggedFoodLabel}
-          suggestedCalories={suggestedCalories}
+        <MobileSummaryTile
+          label="Consumido"
+          value={formatCalories(summary.consumedCalories)}
+          meta={`${Math.round(consumedRatio)}%`}
+          onClick={onOpenConsumedSummary}
+          tone="accent"
+          ratio={consumedRatio}
         />
+        <MobileSummaryTile
+          label="Restante"
+          value={formatCalories(summary.remainingCalories)}
+          meta={summary.remainingCalories > 0 ? "Livre" : "Meta"}
+          tone="calm"
+          ratio={100 - consumedRatio}
+        />
+      </div>
+      <MobileActiveMealCard
+        mealLabel={activeMealLabel}
+        mealCalories={activeMealCalories}
+        onOpenMeal={onOpenConsumedSummary}
+        onAddToMeal={onAddToActiveMeal}
+        recentlyLoggedFoodLabel={recentlyLoggedFoodLabel}
+        suggestedCalories={suggestedCalories}
+      />
       <div className="glass-panel static-panel min-w-0 overflow-hidden rounded-[1.25rem] border-white/5 bg-[#050f1d] p-4 shadow-2xl">
         <div className="mb-5 flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -459,24 +517,34 @@ function MobileSummaryStrip({
                   </span>
                 </div>
               </div>
-              <CircularProgress ratio={waterRatio} color="#0ea5e9" size={42} strokeWidth={4}>
-                 <span className="text-[0.6rem] font-bold text-[var(--text-primary)]">{Math.round(waterRatio)}%</span>
+              <CircularProgress
+                ratio={waterRatio}
+                color="#0ea5e9"
+                size={42}
+                strokeWidth={4}
+              >
+                <span className="text-[0.6rem] font-bold text-[var(--text-primary)]">
+                  {Math.round(waterRatio)}%
+                </span>
               </CircularProgress>
             </div>
 
             <div className="mt-6 flex items-center gap-6">
               {/* Simple Pitcher Representation */}
               <div className="relative h-20 w-16 overflow-hidden rounded-b-xl border-2 border-white/20">
-                <div 
+                <div
                   className="absolute bottom-0 w-full bg-gradient-to-t from-sky-500 to-sky-300 transition-all duration-1000 ease-in-out"
-                  style={{ height: `${Math.min(waterRatio, 100)}%`, boxShadow: '0 0 15px #0ea5e980' }}
+                  style={{
+                    height: `${Math.min(waterRatio, 100)}%`,
+                    boxShadow: "0 0 15px #0ea5e980",
+                  }}
                 />
                 <div className="absolute inset-x-2 top-2 h-1 rounded-full bg-white/10" />
               </div>
 
               <div className="flex-1">
                 <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-white/5">
-                  <div 
+                  <div
                     className="h-full bg-sky-400 transition-all duration-700"
                     style={{ width: `${Math.min(waterRatio, 100)}%` }}
                   />
@@ -488,32 +556,34 @@ function MobileSummaryStrip({
             </div>
 
             <div className="mt-8 grid grid-cols-3 gap-2.5">
-              <button 
-                onClick={() => {
-                  onAdjustWater?.(250);
-                  setTimeout(() => onSaveWater?.(), 0);
-                }}
+              <button
+                onClick={() => onAdjustWater?.(250)}
                 className="flex flex-col items-center justify-center rounded-xl border border-white/5 bg-white/5 py-3 transition-all active:scale-95 active:bg-white/10"
               >
                 <span className="text-sky-400">🥛</span>
-                <span className="mt-1 text-[0.75rem] font-black text-[var(--text-primary)]">250 ML</span>
+                <span className="mt-1 text-[0.75rem] font-black text-[var(--text-primary)]">
+                  250 ML
+                </span>
               </button>
-              <button 
-                onClick={() => {
-                  onAdjustWater?.(500);
-                  setTimeout(() => onSaveWater?.(), 0);
-                }}
+              <button
+                onClick={() => onAdjustWater?.(500)}
                 className="flex flex-col items-center justify-center rounded-xl border border-white/5 bg-white/5 py-3 transition-all active:scale-95 active:bg-white/10"
               >
                 <span className="text-sky-400">🥛🥛</span>
-                <span className="mt-1 text-[0.75rem] font-black text-[var(--text-primary)]">500 ML</span>
+                <span className="mt-1 text-[0.75rem] font-black text-[var(--text-primary)]">
+                  500 ML
+                </span>
               </button>
-              <button 
+              <button
                 onClick={onOpenCustomWater}
                 className="flex flex-col items-center justify-center rounded-xl border border-white/5 bg-white/5 py-3 transition-all active:scale-95 active:bg-white/10"
               >
-                <span className="text-[1.1rem] text-[var(--text-muted)]">+</span>
-                <span className="mt-0.5 text-[0.65rem] font-bold text-[var(--text-muted)]">Personalizado</span>
+                <span className="text-[1.1rem] text-[var(--text-muted)]">
+                  +
+                </span>
+                <span className="mt-0.5 text-[0.65rem] font-bold text-[var(--text-muted)]">
+                  Personalizado
+                </span>
               </button>
             </div>
           </article>
@@ -559,7 +629,6 @@ interface NutritionHeaderProps {
   recentlyLoggedFoodLabel?: string | null;
   onAdjustWater?: (amount: number) => void;
   onOpenCustomWater?: () => void;
-  onSaveWater?: () => void;
 }
 
 export function NutritionHeader({
@@ -576,9 +645,7 @@ export function NutritionHeader({
   recentlyLoggedFoodLabel,
   onAdjustWater,
   onOpenCustomWater,
-  onSaveWater,
 }: NutritionHeaderProps) {
-
   return (
     <header
       className={`glass-panel static-panel anim-enter relative mb-[0.9rem] overflow-hidden ${
@@ -655,7 +722,6 @@ export function NutritionHeader({
             onAddToActiveMeal={onAddToActiveMeal}
             recentlyLoggedFoodLabel={recentlyLoggedFoodLabel}
             onAdjustWater={onAdjustWater}
-            onSaveWater={onSaveWater}
             onOpenCustomWater={onOpenCustomWater}
           />
         ) : (

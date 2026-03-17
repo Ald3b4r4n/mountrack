@@ -309,6 +309,13 @@ export async function searchFoodsByQuery(
 
     const hasTokenMatch =
       queryTokens.length > 0 && matchingTokenCount >= minimumTokenMatches;
+    const hasNameTokenMatch =
+      queryTokens.length > 0 &&
+      countTextTokenMatches(normalizedName, queryTokens) > 0;
+    const hasTagTokenMatch =
+      queryTokens.length > 0 &&
+      normalizedTags.some((tag) => countTextTokenMatches(tag, queryTokens) > 0);
+    const hasNameOrTagTokenMatch = hasNameTokenMatch || hasTagTokenMatch;
 
     const matchesProteinIntent =
       normalizedQuery.includes("prote") &&
@@ -319,9 +326,19 @@ export async function searchFoodsByQuery(
     const matchesRequestedBrand = brandProfile
       ? matchesSupplementBrandText(searchableText, brandProfile)
       : false;
+    const isGenericSingleTokenQuery = !brandProfile && queryTokens.length === 1;
 
     if (brandProfile && !matchesRequestedBrand) {
       return food.barcode === query.trim();
+    }
+
+    if (
+      isGenericSingleTokenQuery &&
+      normalizedBrand.includes(normalizedQuery) &&
+      !normalizedName.includes(normalizedQuery) &&
+      !hasNameOrTagTokenMatch
+    ) {
+      return false;
     }
 
     return (

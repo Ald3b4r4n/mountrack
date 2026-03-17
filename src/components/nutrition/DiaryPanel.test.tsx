@@ -12,8 +12,24 @@ const mealDefinitions: MealDefinition[] = [
 function renderDiaryPanel({
   activeDiaryView = "today",
   recentlyLoggedFoodLabel = null,
-  activeDiaryItems = [{ id: "item-1", foodName: "Iogurte", quantity: 40, unit: "g", calories: 26 } as never],
-  pagedDiaryItems = [{ id: "item-1", foodName: "Iogurte", quantity: 40, unit: "g", calories: 26 } as never],
+  activeDiaryItems = [
+    {
+      id: "item-1",
+      foodName: "Iogurte",
+      quantity: 40,
+      unit: "g",
+      calories: 26,
+    } as never,
+  ],
+  pagedDiaryItems = [
+    {
+      id: "item-1",
+      foodName: "Iogurte",
+      quantity: 40,
+      unit: "g",
+      calories: 26,
+    } as never,
+  ],
   groupedDiaryItems = {
     breakfast: [],
     lunch: [],
@@ -66,7 +82,6 @@ function renderDiaryPanel({
       handleAdjustWater={jest.fn()}
       waterDraft="250"
       setWaterDraft={jest.fn()}
-      handleSaveWater={jest.fn()}
       isUpdatingWater={false}
       mealDefinitions={mealDefinitions}
       activeDiaryMeal="custom:ceia"
@@ -110,7 +125,9 @@ describe("DiaryPanel", () => {
     expect(screen.getByText(/Tudo nesta refeição/i)).toBeInTheDocument();
     expect(screen.getByText(/^Refeição atual$/i)).toBeInTheDocument();
     expect(screen.getAllByText(/^Ceia$/i).length).toBeGreaterThanOrEqual(2);
-    expect(screen.queryByRole("button", { name: /^Almoço$/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^Almoço$/i }),
+    ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /^Histórico$/i }));
 
@@ -133,7 +150,9 @@ describe("DiaryPanel", () => {
     const { onOpenSearchForMeal } = renderDiaryPanel();
 
     await user.click(screen.getByRole("button", { name: /Registro do dia/i }));
-    await user.click(screen.getByRole("button", { name: /Adicionar à refeição Ceia/i }));
+    await user.click(
+      screen.getByRole("button", { name: /Adicionar à refeição Ceia/i }),
+    );
 
     expect(onOpenSearchForMeal).toHaveBeenCalledWith("custom:ceia");
   });
@@ -150,14 +169,22 @@ describe("DiaryPanel", () => {
 
   it("surfaces the latest logged item inside the selected meal card on mobile", async () => {
     const user = userEvent.setup();
-    const { onOpenSearchForMeal } = renderDiaryPanel({ recentlyLoggedFoodLabel: "Banana prata" });
+    const { onOpenSearchForMeal } = renderDiaryPanel({
+      recentlyLoggedFoodLabel: "Banana prata",
+    });
 
     await user.click(screen.getByRole("button", { name: /Registro do dia/i }));
 
-    expect(screen.getAllByText(/Registrado agora/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/Banana prata/i).length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText(/Registrado agora/i).length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Banana prata/i).length).toBeGreaterThanOrEqual(
+      1,
+    );
 
-    await user.click(screen.getByRole("button", { name: /Adicionar à refeição Ceia/i }));
+    await user.click(
+      screen.getByRole("button", { name: /Adicionar à refeição Ceia/i }),
+    );
 
     expect(onOpenSearchForMeal).toHaveBeenCalledWith("custom:ceia");
   });
@@ -177,7 +204,11 @@ describe("DiaryPanel", () => {
     await user.click(screen.getByRole("button", { name: /Registro do dia/i }));
 
     expect(screen.getByText(/Nada nesta refeição ainda/i)).toBeInTheDocument();
-    expect(screen.getByText(/Toque em Adicionar para lançar o primeiro item desta refeição./i)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Toque em Adicionar para lançar o primeiro item desta refeição./i,
+      ),
+    ).toBeInTheDocument();
   });
 
   it("renders the compact history review cards on mobile", async () => {
@@ -199,10 +230,14 @@ describe("DiaryPanel", () => {
       ],
     });
 
-    await user.click(screen.getByRole("button", { name: /Histórico do diário/i }));
+    await user.click(
+      screen.getByRole("button", { name: /Histórico do diário/i }),
+    );
 
     expect(screen.getByText(/Dias fechados/i)).toBeInTheDocument();
-    expect(screen.getByText(/Consulte só os dias já concluídos./i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Consulte só os dias já concluídos./i),
+    ).toBeInTheDocument();
     expect(screen.getByText(/^3 item\(ns\)$/i)).toBeInTheDocument();
     expect(screen.getByText(/420 kcal/i)).toBeInTheDocument();
   });
@@ -228,10 +263,14 @@ describe("DiaryPanel", () => {
       historyTotalPages: 3,
     });
 
-    await user.click(screen.getByRole("button", { name: /Histórico do diário/i }));
+    await user.click(
+      screen.getByRole("button", { name: /Histórico do diário/i }),
+    );
     expect(screen.getByText(/^Dias$/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Próxima página do diário/i }));
+    await user.click(
+      screen.getByRole("button", { name: /Próxima página do diário/i }),
+    );
 
     expect(loadHistory).toHaveBeenCalledWith(3);
   });

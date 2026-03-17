@@ -25,7 +25,6 @@ interface DiaryPanelProps {
   isMobileLayout: boolean;
   handleAdjustWater: (amount: number) => void;
   onOpenCustomWater?: () => void;
-  handleSaveWater: () => void;
   isUpdatingWater: boolean;
   mealDefinitions: MealDefinition[];
   activeDiaryMeal: MealType;
@@ -60,7 +59,6 @@ export function DiaryPanel({
   isMobileLayout,
   handleAdjustWater,
   onOpenCustomWater,
-  handleSaveWater,
   isUpdatingWater,
   mealDefinitions,
   activeDiaryMeal,
@@ -85,8 +83,9 @@ export function DiaryPanel({
   onOpenChange,
   sectionRef,
 }: DiaryPanelProps) {
-  const activeMealDefinition =
-    mealDefinitions.find((meal) => meal.key === activeDiaryMeal) ?? { key: activeDiaryMeal, label: String(activeDiaryMeal) };
+  const activeMealDefinition = mealDefinitions.find(
+    (meal) => meal.key === activeDiaryMeal,
+  ) ?? { key: activeDiaryMeal, label: String(activeDiaryMeal) };
   const activeMealLabel = activeMealDefinition.label;
   const panelTitle = isMobileLayout
     ? activeDiaryView === "today"
@@ -98,7 +97,12 @@ export function DiaryPanel({
       ? "Refeição atual, água do dia e histórico quando precisar."
       : "Consulte os dias anteriores sem sair de Hoje."
     : "Revise aqui os consumos e a água do dia.";
-  const panelBadgeLabel = activeDiaryView === "today" ? (isMobileLayout ? activeMealLabel : "Hoje") : "Histórico";
+  const panelBadgeLabel =
+    activeDiaryView === "today"
+      ? isMobileLayout
+        ? activeMealLabel
+        : "Hoje"
+      : "Histórico";
 
   return (
     <CollapsibleSection
@@ -117,7 +121,9 @@ export function DiaryPanel({
                 <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
                   Agora
                 </span>
-                <strong className="block text-[0.96rem] text-[var(--text-primary)]">Tudo nesta refeição</strong>
+                <strong className="block text-[0.96rem] text-[var(--text-primary)]">
+                  Tudo nesta refeição
+                </strong>
                 <span className="mt-1 block text-[0.8rem] text-[var(--text-secondary)]">
                   Abra o histórico só quando quiser revisar.
                 </span>
@@ -174,7 +180,6 @@ export function DiaryPanel({
           isMobileLayout={isMobileLayout}
           handleAdjustWater={handleAdjustWater}
           onOpenCustomWater={onOpenCustomWater}
-          handleSaveWater={handleSaveWater}
           isUpdatingWater={isUpdatingWater}
           mealDefinitions={mealDefinitions}
           activeDiaryMeal={activeDiaryMeal}

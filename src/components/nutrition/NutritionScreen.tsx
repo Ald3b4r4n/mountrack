@@ -7,9 +7,9 @@ import { NutritionScreenPreviewGate } from "@/components/nutrition/NutritionScre
 import { NutritionWorkspaceContent } from "@/components/nutrition/NutritionWorkspaceContent";
 import {
   formatSearchSourceLabel,
+  getDefaultFocusedMeal,
   parseInputNumber,
   roundValue,
-  summarizeMealPlan,
 } from "@/components/nutrition/nutrition-screen-helpers";
 import {
   type NutritionScreenUiState,
@@ -100,7 +100,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
 
   const { state: dState, setters: dSetters, actions: dActions } = dashboardHook;
   const { state: sState, actions: sActions } = searchHook;
-  const { state: hState, setters: hSetters, actions: hActions } = hydrationHook;
+  const { state: hState, setters: hSetters } = hydrationHook;
 
   const {
     summary,
@@ -159,7 +159,6 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
 
   const { waterDraft, isUpdatingWater, hydrationMode } = hState;
   const { setWaterDraft } = hSetters;
-  const { handleAdjustWater } = hActions;
 
   const {
     planRejectedFoods,
@@ -276,13 +275,12 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     handleAddDiaryItem,
     handleDeleteDiaryItem,
     handleSaveGoal,
-    handleSaveWater,
+    handleSaveCustomWater,
     handleDiscardMealPlan,
     handleGenerateMealPlan,
     handleChangeMealPlanItemQuantity,
     handleRejectMealPlanItem,
     handleExportMealPlanPdf,
-    handleSaveCustomWater,
   } = useNutritionScreenActions({
     activeUser,
     today,
@@ -540,6 +538,29 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     });
   }, [diaryTotalPages, dispatchUiState]);
 
+  // Sync active meal with current hour - check every minute
+  useEffect(() => {
+    const syncMealWithHour = () => {
+      const mealtypeByHour = getDefaultFocusedMeal();
+      if (
+        mealtypeByHour !== activeDiaryMeal &&
+        mealDefinitions.some((def) => def.key === mealtypeByHour)
+      ) {
+        dispatchUiState({
+          type: "patch",
+          value: { activeDiaryMeal: mealtypeByHour },
+        });
+      }
+    };
+
+    // Check immediately
+    syncMealWithHour();
+
+    // Check every minute
+    const interval = setInterval(syncMealWithHour, 60000);
+    return () => clearInterval(interval);
+  }, [activeDiaryMeal, dispatchUiState, mealDefinitions]);
+
   const consumedRatio =
     summary.targetCalories > 0
       ? Math.min((summary.consumedCalories / summary.targetCalories) * 100, 100)
@@ -630,10 +651,8 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     waterRatio,
     isMobileLayout,
     onAdjustWater: (amount: number) => {
-      handleAdjustWater(amount);
-      window.setTimeout(() => void handleSaveWater(), 50);
+      void handleSaveCustomWater(amount, "increment");
     },
-    onSaveWater: () => void handleSaveWater(),
     onOpenCustomWater: () => setCustomWaterOpen(true),
     isUpdatingWater,
     mealDefinitions,
@@ -864,18 +883,9 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
             }
           : undefined,
         onAdjustWater: (amount) => {
-          // If amount is null or special, we could open modal, 
-          // but shortcuts (+250, +500) will still call this with numbers.
-          handleAdjustWater(amount);
-          // Wait for state sync then save
-          window.setTimeout(() => {
-            void handleSaveWater();
-          }, 50);
+          void handleSaveCustomWater(amount, "increment");
         },
         onOpenCustomWater: () => setCustomWaterOpen(true),
-        onSaveWater: () => {
-          void handleSaveWater();
-        },
       }}
       navProps={{
         activeArea,

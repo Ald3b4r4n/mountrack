@@ -154,6 +154,34 @@ describe("catalog search service", () => {
     expect(mockedSearchFatSecretFoods).toHaveBeenCalledWith("banana prata");
   });
 
+  it("returns more than 8 merged results when available", async () => {
+    mockedSearchFatSecretFoods.mockResolvedValue(
+      Array.from({ length: 12 }, (_, index) =>
+        makeFood(`fatsecret-item-${index + 1}`, {
+          source: "fatsecret",
+          name: `Frango item ${index + 1}`,
+          displayName: `Frango item ${index + 1}`,
+          confidenceScore: 1.8,
+        }),
+      ),
+    );
+    mockedListAccessibleFoods.mockResolvedValue(
+      Array.from({ length: 10 }, (_, index) =>
+        makeFood(`local-item-${index + 1}`, {
+          source: "internal",
+          name: `Frango local ${index + 1}`,
+          displayName: `Frango local ${index + 1}`,
+          confidenceScore: 1.2,
+        }),
+      ),
+    );
+
+    const result = await searchNutritionCatalog("user-a", "frango");
+
+    expect(result.results.length).toBeGreaterThan(8);
+    expect(result.results.length).toBe(22);
+  });
+
   it("returns strong local hits when external sources are empty", async () => {
     mockedListAccessibleFoods.mockResolvedValue([
       makeFood("custom-persistencia", {

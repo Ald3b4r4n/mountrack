@@ -1,4 +1,7 @@
-import { buildNextHydrationDraft, buildNextWaterIntake } from "@/modules/nutrition/services/hydration-input";
+import {
+  buildNextHydrationDraft,
+  buildNextWaterIntake,
+} from "@/modules/nutrition/services/hydration-input";
 
 describe("hydration input helpers", () => {
   it("adds quick increments to the draft instead of replacing with the current total", () => {
@@ -9,6 +12,11 @@ describe("hydration input helpers", () => {
   it("adds the typed amount on top of the current daily intake", () => {
     expect(buildNextWaterIntake(500, "500")).toBe(1000);
     expect(buildNextWaterIntake(1250, "250")).toBe(1500);
+  });
+
+  it("never resets existing intake during quick add", () => {
+    expect(buildNextWaterIntake(1800, "250", "increment")).toBe(2050);
+    expect(buildNextWaterIntake(1800, "500", "increment")).toBe(2300);
   });
 
   it("lets the user correct the absolute daily total when they logged water incorrectly", () => {

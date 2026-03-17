@@ -8,7 +8,11 @@ import {
   type NutritionDashboardSnapshot,
   type NutritionHistorySnapshot,
 } from "@/modules/nutrition/client-storage";
-import { authorizedNutritionFetch, getNutritionErrorMessage, getNutritionStorageMode } from "@/modules/nutrition/client";
+import {
+  authorizedNutritionFetch,
+  getNutritionErrorMessage,
+  getNutritionStorageMode,
+} from "@/modules/nutrition/client";
 import type {
   DailySummary,
   DiaryHistoryEntry,
@@ -33,7 +37,11 @@ const DEFAULT_GOAL: NutritionGoal = {
   objective: "maintain",
 };
 
-export type NutritionUiStorageMode = "checking" | "database" | "memory" | "volatile";
+export type NutritionUiStorageMode =
+  | "checking"
+  | "database"
+  | "memory"
+  | "volatile";
 
 export type GoalInputState = {
   targetCalories: string;
@@ -96,7 +104,10 @@ function createGoalInputState(sourceGoal: NutritionGoal): GoalInputState {
   };
 }
 
-type NutritionDashboardUser = User | { uid: string; getIdToken?: () => Promise<string>; devBypass?: boolean } | null;
+type NutritionDashboardUser =
+  | User
+  | { uid: string; getIdToken?: () => Promise<string>; devBypass?: boolean }
+  | null;
 
 export function useNutritionDashboard(
   activeUser: NutritionDashboardUser,
@@ -104,29 +115,37 @@ export function useNutritionDashboard(
   canUseBrowserPersistence: boolean,
 ) {
   const [diaryItems, setDiaryItems] = useState<DiaryItemSnapshot[]>([]);
-  const [diaryMealDefinitions, setDiaryMealDefinitions] = useState<MealDefinition[]>(() =>
-    getDefaultMealDefinitions(),
+  const [diaryMealDefinitions, setDiaryMealDefinitions] = useState<
+    MealDefinition[]
+  >(() => getDefaultMealDefinitions());
+  const [summary, setSummary] = useState<DailySummary>(() =>
+    createEmptySummary(today),
   );
-  const [summary, setSummary] = useState<DailySummary>(() => createEmptySummary(today));
   const [goal, setGoal] = useState<NutritionGoal>(DEFAULT_GOAL);
-  
+
   // States extraídos de NutritionScreen relacionados ao dashboard
-  const [goalInputs, setGoalInputs] = useState<GoalInputState>(() => createGoalInputState(DEFAULT_GOAL));
-  const [goalObjectiveDraft, setGoalObjectiveDraft] = useState<NutritionObjective>(DEFAULT_GOAL.objective);
+  const [goalInputs, setGoalInputs] = useState<GoalInputState>(() =>
+    createGoalInputState(DEFAULT_GOAL),
+  );
+  const [goalObjectiveDraft, setGoalObjectiveDraft] =
+    useState<NutritionObjective>(DEFAULT_GOAL.objective);
   const [goalInputsDirty, setGoalInputsDirty] = useState(false);
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [mealPlanDraft, setMealPlanDraft] = useState<MealPlan | null>(null);
-  const [planCalories, setPlanCalories] = useState(String(DEFAULT_GOAL.targetCalories));
-  
+  const [planCalories, setPlanCalories] = useState(
+    String(DEFAULT_GOAL.targetCalories),
+  );
+
   const [historyEntries, setHistoryEntries] = useState<DiaryHistoryEntry[]>([]);
   const [historyTotalPages, setHistoryTotalPages] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [storageMode, setStorageMode] = useState<NutritionUiStorageMode>("checking");
-  
+  const [storageMode, setStorageMode] =
+    useState<NutritionUiStorageMode>("checking");
+
   const goalRef = useRef(goal);
   const storageModeRef = useRef(storageMode);
 
@@ -148,11 +167,17 @@ export function useNutritionDashboard(
     setStorageMode("checking");
   }, [activeUser?.uid]);
 
-  const resolveRequestError = useCallback(async (response: Response, fallbackMessage: string) => {
-    const nextMessage = await getNutritionErrorMessage(response, fallbackMessage);
-    setMessage(nextMessage);
-    return nextMessage;
-  }, []);
+  const resolveRequestError = useCallback(
+    async (response: Response, fallbackMessage: string) => {
+      const nextMessage = await getNutritionErrorMessage(
+        response,
+        fallbackMessage,
+      );
+      setMessage(nextMessage);
+      return nextMessage;
+    },
+    [],
+  );
 
   function updateGoalInput(field: keyof GoalInputState, value: string) {
     setGoalInputsDirty(true);
@@ -171,12 +196,28 @@ export function useNutritionDashboard(
       const nextMealPlan = payload.mealPlan ?? null;
 
       setDiaryItems(payload.diary?.items ?? []);
-      setDiaryMealDefinitions(payload.diary?.mealDefinitions ?? getDefaultMealDefinitions());
-      setSummary({
-        ...createEmptySummary(today),
-        ...nextSummary,
-        targetWaterMl: nextSummary.targetWaterMl ?? nextGoal.targetWaterMl ?? DEFAULT_WATER_TARGET,
-      });
+      setDiaryMealDefinitions(
+        payload.diary?.mealDefinitions ?? getDefaultMealDefinitions(),
+      );
+      setSummary(
+        nextSummary.waterIntakeMl !== undefined &&
+          nextSummary.consumedCalories !== undefined
+          ? {
+              ...nextSummary,
+              targetWaterMl:
+                nextSummary.targetWaterMl ??
+                nextGoal.targetWaterMl ??
+                DEFAULT_WATER_TARGET,
+            }
+          : {
+              ...createEmptySummary(today),
+              ...nextSummary,
+              targetWaterMl:
+                nextSummary.targetWaterMl ??
+                nextGoal.targetWaterMl ??
+                DEFAULT_WATER_TARGET,
+            },
+      );
       setGoal(nextGoal);
       setMealPlan(nextMealPlan);
       setMealPlanDraft(cloneMealPlan(nextMealPlan));
@@ -185,13 +226,16 @@ export function useNutritionDashboard(
     [activeUser?.uid, today],
   );
 
-  const hydrateHistory = useCallback((payload: Partial<NutritionHistorySnapshot>) => {
-    const totalPages = Math.max(1, payload.totalPages ?? 1);
-    const safePage = Math.min(payload.page ?? 1, totalPages);
-    setHistoryEntries(payload.entries ?? []);
-    setHistoryTotalPages(totalPages);
-    setHistoryPage(safePage);
-  }, []);
+  const hydrateHistory = useCallback(
+    (payload: Partial<NutritionHistorySnapshot>) => {
+      const totalPages = Math.max(1, payload.totalPages ?? 1);
+      const safePage = Math.min(payload.page ?? 1, totalPages);
+      setHistoryEntries(payload.entries ?? []);
+      setHistoryTotalPages(totalPages);
+      setHistoryPage(safePage);
+    },
+    [],
+  );
 
   const loadBrowserDashboard = useCallback(() => {
     if (!activeUser) return null;
@@ -226,16 +270,70 @@ export function useNutritionDashboard(
     [activeUser, today],
   );
 
-  const loadDashboard = useCallback(async (): Promise<NutritionUiStorageMode> => {
-    if (!activeUser) return "checking";
-    const currentGoal = goalRef.current;
+  const loadDashboard =
+    useCallback(async (): Promise<NutritionUiStorageMode> => {
+      if (!activeUser) return "checking";
+      const currentGoal = goalRef.current;
 
-    setIsLoading(true);
-    try {
-      const response = await authorizedNutritionFetch(activeUser, `/api/nutrition/diaries/${today}`);
-      if (!response.ok) {
-        await resolveRequestError(response, "Não foi possível carregar o painel de nutrição agora.");
-        if (canUseBrowserPersistence && hasNutritionBrowserSnapshot(activeUser.uid)) {
+      setIsLoading(true);
+      try {
+        const response = await authorizedNutritionFetch(
+          activeUser,
+          `/api/nutrition/diaries/${today}`,
+        );
+        if (!response.ok) {
+          await resolveRequestError(
+            response,
+            "Não foi possível carregar o painel de nutrição agora.",
+          );
+          if (
+            canUseBrowserPersistence &&
+            hasNutritionBrowserSnapshot(activeUser.uid)
+          ) {
+            setStorageMode("volatile");
+            const browserDashboard = loadBrowserDashboard();
+            if (browserDashboard) {
+              hydrateDashboard(browserDashboard);
+              return "volatile";
+            }
+          }
+          return "memory";
+        }
+
+        const nextStorageMode = resolveUiStorageMode(
+          response,
+          canUseBrowserPersistence,
+        );
+        setStorageMode(nextStorageMode);
+
+        const payload =
+          (await response.json()) as Partial<NutritionDashboardSnapshot>;
+
+        if (nextStorageMode === "volatile" && canUseBrowserPersistence) {
+          if (!hasNutritionBrowserSnapshot(activeUser.uid)) {
+            seedNutritionBrowserFromDashboard(activeUser.uid, today, payload, {
+              ...DEFAULT_GOAL,
+              ...currentGoal,
+              userId: activeUser.uid,
+              targetWaterMl: currentGoal.targetWaterMl ?? DEFAULT_WATER_TARGET,
+            });
+          }
+
+          const browserDashboard = loadBrowserDashboard();
+          if (browserDashboard) {
+            hydrateDashboard(browserDashboard);
+            return nextStorageMode;
+          }
+        }
+
+        hydrateDashboard(payload);
+        return nextStorageMode;
+      } catch {
+        if (
+          canUseBrowserPersistence &&
+          activeUser &&
+          hasNutritionBrowserSnapshot(activeUser.uid)
+        ) {
           setStorageMode("volatile");
           const browserDashboard = loadBrowserDashboard();
           if (browserDashboard) {
@@ -243,56 +341,23 @@ export function useNutritionDashboard(
             return "volatile";
           }
         }
-        return "memory";
+
+        setMessage(
+          (current) =>
+            current ?? "Não foi possível carregar o painel de nutrição agora.",
+        );
+        return canUseBrowserPersistence ? "volatile" : "memory";
+      } finally {
+        setIsLoading(false);
       }
-
-      const nextStorageMode = resolveUiStorageMode(response, canUseBrowserPersistence);
-      setStorageMode(nextStorageMode);
-
-      const payload = (await response.json()) as Partial<NutritionDashboardSnapshot>;
-
-      if (nextStorageMode === "volatile" && canUseBrowserPersistence) {
-        if (!hasNutritionBrowserSnapshot(activeUser.uid)) {
-          seedNutritionBrowserFromDashboard(activeUser.uid, today, payload, {
-            ...DEFAULT_GOAL,
-            ...currentGoal,
-            userId: activeUser.uid,
-            targetWaterMl: currentGoal.targetWaterMl ?? DEFAULT_WATER_TARGET,
-          });
-        }
-
-        const browserDashboard = loadBrowserDashboard();
-        if (browserDashboard) {
-          hydrateDashboard(browserDashboard);
-          return nextStorageMode;
-        }
-      }
-
-      hydrateDashboard(payload);
-      return nextStorageMode;
-    } catch {
-      if (canUseBrowserPersistence && activeUser && hasNutritionBrowserSnapshot(activeUser.uid)) {
-        setStorageMode("volatile");
-        const browserDashboard = loadBrowserDashboard();
-        if (browserDashboard) {
-          hydrateDashboard(browserDashboard);
-          return "volatile";
-        }
-      }
-
-      setMessage((current) => current ?? "Não foi possível carregar o painel de nutrição agora.");
-      return canUseBrowserPersistence ? "volatile" : "memory";
-    } finally {
-      setIsLoading(false);
-    }
-  }, [
-    activeUser,
-    canUseBrowserPersistence,
-    hydrateDashboard,
-    loadBrowserDashboard,
-    resolveRequestError,
-    today,
-  ]);
+    }, [
+      activeUser,
+      canUseBrowserPersistence,
+      hydrateDashboard,
+      loadBrowserDashboard,
+      resolveRequestError,
+      today,
+    ]);
 
   const loadHistory = useCallback(
     async (nextPage: number, modeOverride?: NutritionUiStorageMode) => {
@@ -314,11 +379,17 @@ export function useNutritionDashboard(
           `/api/nutrition/history?page=${nextPage}&pageSize=${HISTORY_PAGE_SIZE}&excludeDate=${today}`,
         );
         if (!response.ok) {
-          await resolveRequestError(response, "Não foi possível carregar o histórico agora.");
+          await resolveRequestError(
+            response,
+            "Não foi possível carregar o histórico agora.",
+          );
           return;
         }
 
-        const nextStorageMode = resolveUiStorageMode(response, canUseBrowserPersistence);
+        const nextStorageMode = resolveUiStorageMode(
+          response,
+          canUseBrowserPersistence,
+        );
         setStorageMode(nextStorageMode);
         if (nextStorageMode === "volatile" && canUseBrowserPersistence) {
           const browserHistory = loadBrowserHistory(nextPage);
@@ -328,10 +399,15 @@ export function useNutritionDashboard(
           }
         }
 
-        const payload = (await response.json()) as Partial<NutritionHistorySnapshot>;
+        const payload =
+          (await response.json()) as Partial<NutritionHistorySnapshot>;
         hydrateHistory(payload);
       } catch {
-        if (canUseBrowserPersistence && activeUser && hasNutritionBrowserSnapshot(activeUser.uid)) {
+        if (
+          canUseBrowserPersistence &&
+          activeUser &&
+          hasNutritionBrowserSnapshot(activeUser.uid)
+        ) {
           setStorageMode("volatile");
           const browserHistory = loadBrowserHistory(nextPage);
           if (browserHistory) {
@@ -340,12 +416,22 @@ export function useNutritionDashboard(
           }
         }
 
-        setMessage((current) => current ?? "Não foi possível carregar o histórico agora.");
+        setMessage(
+          (current) =>
+            current ?? "Não foi possível carregar o histórico agora.",
+        );
       } finally {
         setIsHistoryLoading(false);
       }
     },
-    [activeUser, canUseBrowserPersistence, hydrateHistory, loadBrowserHistory, resolveRequestError, today],
+    [
+      activeUser,
+      canUseBrowserPersistence,
+      hydrateHistory,
+      loadBrowserHistory,
+      resolveRequestError,
+      today,
+    ],
   );
 
   return {

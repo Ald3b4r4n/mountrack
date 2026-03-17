@@ -25,7 +25,6 @@ interface NutritionTodayWorkspaceSectionProps {
   isMobileLayout: boolean;
   onAdjustWater: (amount: number) => void;
   onOpenCustomWater: () => void;
-  onSaveWater: () => void;
   isUpdatingWater: boolean;
   mealDefinitions: MealDefinition[];
   activeDiaryMeal: MealType;
@@ -65,7 +64,6 @@ export function NutritionTodayWorkspaceSection({
   isMobileLayout,
   onAdjustWater,
   onOpenCustomWater,
-  onSaveWater,
   isUpdatingWater,
   mealDefinitions,
   activeDiaryMeal,
@@ -104,7 +102,9 @@ export function NutritionTodayWorkspaceSection({
       embedded={!isMobileLayout}
       isMobileLayout={isMobileLayout}
       mealsSectionOpen={isMobileLayout ? mealsSectionOpen : undefined}
-      onMealsSectionOpenChange={isMobileLayout ? onMealsSectionOpenChange : undefined}
+      onMealsSectionOpenChange={
+        isMobileLayout ? onMealsSectionOpenChange : undefined
+      }
       mealsSectionRef={isMobileLayout ? mealsSectionRef : undefined}
       onOpenMeal={onOpenMeal}
       onOpenSearchForMeal={onOpenSearchForMeal}
@@ -120,7 +120,6 @@ export function NutritionTodayWorkspaceSection({
         isMobileLayout={isMobileLayout}
         handleAdjustWater={onAdjustWater}
         onOpenCustomWater={onOpenCustomWater}
-        handleSaveWater={onSaveWater}
         isUpdatingWater={isUpdatingWater}
         mealDefinitions={mealDefinitions}
         activeDiaryMeal={activeDiaryMeal}

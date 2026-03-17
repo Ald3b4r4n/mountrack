@@ -28,7 +28,7 @@ import {
 } from "@/modules/nutrition/providers/fatsecret";
 import { searchUsdaFoods } from "@/modules/nutrition/providers/usda-food-data";
 
-const SEARCH_LIMIT = 8;
+const SEARCH_LIMIT = 50;
 
 function findBarcodeMatch(
   foods: FoodItem[],
