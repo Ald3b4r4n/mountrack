@@ -153,6 +153,28 @@ Com estas chaves e procedimentos de ingestão definidos no Vercel, clique em **D
 
 ## 🍽️ Nutrition API Integration & FatSecret Proxy Infrastructure
 
+### FatSecret Attribution Compliance (Required)
+
+To stay compliant with the FatSecret Platform API Terms of Use, attribution must be present in 3 places:
+
+1. Inside the application where nutrition content is displayed.
+2. In at least one screen accessible without login when authentication is required.
+3. In the Apple App Store and Google Play description with this exact phrase: `Powered by fatsecret nutrition API` ([www.fatsecret.com](https://www.fatsecret.com)).
+
+Current implementation in this repository:
+
+- In-app attribution is rendered in the nutrition flow.
+- A public attribution entry is rendered on the login page.
+- Website attribution is rendered via the same badge/snippet component.
+
+Reference snippet (do not modify if used directly):
+
+```html
+<!-- Begin fatsecret Platform API HTML Attribution Snippet -->
+<a href="https://platform.fatsecret.com">Powered by fatsecret Platform API</a>
+<!-- End fatsecret Platform API HTML Attribution Snippet -->
+```
+
 ### Problema Original
 
 O FatSecret API bloqueia requisições baseado em IP whitelist. Como **Vercel usa IPs dinâmicos** (múltiplos data centers, ~5 IPs diferentes), e o FatSecret Policy rejeita IPs não-whitelistados, o app não conseguia fazer lookup de alimentos via API.

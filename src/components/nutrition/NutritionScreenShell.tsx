@@ -1,4 +1,5 @@
 import type { ComponentProps, ReactNode } from "react";
+import { FatSecretAttribution } from "@/components/FatSecretAttribution";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { BarcodeScannerDialog } from "@/components/nutrition/BarcodeScannerDialog";
 import { CustomMealDialog } from "@/components/nutrition/CustomMealDialog";
@@ -50,6 +51,9 @@ export function NutritionScreenShell({
       <NutritionWorkspaceNav {...navProps} />
       <NutritionStatusBanners {...statusBannersProps} />
       {workspaceContent}
+      <footer className="mt-4 flex justify-center pb-2">
+        <FatSecretAttribution compact />
+      </footer>
     </NutritionLayout>
   );
 

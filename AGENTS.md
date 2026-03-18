@@ -94,3 +94,9 @@ A&R Software Development
 - **Problem**: The `Personalizado` quick action in mobile hydration controls looked visually inconsistent compared to `250` and `500` and could overflow on narrow widths
 - **Solution**: In [DiaryTodayView.tsx](src/components/nutrition/DiaryTodayView.tsx), align typography/color with the quick-add buttons and keep overflow protection (`overflow-hidden`, `textOverflow: ellipsis`, `whiteSpace: nowrap`)
 - **Impact**: Keeps visual consistency across hydration CTAs while preventing text spill in narrow mobile viewports
+
+### FatSecret Attribution Policy Compliance
+
+- **Policy requirement**: FatSecret attribution must exist in app content surfaces, at least one screen accessible without login, and app store listings.
+- **Solution**: Added reusable attribution component in [FatSecretAttribution.tsx](src/components/FatSecretAttribution.tsx), rendered in [NutritionScreenShell.tsx](src/components/nutrition/NutritionScreenShell.tsx) and [login/page.tsx](src/app/login/page.tsx).
+- **Operational note**: Store listing descriptions must include the exact phrase `Powered by fatsecret nutrition API` ([www.fatsecret.com](https://www.fatsecret.com)).

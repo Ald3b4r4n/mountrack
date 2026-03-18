@@ -600,7 +600,7 @@ function MobileSummaryStrip({
                 <span className="text-[1.1rem] text-[var(--text-muted)]">
                   +
                 </span>
-                <span className="mt-0.5 text-[0.65rem] font-bold text-[var(--text-muted)]">
+                <span className="mt-0.5 text-[0.65rem] font-bold text-[var(--text-primary)]">
                   Personalizado
                 </span>
               </button>
@@ -696,7 +696,7 @@ export function NutritionHeader({
               {isMobileLayout ? (
                 <Link
                   href="/"
-                  className="inline-flex items-center gap-1 rounded-full border border-white/8 bg-white/4 px-2.5 py-1 text-[0.76rem] text-[var(--text-secondary)] transition-colors duration-200 hover:border-[#34d399]/18 hover:text-[var(--text-primary)]"
+                  className="inline-flex items-center gap-1 rounded-full border border-white/8 bg-white/4 px-2.5 py-1 pr-8 text-[0.76rem] text-[var(--text-secondary)] transition-colors duration-200 hover:border-[#34d399]/18 hover:text-[var(--text-primary)]"
                 >
                   <ArrowLeft size={13} />
                   Painel
@@ -723,7 +723,7 @@ export function NutritionHeader({
             ) : null}
           </div>
           {!isMobileLayout ? (
-            <div className="flex flex-wrap gap-2.5 self-start">
+            <div className="flex flex-wrap gap-2.5 self-start pr-10">
               <Link href="/" className="nav-pill justify-center">
                 Painel
               </Link>
