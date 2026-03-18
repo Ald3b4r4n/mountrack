@@ -12,21 +12,30 @@ const WORKSPACE_META: Record<
     status?: string;
   }
 > = {
+  none: {
+    badge: "Resumo",
+    title: "Painel nutricional",
+    description:
+      "Escolha uma área para iniciar seu fluxo de registro, busca ou planejamento.",
+  },
   today: {
     badge: "Hoje",
     title: "Diário de hoje",
-    description: "Acompanhe suas refeições, água e histórico recente em um único painel.",
+    description:
+      "Acompanhe suas refeições, água e histórico recente em um único painel.",
     status: "Resumo ativo",
   },
   search: {
     badge: "Buscar",
     title: "Buscar alimentos",
-    description: "Pesquise no catálogo, confira os detalhes e registre cada item no diário.",
+    description:
+      "Pesquise no catálogo, confira os detalhes e registre cada item no diário.",
   },
   planning: {
     badge: "Planejar",
     title: "Planejamento nutricional",
-    description: "Defina suas metas e monte um cardápio diário alinhado ao seu objetivo.",
+    description:
+      "Defina suas metas e monte um cardápio diário alinhado ao seu objetivo.",
     status: "Planejamento",
   },
 };
