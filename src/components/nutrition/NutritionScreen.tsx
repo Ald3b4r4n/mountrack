@@ -86,6 +86,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     setPlanCalories,
     setCustomWaterOpen,
     setIsUpdatingWater,
+    setMealChooserOpen,
   } = useNutritionScreenUiState();
   const canUseBrowserPersistence = Boolean(
     activeUser && !("devBypass" in activeUser && activeUser.devBypass),
@@ -190,11 +191,13 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     workspaceMinHeight,
     planningPanelMinHeight,
     customWaterOpen,
+    mealChooserOpen,
   } = uiState;
 
   const activeWorkspaceRef = useRef<HTMLDivElement | null>(null);
   const activePlanningPanelRef = useRef<HTMLDivElement | null>(null);
   const mealPreferenceReadyForUserRef = useRef<string | null>(null);
+  const lastAutoSyncedMealRef = useRef<MealType | null>(null);
 
   const mealDefinitions = useMemo(
     () => buildMealDefinitions(diaryItems, diaryMealDefinitions),
@@ -227,7 +230,6 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     handleTodayMealsSectionOpenChange,
     handleTodayDiarySectionOpenChange,
     handleOpenConsumedSummary,
-    handleOpenMealChooser,
     announceDiarySuccess,
     openSearchForMeal,
     closeCustomMealDialog,
@@ -539,25 +541,34 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     });
   }, [diaryTotalPages, dispatchUiState]);
 
-  // Sync active meal with current hour - check every minute
+  // Sync active meal with current hour without overriding manual meal changes.
   useEffect(() => {
     const syncMealWithHour = () => {
-      const mealtypeByHour = getDefaultFocusedMeal();
+      const mealByHour = getDefaultFocusedMeal();
       if (
-        mealtypeByHour !== activeDiaryMeal &&
-        mealDefinitions.some((def) => def.key === mealtypeByHour)
+        !mealDefinitions.some((definition) => definition.key === mealByHour)
       ) {
+        return;
+      }
+
+      if (activeDiaryMeal === mealByHour) {
+        lastAutoSyncedMealRef.current = mealByHour;
+        return;
+      }
+
+      if (
+        lastAutoSyncedMealRef.current == null ||
+        activeDiaryMeal === lastAutoSyncedMealRef.current
+      ) {
+        lastAutoSyncedMealRef.current = mealByHour;
         dispatchUiState({
           type: "patch",
-          value: { activeDiaryMeal: mealtypeByHour },
+          value: { activeDiaryMeal: mealByHour },
         });
       }
     };
 
-    // Check immediately
     syncMealWithHour();
-
-    // Check every minute
     const interval = setInterval(syncMealWithHour, 60000);
     return () => clearInterval(interval);
   }, [activeDiaryMeal, dispatchUiState, mealDefinitions]);
@@ -670,7 +681,10 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
       setDiaryPage(1);
     },
     onOpenSearchForMeal: openSearchForMeal,
-    onOpenMealChooser: handleOpenMealChooser,
+    onOpenMealChooser: () => {
+      setDiarySuccessFeedback(null);
+      setMealChooserOpen(true);
+    },
     groupedDiaryItems,
     activeDiaryItems,
     diaryPage,
@@ -842,6 +856,36 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
           void handleCreateCustomMeal(label);
         },
       }}
+      mealSwitchDialogProps={{
+        open: mealChooserOpen,
+        onClose: () => setMealChooserOpen(false),
+        activeMeal: activeDiaryMeal,
+        mealDefinitions,
+        mealCalories: summary.meals,
+        mealItemsCount: Object.fromEntries(
+          mealDefinitions.map((meal) => [
+            meal.key,
+            groupedDiaryItems[meal.key]?.length ?? 0,
+          ]),
+        ),
+        onSelectMeal: (meal) => {
+          setActiveDiaryMeal(meal);
+          setMealType(meal);
+          setDiaryPage(1);
+          setMealChooserOpen(false);
+          setMessage(
+            `Refeição em foco alterada para ${mealDefinitions.find((item) => item.key === meal)?.label ?? meal}.`,
+          );
+        },
+        onCreateMeal: () => {
+          setMealChooserOpen(false);
+          openCreateMealDialog();
+        },
+        onManageMeal: (meal) => {
+          setMealChooserOpen(false);
+          openManageMealDialog(meal);
+        },
+      }}
       customFoodDialogProps={{
         authUser: activeUser,
         open: customFoodOpen,
@@ -877,6 +921,12 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
             : null,
         onOpenConsumedSummary: isMobileLayout
           ? handleOpenConsumedSummary
+          : undefined,
+        onOpenMealChooser: isMobileLayout
+          ? () => {
+              setDiarySuccessFeedback(null);
+              setMealChooserOpen(true);
+            }
           : undefined,
         onAddToActiveMeal: isMobileLayout
           ? () => {

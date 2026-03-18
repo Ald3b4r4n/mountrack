@@ -54,6 +54,11 @@ O MounTrack não utiliza IA apenas por _buzzword_; a arquitetura alavanca capaci
 
 ## 🚀 Guia de Quick Start
 
+## 🧪 Nutrition UX Updates (2026-03-17)
+
+- **Meal switch flow (mobile):** o seletor de refeição agora abre via modal dedicado e substitui o uso do bloco "Refeições do dia" no fluxo mobile.
+- **Hydration quick actions:** os botões de água no mobile foram refinados com ícones Lucide e o CTA `Personalizado` foi alinhado visualmente com `250` e `500`, mantendo proteção contra overflow em telas estreitas.
+
 Para rodar essa obra de arte arquitetural na sua máquina localmente para contribuição:
 
 ### Pré-requisitos

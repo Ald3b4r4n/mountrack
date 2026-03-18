@@ -1,4 +1,4 @@
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Droplets, GlassWater } from "lucide-react";
 import type {
   DiaryItemSnapshot,
   MealDefinition,
@@ -117,19 +117,25 @@ export function DiaryTodayView({
         <div className="grid grid-cols-3 gap-2">
           <button
             onClick={() => handleAdjustWater(250)}
-            className="btn-outline min-h-[2.8rem] rounded-[0.95rem] text-sky-300"
+            className="btn-outline min-h-[2.8rem] min-w-0 rounded-[0.95rem] px-1 text-[0.8rem] text-sky-300"
           >
-            <span className="mr-1">🥛</span> 250
+            <GlassWater size={15} className="mr-1 inline-block" /> 250
           </button>
           <button
             onClick={() => handleAdjustWater(500)}
-            className="btn-outline min-h-[2.8rem] rounded-[0.95rem] text-sky-300"
+            className="btn-outline min-h-[2.8rem] min-w-0 rounded-[0.95rem] px-1 text-[0.8rem] text-sky-300"
           >
-            <span className="mr-1">🏺</span> 500
+            <Droplets size={15} className="mr-1 inline-block" /> 500
           </button>
           <button
             onClick={onOpenCustomWater}
-            className="btn-outline min-h-[2.8rem] rounded-[0.95rem] text-[var(--text-muted)]"
+            className="btn-outline min-h-[2.8rem] min-w-0 overflow-hidden rounded-[0.95rem] px-1 text-[0.8rem] text-sky-300"
+            style={{
+              paddingInline: "0.35rem",
+              whiteSpace: "nowrap",
+              textOverflow: "ellipsis",
+            }}
+            title="Personalizado"
           >
             Personalizado
           </button>

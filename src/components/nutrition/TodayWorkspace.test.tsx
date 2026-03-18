@@ -10,7 +10,7 @@ const mealDefinitions: MealDefinition[] = [
 ];
 
 describe("TodayWorkspace", () => {
-  it("renders the mobile meal list without duplicating the active summary card", async () => {
+  it("omits the mobile meal block and keeps only diary content", async () => {
     const user = userEvent.setup();
     const onOpenMeal = jest.fn();
 
@@ -40,14 +40,14 @@ describe("TodayWorkspace", () => {
       </TodayWorkspace>,
     );
 
-    expect(screen.getByRole("button", { name: /Café da manhã/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Almoço/i })).toBeInTheDocument();
-    expect(screen.getByText(/Escolha uma refeição para registrar alimentos./i)).toBeInTheDocument();
-    expect(screen.getAllByText(/333 kcal/i)).toHaveLength(1);
-    expect(screen.getByText(/^Ativa$/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Refeições do dia/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Escolha uma refeição para registrar alimentos./i),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(/conteudo do diario/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Café da manhã/i }));
+    await user.click(screen.getByText(/conteudo do diario/i));
 
-    expect(onOpenMeal).toHaveBeenCalledWith("breakfast");
+    expect(onOpenMeal).not.toHaveBeenCalled();
   });
 });

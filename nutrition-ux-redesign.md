@@ -10,7 +10,7 @@ Resumo rapido:
 
 - Nova navegacao mobile-first: `Hoje`, `Buscar`, `Planejar`
 - `Historico` sai do topo e vira funcao secundaria dentro de `Hoje`
-- o diario passa a aceitar `Adicionar refeicao` alem de cafe da manha, almoco, lanche e jantar
+- o diario passa a aceitar `Adicionar refeição` alem de cafe da manha, almoco, lanche e jantar
 - `Buscar` vira fluxo unico com resultados + bottom sheet de compositor
 - `Metas` e `Cardapio` ficam agrupados em `Planejar`
 - Desktop deixa de ser painel solto e vira workspace com colunas de contexto

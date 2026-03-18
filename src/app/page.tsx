@@ -11,7 +11,15 @@ import {
   orderBy,
   query,
 } from "firebase/firestore";
-import { Sparkles, Trophy, TrendingDown, TrendingUp } from "lucide-react";
+import {
+  Flame,
+  Gem,
+  Lightbulb,
+  Sparkles,
+  Trophy,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
@@ -413,7 +421,7 @@ export default function Home() {
       ? buildGoogleCalendarLink({
           daysUntil,
           isDoseOverdue,
-          title: "🩸 Aplicação Mounjaro",
+          title: "Aplicação Mounjaro",
           details: "Lembrete de dose semanal! Registre no MounTrack.",
         })
       : "#";
@@ -561,7 +569,12 @@ export default function Home() {
                   gap: "0.75rem",
                 }}
               >
-                <span style={{ fontSize: "1.5rem" }}>💡</span>
+                <span
+                  style={{ display: "inline-flex", color: "#EAB308" }}
+                  aria-hidden="true"
+                >
+                  <Lightbulb size={22} />
+                </span>
                 <p
                   style={{
                     color: "var(--text-secondary)",
@@ -600,7 +613,12 @@ export default function Home() {
                       borderRadius: "2rem",
                     }}
                   >
-                    <span style={{ fontSize: "1.2rem" }}>🔥</span>
+                    <span
+                      style={{ display: "inline-flex", color: "#06b6d4" }}
+                      aria-hidden="true"
+                    >
+                      <Flame size={18} />
+                    </span>
                     <div>
                       <span
                         style={{
@@ -638,7 +656,12 @@ export default function Home() {
                       borderRadius: "2rem",
                     }}
                   >
-                    <span style={{ fontSize: "1.2rem" }}>💎</span>
+                    <span
+                      style={{ display: "inline-flex", color: "#34d399" }}
+                      aria-hidden="true"
+                    >
+                      <Gem size={18} />
+                    </span>
                     <div>
                       <span
                         style={{

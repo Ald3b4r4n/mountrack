@@ -116,8 +116,10 @@ describe("DiaryPanel", () => {
 
     await user.click(screen.getByRole("button", { name: /Registro do dia/i }));
 
-    expect(screen.getByText(/Tudo nesta refeição/i)).toBeInTheDocument();
-    expect(screen.getByText(/^Refeição atual$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^Log de$/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Registros de dias anteriores/i),
+    ).toBeInTheDocument();
     expect(screen.getAllByText(/^Ceia$/i).length).toBeGreaterThanOrEqual(2);
     expect(
       screen.queryByRole("button", { name: /^Almoço$/i }),

@@ -60,6 +60,7 @@ export interface NutritionScreenUiState {
   planningPanelMinHeight: number;
   customWaterOpen: boolean;
   isUpdatingWater: boolean;
+  mealChooserOpen: boolean;
 }
 
 type NutritionScreenUiAction =
@@ -123,6 +124,7 @@ function createInitialNutritionScreenUiState(): NutritionScreenUiState {
     planningPanelMinHeight: 0,
     customWaterOpen: false,
     isUpdatingWater: false,
+    mealChooserOpen: false,
   };
 }
 
@@ -152,7 +154,9 @@ function nutritionScreenUiReducer(
         ...state,
         goalInputs: {
           targetCalories: String(action.goal.targetCalories ?? 2000),
-          targetWaterMl: String(action.goal.targetWaterMl ?? DEFAULT_WATER_TARGET),
+          targetWaterMl: String(
+            action.goal.targetWaterMl ?? DEFAULT_WATER_TARGET,
+          ),
           targetProtein: String(action.goal.targetProtein ?? 140),
           targetCarbs: String(action.goal.targetCarbs ?? 180),
           targetFat: String(action.goal.targetFat ?? 65),
@@ -179,7 +183,9 @@ export function useNutritionScreenUiState() {
 
   const setUiStateField = <K extends keyof NutritionScreenUiState>(
     key: K,
-    value: NutritionScreenUiState[K] | ((current: NutritionScreenUiState[K]) => NutritionScreenUiState[K]),
+    value:
+      | NutritionScreenUiState[K]
+      | ((current: NutritionScreenUiState[K]) => NutritionScreenUiState[K]),
   ) => {
     if (typeof value === "function") {
       dispatchUiState({
@@ -205,26 +211,35 @@ export function useNutritionScreenUiState() {
     dispatchUiState,
     updateGoalInput: (key: keyof GoalInputState, value: string) =>
       dispatchUiState({ type: "updateGoalInput", key, value }),
-    setPlanRejectedFoods: (value: string[] | ((current: string[]) => string[])) =>
-      setUiStateField("planRejectedFoods", value),
-    setQuantity: (value: string | ((current: string) => string)) => setUiStateField("quantity", value),
-    setUnit: (value: NutritionUnit | ((current: NutritionUnit) => NutritionUnit)) =>
-      setUiStateField("unit", value),
+    setPlanRejectedFoods: (
+      value: string[] | ((current: string[]) => string[]),
+    ) => setUiStateField("planRejectedFoods", value),
+    setQuantity: (value: string | ((current: string) => string)) =>
+      setUiStateField("quantity", value),
+    setUnit: (
+      value: NutritionUnit | ((current: NutritionUnit) => NutritionUnit),
+    ) => setUiStateField("unit", value),
     setMealType: (value: MealType | ((current: MealType) => MealType)) =>
       setUiStateField("mealType", value),
-    setActiveArea: (value: NutritionArea | ((current: NutritionArea) => NutritionArea)) =>
-      setUiStateField("activeArea", value),
-    setPlanningTab: (value: PlanningTabKey | ((current: PlanningTabKey) => PlanningTabKey)) =>
-      setUiStateField("planningTab", value),
-    setActiveDiaryView: (value: DiaryViewKey | ((current: DiaryViewKey) => DiaryViewKey)) =>
-      setUiStateField("activeDiaryView", value),
+    setActiveArea: (
+      value: NutritionArea | ((current: NutritionArea) => NutritionArea),
+    ) => setUiStateField("activeArea", value),
+    setPlanningTab: (
+      value: PlanningTabKey | ((current: PlanningTabKey) => PlanningTabKey),
+    ) => setUiStateField("planningTab", value),
+    setActiveDiaryView: (
+      value: DiaryViewKey | ((current: DiaryViewKey) => DiaryViewKey),
+    ) => setUiStateField("activeDiaryView", value),
     setActiveDiaryMeal: (value: MealType | ((current: MealType) => MealType)) =>
       setUiStateField("activeDiaryMeal", value),
-    setDiaryPage: (value: number | ((current: number) => number)) => setUiStateField("diaryPage", value),
-    setTodayMealsSectionOpen: (value: boolean | ((current: boolean) => boolean)) =>
-      setUiStateField("todayMealsSectionOpen", value),
-    setTodayDiarySectionOpen: (value: boolean | ((current: boolean) => boolean)) =>
-      setUiStateField("todayDiarySectionOpen", value),
+    setDiaryPage: (value: number | ((current: number) => number)) =>
+      setUiStateField("diaryPage", value),
+    setTodayMealsSectionOpen: (
+      value: boolean | ((current: boolean) => boolean),
+    ) => setUiStateField("todayMealsSectionOpen", value),
+    setTodayDiarySectionOpen: (
+      value: boolean | ((current: boolean) => boolean),
+    ) => setUiStateField("todayDiarySectionOpen", value),
     setScannerOpen: (value: boolean | ((current: boolean) => boolean)) =>
       setUiStateField("scannerOpen", value),
     setIsSavingGoal: (value: boolean | ((current: boolean) => boolean)) =>
@@ -234,32 +249,43 @@ export function useNutritionScreenUiState() {
     setCustomMealOpen: (value: boolean | ((current: boolean) => boolean)) =>
       setUiStateField("customMealOpen", value),
     setEditingMeal: (
-      value: MealDefinition | null | ((current: MealDefinition | null) => MealDefinition | null),
+      value:
+        | MealDefinition
+        | null
+        | ((current: MealDefinition | null) => MealDefinition | null),
     ) => setUiStateField("editingMeal", value),
     setIsGeneratingPlan: (value: boolean | ((current: boolean) => boolean)) =>
       setUiStateField("isGeneratingPlan", value),
     setIsExportingPdf: (value: boolean | ((current: boolean) => boolean)) =>
       setUiStateField("isExportingPdf", value),
-    setMessage: (value: string | null | ((current: string | null) => string | null)) =>
-      setUiStateField("message", value),
+    setMessage: (
+      value: string | null | ((current: string | null) => string | null),
+    ) => setUiStateField("message", value),
     setDiarySuccessFeedback: (
       value:
         | DiarySuccessFeedback
         | null
-        | ((current: DiarySuccessFeedback | null) => DiarySuccessFeedback | null),
+        | ((
+            current: DiarySuccessFeedback | null,
+          ) => DiarySuccessFeedback | null),
     ) => setUiStateField("diarySuccessFeedback", value),
     setGoalObjectiveDraft: (
-      value: NutritionObjective | ((current: NutritionObjective) => NutritionObjective),
+      value:
+        | NutritionObjective
+        | ((current: NutritionObjective) => NutritionObjective),
     ) => setUiStateField("goalObjectiveDraft", value),
     setGoalInputsDirty: (value: boolean | ((current: boolean) => boolean)) =>
       setUiStateField("goalInputsDirty", value),
-    setMealPlanDraft: (value: MealPlan | null | ((current: MealPlan | null) => MealPlan | null)) =>
-      setUiStateField("mealPlanDraft", value),
+    setMealPlanDraft: (
+      value: MealPlan | null | ((current: MealPlan | null) => MealPlan | null),
+    ) => setUiStateField("mealPlanDraft", value),
     setPlanCalories: (value: string | ((current: string) => string)) =>
       setUiStateField("planCalories", value),
     setCustomWaterOpen: (value: boolean | ((current: boolean) => boolean)) =>
       setUiStateField("customWaterOpen", value),
     setIsUpdatingWater: (value: boolean | ((current: boolean) => boolean)) =>
       setUiStateField("isUpdatingWater", value),
+    setMealChooserOpen: (value: boolean | ((current: boolean) => boolean)) =>
+      setUiStateField("mealChooserOpen", value),
   };
 }

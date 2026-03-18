@@ -88,3 +88,9 @@ A&R Software Development
 - **Problem**: Generic queries could return unrelated items via brand-only matches (e.g., `frango` surfacing chocolates) and search responses were capped too aggressively
 - **Solution**: In [food-search.service.ts](src/modules/nutrition/services/food-search.service.ts), require name/tag token evidence for generic one-word queries before accepting brand-only matches; in [catalog-search.service.ts](src/modules/nutrition/services/catalog-search.service.ts), raise result cap from 8 to 50
 - **Testing**: Added regression coverage in [food-search.service.test.ts](src/modules/nutrition/services/food-search.service.test.ts) and [catalog-search.service.test.ts](src/modules/nutrition/services/catalog-search.service.test.ts)
+
+### Mobile Water CTA Typography Alignment
+
+- **Problem**: The `Personalizado` quick action in mobile hydration controls looked visually inconsistent compared to `250` and `500` and could overflow on narrow widths
+- **Solution**: In [DiaryTodayView.tsx](src/components/nutrition/DiaryTodayView.tsx), align typography/color with the quick-add buttons and keep overflow protection (`overflow-hidden`, `textOverflow: ellipsis`, `whiteSpace: nowrap`)
+- **Impact**: Keeps visual consistency across hydration CTAs while preventing text spill in narrow mobile viewports

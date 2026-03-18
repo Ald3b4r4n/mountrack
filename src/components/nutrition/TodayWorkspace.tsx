@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
 import { Plus, Settings2 } from "lucide-react";
-import type { DiaryItemSnapshot, MealDefinition, MealType } from "@/modules/nutrition/domain/types";
+import type {
+  DiaryItemSnapshot,
+  MealDefinition,
+  MealType,
+} from "@/modules/nutrition/domain/types";
 import { formatCalories } from "@/modules/nutrition/ui-helpers";
 import { CollapsibleSection } from "./CommonUI";
 
@@ -62,13 +66,21 @@ function MealQuickCard({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
-              {active ? "Agora" : meal.isDefault === false ? "Extra" : "Refeição"}
+              {active
+                ? "Agora"
+                : meal.isDefault === false
+                  ? "Extra"
+                  : "Refeição"}
             </span>
             <strong className="mt-1 block truncate font-['Outfit',sans-serif] text-[1rem] text-[var(--text-primary)]">
               {label}
             </strong>
           </div>
-          {active ? <span className="badge badge-success">Ativa</span> : meal.isDefault === false ? <span className="badge badge-success">Extra</span> : null}
+          {active ? (
+            <span className="badge badge-success">Ativa</span>
+          ) : meal.isDefault === false ? (
+            <span className="badge badge-success">Extra</span>
+          ) : null}
         </div>
         <div className="mt-3 flex items-end justify-between gap-3">
           <strong className="block font-['Outfit',sans-serif] text-[1.1rem] text-[var(--text-primary)]">
@@ -80,16 +92,28 @@ function MealQuickCard({
         </div>
         {isMobileLayout ? (
           <span className="mt-2 block text-[0.78rem] text-[var(--text-secondary)]">
-            {active ? "Toque para ver esta refeição." : "Toque para abrir esta refeição."}
+            {active
+              ? "Toque para ver esta refeição."
+              : "Toque para abrir esta refeição."}
           </span>
         ) : null}
       </button>
-      <div className={`mt-3 grid gap-2 ${meal.isDefault === false ? "grid-cols-2" : "grid-cols-1"}`}>
-        <button type="button" onClick={onAdd} className="btn-outline min-h-[2.7rem] w-full">
+      <div
+        className={`mt-3 grid gap-2 ${meal.isDefault === false ? "grid-cols-2" : "grid-cols-1"}`}
+      >
+        <button
+          type="button"
+          onClick={onAdd}
+          className="btn-outline min-h-[2.7rem] w-full"
+        >
           Adicionar
         </button>
         {meal.isDefault === false ? (
-          <button type="button" onClick={onManage} className="btn-outline min-h-[2.7rem] w-full">
+          <button
+            type="button"
+            onClick={onManage}
+            className="btn-outline min-h-[2.7rem] w-full"
+          >
             <span className="inline-flex items-center gap-2">
               <Settings2 size={14} />
               Gerenciar
@@ -101,7 +125,13 @@ function MealQuickCard({
   );
 }
 
-function AddMealCard({ onAddMeal, isMobileLayout = false }: { onAddMeal: () => void; isMobileLayout?: boolean }) {
+function AddMealCard({
+  onAddMeal,
+  isMobileLayout = false,
+}: {
+  onAddMeal: () => void;
+  isMobileLayout?: boolean;
+}) {
   return (
     <button
       type="button"
@@ -142,12 +172,20 @@ export function TodayWorkspace({
   onAddMeal,
   children,
 }: TodayWorkspaceProps) {
+  if (isMobileLayout) {
+    return <section className="grid gap-4">{children}</section>;
+  }
+
   return (
     <section className="grid gap-4">
       <CollapsibleSection
         title="Refeições do dia"
         subtitle="Escolha uma refeição para registrar alimentos."
-        badge={!embedded ? <span className="badge badge-success">Hoje</span> : undefined}
+        badge={
+          !embedded ? (
+            <span className="badge badge-success">Hoje</span>
+          ) : undefined
+        }
         open={mealsSectionOpen}
         onOpenChange={onMealsSectionOpenChange}
         sectionRef={mealsSectionRef}
@@ -164,7 +202,11 @@ export function TodayWorkspace({
                 count={groupedDiaryItems[meal.key]?.length ?? 0}
                 onSelect={() => onOpenMeal(meal.key)}
                 onAdd={() => onOpenSearchForMeal(meal.key)}
-                onManage={meal.isDefault === false ? () => onManageMeal?.(meal) : undefined}
+                onManage={
+                  meal.isDefault === false
+                    ? () => onManageMeal?.(meal)
+                    : undefined
+                }
                 isMobileLayout
               />
             ))}
@@ -182,7 +224,11 @@ export function TodayWorkspace({
                 count={groupedDiaryItems[meal.key]?.length ?? 0}
                 onSelect={() => onOpenMeal(meal.key)}
                 onAdd={() => onOpenSearchForMeal(meal.key)}
-                onManage={meal.isDefault === false ? () => onManageMeal?.(meal) : undefined}
+                onManage={
+                  meal.isDefault === false
+                    ? () => onManageMeal?.(meal)
+                    : undefined
+                }
               />
             ))}
             <AddMealCard onAddMeal={onAddMeal} />

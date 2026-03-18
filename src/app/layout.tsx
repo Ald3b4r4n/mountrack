@@ -1,12 +1,12 @@
-import type { Metadata } from 'next';
-import './globals.css';
-import { AuthProvider } from '@/contexts/AuthContext';
-import PageTransition from '@/components/PageTransition';
-import { AppFooter } from '@/components/AppFooter';
+import type { Metadata } from "next";
+import "./globals.css";
+import { AuthProvider } from "@/contexts/AuthContext";
+import PageTransition from "@/components/PageTransition";
+import { AppFooter } from "@/components/AppFooter";
 
 export const metadata: Metadata = {
-  title: 'MounTrack | Progress Dashboard',
-  description: 'Track your Monjaro journey with style and precision.',
+  title: "MounTrack | Progress Dashboard",
+  description: "Track your Monjaro journey with style and precision.",
 };
 
 export default function RootLayout({
@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" data-scroll-behavior="smooth">
       <body>
         <AuthProvider>
           <PageTransition>

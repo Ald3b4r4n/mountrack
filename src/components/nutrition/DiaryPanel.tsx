@@ -95,7 +95,7 @@ export function DiaryPanel({
   const panelSubtitle = isMobileLayout
     ? activeDiaryView === "today"
       ? "Refeição atual, água do dia e histórico quando precisar."
-      : "Consulte os dias anteriores sem sair de Hoje."
+      : "Consulte os dias anteriores."
     : "Revise aqui os consumos e a água do dia.";
   const panelBadgeLabel =
     activeDiaryView === "today"
@@ -119,13 +119,13 @@ export function DiaryPanel({
             <div className="flex w-full items-center justify-between gap-3 rounded-[1rem] border border-white/7 bg-[#071223]/72 p-3">
               <div className="min-w-0">
                 <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                  Agora
+                  Log de
                 </span>
                 <strong className="block text-[0.96rem] text-[var(--text-primary)]">
-                  Tudo nesta refeição
+                  Registros de dias anteriores
                 </strong>
                 <span className="mt-1 block text-[0.8rem] text-[var(--text-secondary)]">
-                  Abra o histórico só quando quiser revisar.
+                  veja no histórico.
                 </span>
               </div>
               <button

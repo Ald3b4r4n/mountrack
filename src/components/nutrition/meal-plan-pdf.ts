@@ -1,5 +1,9 @@
 import type { jsPDF } from "jspdf";
-import type { MealPlan, NutritionObjective, NutritionTotals } from "@/modules/nutrition/domain/types";
+import type {
+  MealPlan,
+  NutritionObjective,
+  NutritionTotals,
+} from "@/modules/nutrition/domain/types";
 
 export const NUTRITION_COMPANY_SIGNATURE = "A&R Software Development";
 export const NUTRITION_COMPANY_URL = "antoniorafael.com.br";
@@ -308,7 +312,7 @@ function buildMealSections(plan: MealPlan): string {
             <div>
               <p class="meal-overline">${escapeHtml(MEAL_LABELS[meal.mealType])}</p>
               <h2>${escapeHtml(meal.name)}</h2>
-              <p class="meal-target">Alvo da refeicao: ${escapeHtml(formatCalories(meal.targetCalories))}</p>
+              <p class="meal-target">Alvo da refeição: ${escapeHtml(formatCalories(meal.targetCalories))}</p>
             </div>
             <div class="meal-calories">${escapeHtml(formatCalories(meal.totalCalories))}</div>
           </div>
@@ -332,7 +336,7 @@ function buildMealSections(plan: MealPlan): string {
                       `,
                     )
                     .join("")
-                : '<p class="empty-copy">Sem itens nesta refeicao.</p>'
+                : '<p class="empty-copy">Sem itens nesta refeição.</p>'
             }
           </div>
         </section>
@@ -448,31 +452,44 @@ async function waitForPdfRenderReady(): Promise<void> {
     await document.fonts.ready;
   }
 
-  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  await new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+  );
 }
 
-function addCanvasPagesToPdf(pdf: jsPDF, canvas: HTMLCanvasElement, targetElement: HTMLElement): void {
+function addCanvasPagesToPdf(
+  pdf: jsPDF,
+  canvas: HTMLCanvasElement,
+  targetElement: HTMLElement,
+): void {
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   const usableWidth = pageWidth - PDF_MARGIN * 2;
   const usableHeight = pageHeight - PDF_MARGIN * 2;
   const renderScale = usableWidth / canvas.width;
-  const maxSliceHeightCanvas = Math.max(1, Math.floor(usableHeight / renderScale));
+  const maxSliceHeightCanvas = Math.max(
+    1,
+    Math.floor(usableHeight / renderScale),
+  );
 
   // Determine safe cut points based on major sections and rows
   // html2canvas uses a scale of 2
   const SCALE = 2;
   const cutPointsCanvas = [canvas.height];
   const targetRect = targetElement.getBoundingClientRect();
-  
+
   // We specify granular elements so we can cut INSIDE the meal card if it's too big,
   // preventing arbitrary geometric cuts that slice text in half.
   const elements = Array.from(
-    targetElement.querySelectorAll('.header-shell, .metrics-shell, .summary-card, .meal-header, .item-row, .empty-copy, .footer-copy')
+    targetElement.querySelectorAll(
+      ".header-shell, .metrics-shell, .summary-card, .meal-header, .item-row, .empty-copy, .footer-copy",
+    ),
   ) as HTMLElement[];
 
   // Sort elements by their vertical position to ensure linear processing
-  elements.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+  elements.sort(
+    (a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top,
+  );
 
   for (let i = 0; i < elements.length - 1; i++) {
     const el1 = elements[i];
@@ -496,14 +513,16 @@ function addCanvasPagesToPdf(pdf: jsPDF, canvas: HTMLCanvasElement, targetElemen
   let renderedHeight = 0;
   let pageIndex = 0;
 
-  while (renderedHeight < canvas.height - 5) { // 5px tolerance
+  while (renderedHeight < canvas.height - 5) {
+    // 5px tolerance
     // Filter to cuts that are ahead of our progress and fit in one page
     const possibleCuts = cutPointsCanvas.filter(
-      (c) => c > renderedHeight + 5 && c <= renderedHeight + maxSliceHeightCanvas
+      (c) =>
+        c > renderedHeight + 5 && c <= renderedHeight + maxSliceHeightCanvas,
     );
 
     let nextPossibleCut = renderedHeight + maxSliceHeightCanvas;
-    
+
     if (possibleCuts.length > 0) {
       // Pick the largest safe cut within this page limit
       nextPossibleCut = possibleCuts[possibleCuts.length - 1];
@@ -516,7 +535,10 @@ function addCanvasPagesToPdf(pdf: jsPDF, canvas: HTMLCanvasElement, targetElemen
       }
     }
 
-    const currentSliceHeight = Math.min(nextPossibleCut - renderedHeight, canvas.height - renderedHeight);
+    const currentSliceHeight = Math.min(
+      nextPossibleCut - renderedHeight,
+      canvas.height - renderedHeight,
+    );
 
     const pageCanvas = document.createElement("canvas");
     pageCanvas.width = canvas.width;
@@ -601,7 +623,10 @@ export async function downloadMealPlanPdf({
       throw new Error("Meal plan PDF root not found.");
     }
 
-    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]);
+    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+      import("html2canvas"),
+      import("jspdf"),
+    ]);
     const canvas = await html2canvas(target, {
       backgroundColor: "#ffffff",
       scale: 2,

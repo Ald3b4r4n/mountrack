@@ -2,6 +2,7 @@ import type { ComponentProps, ReactNode } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { BarcodeScannerDialog } from "@/components/nutrition/BarcodeScannerDialog";
 import { CustomMealDialog } from "@/components/nutrition/CustomMealDialog";
+import { MealSwitchDialog } from "@/components/nutrition/MealSwitchDialog";
 import { NutritionHeader } from "@/components/nutrition/NutritionHeader";
 import { NutritionLayout } from "@/components/nutrition/NutritionLayout";
 import { NutritionStatusBanners } from "@/components/nutrition/NutritionStatusBanners";
@@ -16,6 +17,7 @@ interface NutritionScreenShellProps {
   barcodeScannerProps: ComponentProps<typeof BarcodeScannerDialog>;
   customMealDialogKey: string;
   customMealDialogProps: ComponentProps<typeof CustomMealDialog>;
+  mealSwitchDialogProps: ComponentProps<typeof MealSwitchDialog>;
   customFoodDialogProps: ComponentProps<typeof CustomFoodDialog>;
   customWaterDialogProps: ComponentProps<typeof CustomWaterDialog>;
   headerProps: ComponentProps<typeof NutritionHeader>;
@@ -30,6 +32,7 @@ export function NutritionScreenShell({
   barcodeScannerProps,
   customMealDialogKey,
   customMealDialogProps,
+  mealSwitchDialogProps,
   customFoodDialogProps,
   customWaterDialogProps,
   headerProps,
@@ -40,6 +43,7 @@ export function NutritionScreenShell({
     <NutritionLayout isMobileLayout={isMobileLayout}>
       <BarcodeScannerDialog {...barcodeScannerProps} />
       <CustomMealDialog key={customMealDialogKey} {...customMealDialogProps} />
+      <MealSwitchDialog {...mealSwitchDialogProps} />
       <CustomFoodDialog {...customFoodDialogProps} />
       <CustomWaterDialog {...customWaterDialogProps} />
       <NutritionHeader {...headerProps} />

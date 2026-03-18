@@ -42,6 +42,7 @@ describe("NutritionHeader", () => {
     const user = userEvent.setup();
     const onOpenConsumedSummary = jest.fn();
     const onAddToActiveMeal = jest.fn();
+    const onOpenMealChooser = jest.fn();
 
     render(
       <NutritionHeader
@@ -56,6 +57,7 @@ describe("NutritionHeader", () => {
         recentlyLoggedFoodLabel="Iogurte natural"
         onOpenConsumedSummary={onOpenConsumedSummary}
         onAddToActiveMeal={onAddToActiveMeal}
+        onOpenMealChooser={onOpenMealChooser}
       />,
     );
 
@@ -72,14 +74,17 @@ describe("NutritionHeader", () => {
     expect(onOpenConsumedSummary).toHaveBeenCalledTimes(1);
     expect(screen.getByText(/^Agora$/i)).toBeInTheDocument();
     expect(screen.getByText(/Sugerido/i)).toBeInTheDocument();
-    expect(screen.getByText(/Registrado agora/i)).toBeInTheDocument();
     expect(screen.getByText(/Iogurte natural/i)).toBeInTheDocument();
-    expect(screen.getByText(/^26%$/i)).toBeInTheDocument();
-    expect(screen.getByText(/^Livre$/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/^26%$/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/^Livre$/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/^Água e metas$/i)).toBeInTheDocument();
     expect(screen.getByText(/Café da manhã em foco/i)).toBeInTheDocument();
     expect(screen.getByText(/Água 0%/i)).toBeInTheDocument();
     expect(screen.getByText(/Meta 140 g/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^Trocar$/i }));
+
+    expect(onOpenMealChooser).toHaveBeenCalledTimes(1);
 
     await user.click(screen.getByRole("button", { name: /^Adicionar$/i }));
 

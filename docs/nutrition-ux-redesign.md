@@ -20,7 +20,7 @@ Isso funciona parcialmente no desktop, mas no mobile gera excesso de profundidad
 - No mobile, a navegacao ja comeca com tabs de superficie (`Busca` e `Diario/Cardapio/Meta`) e logo abaixo aparecem mais tabs internas por contexto.
 - O header ocupa quase toda a primeira dobra com resumo, agua e macros em [`NutritionHeader.tsx`](../src/components/nutrition/NutritionHeader.tsx).
 - A busca empilha input, resultados e compositor na mesma coluna em [`FoodSearchPanel.tsx`](../src/components/nutrition/FoodSearchPanel.tsx).
-- O diario concentra hidratacao, troca entre hoje/historico e filtros por refeicao em [`DiaryPanel.tsx`](../src/components/nutrition/DiaryPanel.tsx).
+- O diario concentra hidratacao, troca entre hoje/historico e filtros por refeição em [`DiaryPanel.tsx`](../src/components/nutrition/DiaryPanel.tsx).
 - Metas e cardapio sao telas de formulario, mas continuam encaixadas como paines equivalentes ao diario.
 
 ## Problemas principais
@@ -52,7 +52,7 @@ Buscar e registrar deveriam ser um fluxo unico, mas hoje sao tres blocos indepen
 
 1. buscar
 2. escolher resultado
-3. compor quantidade/unidade/refeicao
+3. compor quantidade/unidade/refeição
 
 No mobile isso vira scroll e perda de contexto.
 
@@ -117,12 +117,12 @@ Conteudo:
 
 - resumo compacto do dia no topo
 - bloco rapido de agua
-- cards de refeicao em sequencia:
+- cards de refeição em sequencia:
   - cafe da manha
   - almoco
   - lanche
   - jantar
-- CTA/card `Adicionar refeicao`
+- CTA/card `Adicionar refeição`
 - cada card mostra:
   - kcal
   - quantidade de itens
@@ -132,10 +132,10 @@ Conteudo:
 
 Regra:
 
-- trocar as tabs de refeicao por cards empilhados
-- usar expansao inline ou bottom sheet para detalhes da refeicao
+- trocar as tabs de refeição por cards empilhados
+- usar expansao inline ou bottom sheet para detalhes da refeição
 - nao limitar a estrutura do dia apenas as 4 refeicoes base; elas viram defaults
-- `Adicionar refeicao` cria um bloco extra nomeavel, como `Pre treino`, `Ceia` ou `Sobremesa`
+- `Adicionar refeição` cria um bloco extra nomeavel, como `Pre treino`, `Ceia` ou `Sobremesa`
 
 #### 2. Buscar
 
@@ -156,7 +156,7 @@ Quando o usuario seleciona um alimento:
   - macros
   - quantidade
   - unidade
-  - refeicao
+  - refeição
   - CTA `Adicionar ao diario`
 
 Regra:
@@ -192,7 +192,7 @@ Separar:
 - resumo do plano
 - lista de refeicoes
 
-Cada refeicao como card expansivel. Em mobile, apenas um card aberto por vez.
+Cada refeição como card expansivel. Em mobile, apenas um card aberto por vez.
 
 ### Desktop
 
@@ -237,7 +237,7 @@ O detalhamento completo pode abrir via `Ver resumo`.
 ### Padrao de componentes
 
 - `SegmentButton` fica para segmentos locais, nao para navegar a IA inteira
-- cards de refeicao viram a unidade principal do diario
+- cards de refeição viram a unidade principal do diario
 - o diario precisa aceitar cards dinamicos extras alem das refeicoes padrao
 - bottom sheet vira a unidade principal de composicao
 - formularios longos devem usar secoes com heading e spacing maior
@@ -273,7 +273,7 @@ O detalhamento completo pode abrir via `Ver resumo`.
 
 ### Fase 3
 
-- refatorar `Diario` para cards por refeicao
+- refatorar `Diario` para cards por refeição
 - mover historico para acesso secundario
 - simplificar hidratacao
 - adicionar suporte a refeicoes extras customizadas
@@ -294,7 +294,7 @@ O detalhamento completo pode abrir via `Ver resumo`.
 - o usuario entende em menos de 3 segundos onde registrar alimento
 - nenhuma tela mobile depende de mais de 2 niveis de tabs
 - a composicao de alimento acontece sem scroll longo
-- o usuario consegue adicionar uma refeicao fora das 4 categorias base sem friccao
+- o usuario consegue adicionar uma refeição fora das 4 categorias base sem friccao
 - desktop ganha estrutura de trabalho clara, nao apenas paines lado a lado
 
 ## Observacao final

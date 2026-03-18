@@ -4,6 +4,8 @@ import {
   ArrowLeft,
   ChevronRight,
   Coffee,
+  Droplets,
+  GlassWater,
   Salad,
   Utensils,
   UtensilsCrossed,
@@ -262,15 +264,15 @@ function MobileSummaryTile({
 function MobileActiveMealCard({
   mealLabel,
   mealCalories,
-  onOpenMeal,
   onAddToMeal,
   recentlyLoggedFoodLabel,
   suggestedCalories = 0,
+  onOpenMealChooser,
 }: {
   mealLabel: string;
   mealCalories: number;
-  onOpenMeal?: () => void;
   onAddToMeal?: () => void;
+  onOpenMealChooser?: () => void;
   recentlyLoggedFoodLabel?: string | null;
   suggestedCalories?: number;
 }) {
@@ -358,10 +360,10 @@ function MobileActiveMealCard({
 
       <div className="mt-6 grid grid-cols-2 gap-3">
         <button
-          onClick={onOpenMeal}
+          onClick={onOpenMealChooser}
           className="btn-outline min-h-[3.2rem] rounded-xl text-[0.85rem] font-bold border-white/10 hover:bg-white/5"
         >
-          Detalhes
+          Trocar
         </button>
         <button
           onClick={onAddToMeal}
@@ -445,6 +447,7 @@ function MobileSummaryStrip({
   activeMealLabel,
   activeMealCalories,
   onOpenConsumedSummary,
+  onOpenMealChooser,
   onAddToActiveMeal,
   recentlyLoggedFoodLabel,
   onAdjustWater,
@@ -457,6 +460,7 @@ function MobileSummaryStrip({
   activeMealLabel: string;
   activeMealCalories: number;
   onOpenConsumedSummary?: () => void;
+  onOpenMealChooser?: () => void;
   onAddToActiveMeal?: () => void;
   recentlyLoggedFoodLabel?: string | null;
   onAdjustWater?: (amount: number) => void;
@@ -485,7 +489,7 @@ function MobileSummaryStrip({
       <MobileActiveMealCard
         mealLabel={activeMealLabel}
         mealCalories={activeMealCalories}
-        onOpenMeal={onOpenConsumedSummary}
+        onOpenMealChooser={onOpenMealChooser}
         onAddToMeal={onAddToActiveMeal}
         recentlyLoggedFoodLabel={recentlyLoggedFoodLabel}
         suggestedCalories={suggestedCalories}
@@ -511,7 +515,6 @@ function MobileSummaryStrip({
             </span>
           </div>
         </div>
-
         <div className="grid gap-3">
           {/* Water Card */}
           <article className="relative overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#050f1d]/80 p-5 shadow-2xl">
@@ -572,7 +575,9 @@ function MobileSummaryStrip({
                 onClick={() => onAdjustWater?.(250)}
                 className="flex flex-col items-center justify-center rounded-xl border border-white/5 bg-white/5 py-3 transition-all active:scale-95 active:bg-white/10"
               >
-                <span className="text-sky-400">🥛</span>
+                <span className="text-sky-400">
+                  <GlassWater size={16} />
+                </span>
                 <span className="mt-1 text-[0.75rem] font-black text-[var(--text-primary)]">
                   250 ML
                 </span>
@@ -581,7 +586,9 @@ function MobileSummaryStrip({
                 onClick={() => onAdjustWater?.(500)}
                 className="flex flex-col items-center justify-center rounded-xl border border-white/5 bg-white/5 py-3 transition-all active:scale-95 active:bg-white/10"
               >
-                <span className="text-sky-400">🥛🥛</span>
+                <span className="text-sky-400">
+                  <Droplets size={16} />
+                </span>
                 <span className="mt-1 text-[0.75rem] font-black text-[var(--text-primary)]">
                   500 ML
                 </span>
@@ -638,6 +645,7 @@ interface NutritionHeaderProps {
   activeMealCalories: number;
   onOpenConsumedSummary?: () => void;
   onAddToActiveMeal?: () => void;
+  onOpenMealChooser?: () => void;
   recentlyLoggedFoodLabel?: string | null;
   onAdjustWater?: (amount: number) => void;
   onOpenCustomWater?: () => void;
@@ -653,6 +661,7 @@ export function NutritionHeader({
   activeMealLabel,
   activeMealCalories,
   onOpenConsumedSummary,
+  onOpenMealChooser,
   onAddToActiveMeal,
   recentlyLoggedFoodLabel,
   onAdjustWater,
@@ -731,6 +740,7 @@ export function NutritionHeader({
             activeMealLabel={activeMealLabel}
             activeMealCalories={activeMealCalories}
             onOpenConsumedSummary={onOpenConsumedSummary}
+            onOpenMealChooser={onOpenMealChooser}
             onAddToActiveMeal={onAddToActiveMeal}
             recentlyLoggedFoodLabel={recentlyLoggedFoodLabel}
             onAdjustWater={onAdjustWater}

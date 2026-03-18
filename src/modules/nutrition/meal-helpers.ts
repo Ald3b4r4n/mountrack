@@ -1,4 +1,8 @@
-import { DEFAULT_MEAL_DEFINITIONS, MEAL_LABELS, MEAL_ORDER } from "@/modules/nutrition/constants";
+import {
+  DEFAULT_MEAL_DEFINITIONS,
+  MEAL_LABELS,
+  MEAL_ORDER,
+} from "@/modules/nutrition/constants";
 import type {
   DefaultMealType,
   DiaryItemSnapshot,
@@ -15,10 +19,12 @@ function slugifyMealLabel(label: string): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, 40);
 
-  return normalized || "refeicao-extra";
+  return normalized || "refeição-extra";
 }
 
-export function isDefaultMealType(mealType: string): mealType is DefaultMealType {
+export function isDefaultMealType(
+  mealType: string,
+): mealType is DefaultMealType {
   return MEAL_ORDER.includes(mealType as DefaultMealType);
 }
 
@@ -49,7 +55,9 @@ export function createCustomMealDefinition(
 ): MealDefinition {
   const trimmedLabel = label.trim().replace(/\s+/g, " ");
   const baseSlug = slugifyMealLabel(trimmedLabel);
-  const existingKeys = new Set(existingDefinitions.map((definition) => definition.key));
+  const existingKeys = new Set(
+    existingDefinitions.map((definition) => definition.key),
+  );
 
   let suffix = 0;
   let key = `custom:${baseSlug}` as MealType;
@@ -92,7 +100,9 @@ export function buildMealDefinitions(
     }
   }
 
-  const defaultDefinitions = MEAL_ORDER.map((mealKey) => definitions.get(mealKey)!).filter(Boolean);
+  const defaultDefinitions = MEAL_ORDER.map(
+    (mealKey) => definitions.get(mealKey)!,
+  ).filter(Boolean);
   const customDefinitions = Array.from(definitions.values()).filter(
     (definition) => !isDefaultMealType(definition.key),
   );
