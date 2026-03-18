@@ -13,8 +13,17 @@ function formatDecimal(value: number): string {
   return DECIMAL_FORMATTER.format(Number(value.toFixed(2)));
 }
 
+function normalizeFoodLabel(value: string): string {
+  const withoutReplacementChars = value.replace(/\uFFFD+/g, " ");
+  const normalizedWhitespace = withoutReplacementChars
+    .replace(/\s+/g, " ")
+    .trim();
+  // Common mojibake fallout in PT-BR datasets: ", milanesa" should be ", à milanesa".
+  return normalizedWhitespace.replace(/,\s+milanesa\b/gi, ", à milanesa");
+}
+
 export function getFoodLabel(food: FoodItem): string {
-  return food.displayName ?? food.name;
+  return normalizeFoodLabel(food.displayName ?? food.name);
 }
 
 export function getFoodDefaultUnit(food: FoodItem): NutritionUnit {

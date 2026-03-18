@@ -16,7 +16,7 @@ const WORKSPACE_META: Record<
     badge: "Resumo",
     title: "Painel nutricional",
     description:
-      "Escolha uma area para iniciar seu fluxo de registro, busca ou planejamento.",
+      "Escolha uma área para iniciar seu fluxo de registro, busca ou planejamento.",
   },
   today: {
     badge: "Hoje",

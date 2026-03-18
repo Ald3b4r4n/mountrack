@@ -1,5 +1,13 @@
 import Link from "next/link";
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import {
+  Apple,
+  ArrowLeft,
+  ChevronRight,
+  Coffee,
+  Salad,
+  Utensils,
+  UtensilsCrossed,
+} from "lucide-react";
 import type {
   DailySummary,
   NutritionGoal,
@@ -268,15 +276,19 @@ function MobileActiveMealCard({
 }) {
   const getMealTheme = (label: string) => {
     const l = label.toLowerCase();
-    if (l.includes("café") || l.includes("breakfast"))
-      return { icon: "☕", color: "#f59e0b", label: "Café" };
-    if (l.includes("almoço") || l.includes("lunch"))
-      return { icon: "🥗", color: "#10b981", label: "Almoço" };
-    if (l.includes("lanche") || l.includes("snack"))
-      return { icon: "🍎", color: "#0ea5e9", label: "Lanche" };
-    if (l.includes("jantar") || l.includes("dinner"))
-      return { icon: "🍽️", color: "#6366f1", label: "Jantar" };
-    return { icon: "🍱", color: "#34d399", label: "Refeição" };
+    if (l.includes("café") || l.includes("breakfast")) {
+      return { Icon: Coffee, color: "#f59e0b", label: "Café" };
+    }
+    if (l.includes("almoço") || l.includes("lunch")) {
+      return { Icon: Salad, color: "#10b981", label: "Almoço" };
+    }
+    if (l.includes("lanche") || l.includes("snack")) {
+      return { Icon: Apple, color: "#0ea5e9", label: "Lanche" };
+    }
+    if (l.includes("jantar") || l.includes("dinner")) {
+      return { Icon: Utensils, color: "#6366f1", label: "Jantar" };
+    }
+    return { Icon: UtensilsCrossed, color: "#34d399", label: "Refeição" };
   };
 
   const theme = getMealTheme(mealLabel);
@@ -289,8 +301,8 @@ function MobileActiveMealCard({
             AGORA
           </span>
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-2xl drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">
-              {theme.icon}
+            <span className="drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">
+              <theme.Icon size={24} style={{ color: theme.color }} />
             </span>
             <h3 className="text-[1.45rem] font-black tracking-tight text-[var(--text-primary)]">
               {recentlyLoggedFoodLabel || mealLabel}
