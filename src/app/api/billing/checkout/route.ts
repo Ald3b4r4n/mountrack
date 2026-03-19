@@ -8,6 +8,7 @@ import {
 import { APP_SESSION_COOKIE_NAME } from "@/modules/billing/auth/session-cookie";
 import {
   isMercadoPagoConfigured,
+  resolveMercadoPagoCheckoutPayerEmail,
   resolveBillingAppBaseUrl,
 } from "@/modules/billing/config/mercado-pago";
 import { createMercadoPagoPreapproval } from "@/modules/billing/providers/mercado-pago";
@@ -98,7 +99,9 @@ export async function POST(request: Request) {
       planName: plan.name,
       amountCents: plan.amountCents,
       currency: plan.currency,
-      payerEmail: typeof decodedToken.email === "string" ? decodedToken.email : undefined,
+      payerEmail: resolveMercadoPagoCheckoutPayerEmail(
+        typeof decodedToken.email === "string" ? decodedToken.email : undefined,
+      ),
       appBaseUrl: resolveBillingAppBaseUrl(request.url),
     });
 
@@ -147,6 +150,10 @@ export async function POST(request: Request) {
 
     if (error instanceof Error && error.message === "MERCADO_PAGO_NOT_CONFIGURED") {
       return createJsonError("Mercado Pago checkout unavailable", 503);
+    }
+
+    if (error instanceof Error && error.message === "MERCADO_PAGO_TEST_PAYER_EMAIL_REQUIRED") {
+      return createJsonError("Mercado Pago test buyer email missing", 503);
     }
 
     if (error instanceof Error && error.message.startsWith("MERCADO_PAGO_")) {

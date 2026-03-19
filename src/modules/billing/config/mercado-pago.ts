@@ -27,6 +27,34 @@ export function isMercadoPagoSandboxToken(accessToken: string): boolean {
   return accessToken.startsWith("TEST-");
 }
 
+export function getMercadoPagoTestPayerEmail(): string | null {
+  const email = process.env.MERCADO_PAGO_TEST_PAYER_EMAIL?.trim() ?? "";
+  return email || null;
+}
+
+export function resolveMercadoPagoCheckoutPayerEmail(accountEmail?: string | null): string | undefined {
+  const normalizedAccountEmail = accountEmail?.trim() || "";
+  const accessToken = getMercadoPagoAccessToken();
+  if (!accessToken) {
+    return normalizedAccountEmail || undefined;
+  }
+
+  if (!isMercadoPagoSandboxToken(accessToken)) {
+    return normalizedAccountEmail || undefined;
+  }
+
+  if (normalizedAccountEmail.endsWith("@testuser.com")) {
+    return normalizedAccountEmail;
+  }
+
+  const testPayerEmail = getMercadoPagoTestPayerEmail();
+  if (testPayerEmail) {
+    return testPayerEmail;
+  }
+
+  throw new Error("MERCADO_PAGO_TEST_PAYER_EMAIL_REQUIRED");
+}
+
 export function getMercadoPagoApiBaseUrl(): string {
   return MERCADO_PAGO_API_BASE_URL;
 }
