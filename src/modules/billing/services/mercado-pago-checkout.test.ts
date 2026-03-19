@@ -78,4 +78,18 @@ describe("mercado-pago checkout service", () => {
       "MERCADO_PAGO_TEST_PAYER_EMAIL_REQUIRED",
     );
   });
+
+  it("fails fast when the configured test buyer email is not a valid email address", async () => {
+    getMercadoPagoTestPayerEmailMock.mockReturnValue("6cd638c8acb449810d34dc563ddb96b44d37add6278131368ae4be429ad39fc8");
+    fetchMercadoPagoCollectorProfileMock.mockResolvedValue({
+      email: "test_user_999@testuser.com",
+      nickname: "TESTUSER999",
+      isTestUser: true,
+      rawPayload: {},
+    });
+
+    await expect(resolveMercadoPagoCheckoutPayerEmail("user@example.com")).rejects.toThrow(
+      "MERCADO_PAGO_TEST_PAYER_EMAIL_INVALID",
+    );
+  });
 });

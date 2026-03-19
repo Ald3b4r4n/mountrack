@@ -9,8 +9,25 @@ function normalizeEmail(value?: string | null): string {
   return value?.trim() ?? "";
 }
 
+function isValidEmail(value?: string | null): boolean {
+  const normalized = normalizeEmail(value);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
+}
+
 function isMercadoPagoTestEmail(value?: string | null): boolean {
   return normalizeEmail(value).toLowerCase().endsWith("@testuser.com");
+}
+
+function requireValidMercadoPagoTestPayerEmail(testPayerEmail: string | null): string {
+  if (!testPayerEmail) {
+    throw new Error("MERCADO_PAGO_TEST_PAYER_EMAIL_REQUIRED");
+  }
+
+  if (!isValidEmail(testPayerEmail)) {
+    throw new Error("MERCADO_PAGO_TEST_PAYER_EMAIL_INVALID");
+  }
+
+  return testPayerEmail;
 }
 
 export async function resolveMercadoPagoCheckoutPayerEmail(
@@ -28,20 +45,12 @@ export async function resolveMercadoPagoCheckoutPayerEmail(
 
   const testPayerEmail = getMercadoPagoTestPayerEmail();
   if (isMercadoPagoSandboxToken(accessToken)) {
-    if (testPayerEmail) {
-      return testPayerEmail;
-    }
-
-    throw new Error("MERCADO_PAGO_TEST_PAYER_EMAIL_REQUIRED");
+    return requireValidMercadoPagoTestPayerEmail(testPayerEmail);
   }
 
   const collectorProfile = await fetchMercadoPagoCollectorProfile();
   if (collectorProfile.isTestUser) {
-    if (testPayerEmail) {
-      return testPayerEmail;
-    }
-
-    throw new Error("MERCADO_PAGO_TEST_PAYER_EMAIL_REQUIRED");
+    return requireValidMercadoPagoTestPayerEmail(testPayerEmail);
   }
 
   return normalizedAccountEmail || undefined;

@@ -160,6 +160,10 @@ export async function POST(request: Request) {
       return createJsonError("Mercado Pago test buyer email missing", 503);
     }
 
+    if (error instanceof Error && error.message === "MERCADO_PAGO_TEST_PAYER_EMAIL_INVALID") {
+      return createJsonError("Mercado Pago test buyer email invalid", 503);
+    }
+
     if (error instanceof Error && isMercadoPagoSandboxCollectorMismatch(error)) {
       return createJsonError(
         "Mercado Pago sandbox mismatch: token e comprador precisam ser ambos de teste",

@@ -288,6 +288,33 @@ describe("POST /api/billing/checkout", () => {
     });
   });
 
+  it("returns 503 when sandbox checkout has an invalid test buyer email", async () => {
+    resolveMercadoPagoCheckoutPayerEmailMock.mockImplementation(async () => {
+      throw new Error("MERCADO_PAGO_TEST_PAYER_EMAIL_INVALID");
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/billing/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: "mt_session=session-token",
+        },
+        body: JSON.stringify({ planCode: "pro_monthly" }),
+      }),
+    );
+
+    expect(response.status).toBe(503);
+    expect(createMercadoPagoPreapprovalMock).not.toHaveBeenCalled();
+    expect(updateBillingCheckoutSessionMock).toHaveBeenCalledWith({
+      sessionId: "checkout-id",
+      status: "cancelled",
+    });
+    await expect(response.json()).resolves.toEqual({
+      error: "Mercado Pago test buyer email invalid",
+    });
+  });
+
   it("cancels the internal session when Mercado Pago subscription creation fails", async () => {
     createMercadoPagoPreapprovalMock.mockRejectedValue(
       new Error("MERCADO_PAGO_PREAPPROVAL_FAILED:500:boom"),
