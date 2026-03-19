@@ -82,8 +82,8 @@ npm install
 Crie um arquivo seguro e local chamado `.env.local` na raiz do projeto com as chaves obrigatórias descritas abaixo:
 
 ```env
-NEXT_PUBLIC_FIREBASE_API_KEY=SuaChaveSecretaFireb4seAqU1
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=seu-projeto.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_WEB_API=SuaConfigPublicaFireb4seAqU1
+NEXT_PUBLIC_FIREBASE_AUTH_HOST=seu-projeto.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=seu-projeto
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=seu-projeto.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=00000000000

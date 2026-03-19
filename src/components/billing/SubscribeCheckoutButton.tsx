@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 interface SubscribeCheckoutButtonProps {
   planCode: string;
+  navigate?: (url: string) => void;
 }
 
 interface CheckoutResponse {
@@ -18,17 +19,26 @@ interface CheckoutResponse {
   error?: string;
 }
 
-export function SubscribeCheckoutButton({ planCode }: SubscribeCheckoutButtonProps) {
+export function SubscribeCheckoutButton({
+  planCode,
+  navigate = (url) => window.location.assign(url),
+}: SubscribeCheckoutButtonProps) {
   const { user, loading, sessionReady } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const requiresLogin = !loading && !user;
 
   async function handleCheckout() {
     setError(null);
     setMessage(null);
 
-    if (!user || !sessionReady) {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    if (!sessionReady) {
       setError("Sua sessao nao esta pronta. Faca login novamente para continuar.");
       return;
     }
@@ -51,7 +61,7 @@ export function SubscribeCheckoutButton({ planCode }: SubscribeCheckoutButtonPro
       }
 
       if (data?.checkoutUrl) {
-        window.location.assign(data.checkoutUrl);
+        navigate(data.checkoutUrl);
         return;
       }
 
@@ -73,8 +83,18 @@ export function SubscribeCheckoutButton({ planCode }: SubscribeCheckoutButtonPro
         disabled={loading || isSubmitting}
         style={{ width: "100%" }}
       >
-        {isSubmitting ? "Preparando checkout..." : "Continuar para pagamento"}
+        {isSubmitting
+          ? "Preparando checkout..."
+          : requiresLogin
+            ? "Entrar para pagar"
+            : "Continuar para pagamento"}
       </button>
+
+      {requiresLogin ? (
+        <p style={{ color: "var(--text-secondary)", fontSize: "0.92rem", lineHeight: 1.6 }}>
+          Faça login com sua conta para abrir o checkout do Mercado Pago.
+        </p>
+      ) : null}
 
       {error ? (
         <p style={{ color: "#fca5a5", fontSize: "0.92rem", lineHeight: 1.6 }}>{error}</p>

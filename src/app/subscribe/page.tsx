@@ -95,8 +95,8 @@ export default async function SubscribePage() {
         </div>
 
         <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", lineHeight: 1.6 }}>
-          A tela de checkout do Mercado Pago será conectada na próxima etapa. Enquanto isso, contas liberadas manualmente por
-          administração continuam entrando normalmente.
+          O checkout do Mercado Pago já está disponível para contas autenticadas. A liberação do acesso continua sendo
+          concluída somente após a confirmação segura do pagamento no backend.
         </p>
 
         <SubscribeCheckoutButton planCode={plan?.code ?? BILLING_MONTHLY_PLAN_CODE} />
