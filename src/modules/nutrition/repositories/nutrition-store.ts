@@ -188,6 +188,16 @@ create index if not exists nutrition_user_foods_custom_user_name_idx
   on nutrition_user_foods_custom (user_id, normalized_name);
 create index if not exists nutrition_user_foods_custom_user_barcode_idx
   on nutrition_user_foods_custom (user_id, barcode);
+
+alter table nutrition_foods enable row level security;
+alter table nutrition_food_sources_raw enable row level security;
+alter table nutrition_brand_watchlist enable row level security;
+alter table nutrition_missing_food_queue enable row level security;
+alter table nutrition_goals enable row level security;
+alter table nutrition_diaries enable row level security;
+alter table nutrition_diary_items enable row level security;
+alter table nutrition_meal_plans enable row level security;
+alter table nutrition_user_foods_custom enable row level security;
 `;
 
 interface ListFoodsOptions {

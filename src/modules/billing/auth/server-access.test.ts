@@ -25,10 +25,17 @@ const bootstrapBillingOwnerMock = jest.mocked(bootstrapBillingOwner);
 const ensureBillingTrialEntitlementMock = jest.mocked(ensureBillingTrialEntitlement);
 const getBillingAccessSnapshotMock = jest.mocked(getBillingAccessSnapshot);
 const getBillingStorageResponseMock = jest.mocked(getBillingStorageResponse);
+const originalBootstrapOwnerEmail = process.env.BOOTSTRAP_OWNER_EMAIL;
+const originalBootstrapAdminEmails = process.env.BOOTSTRAP_ADMIN_EMAILS;
+const originalNodeEnv = process.env.NODE_ENV;
+const mutableEnv = process.env as Record<string, string | undefined>;
 
 describe("server-access", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mutableEnv.BOOTSTRAP_OWNER_EMAIL = "";
+    mutableEnv.BOOTSTRAP_ADMIN_EMAILS = "";
+    mutableEnv.NODE_ENV = originalNodeEnv ?? "test";
     getBillingStorageResponseMock.mockReturnValue("database");
     verifyFirebaseIdTokenMock.mockResolvedValue({
       uid: "user-123",
@@ -69,6 +76,12 @@ describe("server-access", () => {
     );
   });
 
+  afterAll(() => {
+    mutableEnv.BOOTSTRAP_OWNER_EMAIL = originalBootstrapOwnerEmail;
+    mutableEnv.BOOTSTRAP_ADMIN_EMAILS = originalBootstrapAdminEmails;
+    mutableEnv.NODE_ENV = originalNodeEnv;
+  });
+
   it("blocks access when the entitlement snapshot is not allowed", async () => {
     getBillingAccessSnapshotMock.mockResolvedValue({
       entitlementStatus: "past_due",
@@ -87,6 +100,24 @@ describe("server-access", () => {
     });
   });
 
+  it("lets owner and admin bypass the paywall even when entitlement is blocked", async () => {
+    getBillingAccessSnapshotMock.mockResolvedValue({
+      entitlementStatus: "past_due",
+      manualGrant: null,
+      roles: ["owner", "admin"],
+    });
+
+    await expect(resolveServerAppAccessFromToken("firebase-session-token")).resolves.toEqual({
+      user: {
+        uid: "user-123",
+        email: "owner@mountrack.app",
+      },
+      roles: ["owner", "admin"],
+      accessAllowed: true,
+      effectiveStatus: "operator_override",
+    });
+  });
+
   it("allows access in non-production when billing storage is unavailable", async () => {
     getBillingStorageResponseMock.mockReturnValue("unavailable");
 
@@ -101,5 +132,22 @@ describe("server-access", () => {
     });
     expect(ensureBillingTrialEntitlementMock).not.toHaveBeenCalled();
     expect(getBillingAccessSnapshotMock).not.toHaveBeenCalled();
+  });
+
+  it("allows the bootstrap operator in production even when billing storage is unavailable", async () => {
+    process.env.BOOTSTRAP_OWNER_EMAIL = "owner@mountrack.app";
+    process.env.BOOTSTRAP_ADMIN_EMAILS = "owner@mountrack.app";
+    mutableEnv.NODE_ENV = "production";
+    getBillingStorageResponseMock.mockReturnValue("unavailable");
+
+    await expect(resolveServerAppAccessFromToken("firebase-session-token")).resolves.toEqual({
+      user: {
+        uid: "user-123",
+        email: "owner@mountrack.app",
+      },
+      roles: ["owner", "admin"],
+      accessAllowed: true,
+      effectiveStatus: "operator_override",
+    });
   });
 });

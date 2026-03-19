@@ -21,7 +21,7 @@
 - Billing state, entitlement state, admin roles, and audit data will live in Supabase Postgres, not only in Firebase custom claims.
 - The app backend will be the source of truth for access decisions.
 - Mercado Pago hosted or tokenized checkout will be used to reduce PCI scope.
-- No Mercado Pago MCP is currently configured in this workspace.
+- Mercado Pago MCP is configured in the local Codex environment for this workspace.
 
 ## Commercial Decision
 
@@ -160,12 +160,12 @@
 
 ### Current state
 
-- No Mercado Pago MCP is installed or configured in this workspace.
+- Mercado Pago MCP is installed in the local Codex environment used for this workspace.
 
 ### Recommended usage
 
 - Phase 1: integrate official Mercado Pago APIs or SDK directly in the backend.
-- Phase 2: optionally install or build a Mercado Pago MCP for admin operations, sandbox support, reporting, or operator tooling.
+- Phase 2: use the configured Mercado Pago MCP for documentation lookup, operator tooling, sandbox support, or reporting assistance.
 
 ### Forbidden usage
 
@@ -319,6 +319,7 @@
 
 - A logged-in user may enter the app only if `access_allowed = true`.
 - `access_allowed` must be computed on the server using entitlement state.
+- `owner` and `admin` may bypass the subscription gate server-side so operators are not blocked during billing recovery flows.
 - Frontend checks are informative only.
 
 ## Sensitive operations
@@ -333,9 +334,11 @@
 - The owner must be a normal user account inside the system.
 - Use environment bootstrap for the first secure promotion:
   - `BOOTSTRAP_OWNER_EMAIL=your@email.com`
+- Use environment bootstrap for additional operator seeding when needed:
+  - `BOOTSTRAP_ADMIN_EMAILS=admin1@email.com,admin2@email.com`
 - On first successful login with that email:
   - create user if needed
-  - assign `owner`
+  - assign `owner` and any configured bootstrap operator roles
   - write audit log
 - After that, role escalation must happen only through owner-controlled admin actions.
 - Enforce MFA for `owner` and `admin`.

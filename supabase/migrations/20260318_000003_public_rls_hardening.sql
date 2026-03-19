@@ -1,0 +1,21 @@
+alter table if exists public.billing_plans enable row level security;
+alter table if exists public.billing_roles enable row level security;
+alter table if exists public.billing_user_roles enable row level security;
+alter table if exists public.billing_customers enable row level security;
+alter table if exists public.billing_subscriptions enable row level security;
+alter table if exists public.billing_payments enable row level security;
+alter table if exists public.billing_checkout_sessions enable row level security;
+alter table if exists public.billing_entitlements enable row level security;
+alter table if exists public.billing_manual_access_grants enable row level security;
+alter table if exists public.billing_events enable row level security;
+alter table if exists public.billing_audit_logs enable row level security;
+
+alter table if exists public.nutrition_foods enable row level security;
+alter table if exists public.nutrition_food_sources_raw enable row level security;
+alter table if exists public.nutrition_brand_watchlist enable row level security;
+alter table if exists public.nutrition_missing_food_queue enable row level security;
+alter table if exists public.nutrition_goals enable row level security;
+alter table if exists public.nutrition_diaries enable row level security;
+alter table if exists public.nutrition_diary_items enable row level security;
+alter table if exists public.nutrition_meal_plans enable row level security;
+alter table if exists public.nutrition_user_foods_custom enable row level security;

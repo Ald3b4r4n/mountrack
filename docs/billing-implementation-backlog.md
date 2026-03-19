@@ -11,6 +11,13 @@ Implement paid access for MounTrack with:
 - admin and finance operations with auditability
 - hardening against SQL injection, IDOR, webhook forgery, replay, privilege escalation, and payment hijacking
 
+## Current gate from Supabase Security Advisor (2026-03-18)
+
+- Billing and nutrition tables created in the `public` schema must keep row level security enabled.
+- Current application architecture remains server-only for Postgres access through `pg`; browser access to billing tables stays out of scope.
+- The correct default posture is `RLS enabled + no public browser policies` until a concrete Supabase client use case exists.
+- The `pg_trgm` warning for extension placement is lower priority than the RLS errors and should be handled in a separate maintenance step.
+
 ## Final Architecture
 
 ## Chosen stack
@@ -62,6 +69,7 @@ Implement paid access for MounTrack with:
 - backend resolves current user
 - backend checks entitlement in Postgres
 - access is allowed only when entitlement is active
+- `owner` and `admin` bypass the paywall server-side for operational recovery and billing support
 - client-side guards remain UX helpers only
 
 ### 3. Trial
@@ -128,7 +136,7 @@ Implement paid access for MounTrack with:
 - Sensitive actions require recent-auth confirmation.
 - Role changes and manual grants must be audited.
 - Never hardcode permanent admin users in code.
-- Bootstrap the initial owner from environment only once.
+- Bootstrap the initial owner and any emergency operator roles from environment only once.
 
 ## Session hardening
 
@@ -250,6 +258,14 @@ Implement paid access for MounTrack with:
 - checkout creation endpoint
 - webhook endpoint
 - reconciliation service
+
+### Current state (2026-03-19)
+
+- `POST /api/billing/checkout` creates and persists an internal checkout session bound to the authenticated user, plan, amount, currency, nonce, and expiration.
+- When `MERCADO_PAGO_ACCESS_TOKEN` is configured, the route creates a real Mercado Pago recurring `preapproval` checkout, persists `provider_checkout_id` and `provider_checkout_url`, and returns the redirect URL to the client.
+- `POST /api/billing/webhooks/mercado-pago` now ingests webhook events, verifies the Mercado Pago signature when `MERCADO_PAGO_WEBHOOK_SECRET` is configured, and stores events idempotently in `billing_events`.
+- Payment webhook reconciliation now fetches the provider payment, validates `amount + currency + external_reference`, stores `billing_payments`, updates `billing_subscriptions` and `billing_checkout_sessions`, and grants or blocks entitlements accordingly.
+- Subscription lifecycle notifications beyond payment events remain the next increment for this workstream.
 
 ### Tasks
 

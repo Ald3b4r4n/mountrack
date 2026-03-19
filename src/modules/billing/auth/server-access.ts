@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { resolveAccessDecision } from "@/modules/billing/access-policy";
+import { hasPrivilegedAccessBypassRole, resolveAccessDecision } from "@/modules/billing/access-policy";
 import { APP_SESSION_COOKIE_NAME } from "@/modules/billing/auth/session-cookie";
+import { getBootstrapRolesForEmail } from "@/modules/billing/config/bootstrap-operators";
 import {
   bootstrapBillingOwner,
   ensureBillingTrialEntitlement,
@@ -39,13 +40,16 @@ export async function resolveServerAppAccessFromToken(
     uid: decodedToken.uid,
     email: coerceEmail(decodedToken.email),
   };
+  const bootstrapRoles = getBootstrapRolesForEmail(user.email);
 
   if (getBillingStorageResponse() === "unavailable") {
+    const operatorOverride = hasPrivilegedAccessBypassRole(bootstrapRoles);
+
     return {
       user,
-      roles: [],
-      accessAllowed: process.env.NODE_ENV !== "production",
-      effectiveStatus: "missing",
+      roles: bootstrapRoles,
+      accessAllowed: operatorOverride || process.env.NODE_ENV !== "production",
+      effectiveStatus: operatorOverride ? "operator_override" : "missing",
     };
   }
 
@@ -61,12 +65,14 @@ export async function resolveServerAppAccessFromToken(
     manualGrant: snapshot.manualGrant,
     now,
   });
+  const roles = Array.from(new Set([...snapshot.roles, ...bootstrapRoles]));
+  const operatorOverride = hasPrivilegedAccessBypassRole(roles) && !decision.accessAllowed;
 
   return {
     user,
-    roles: snapshot.roles,
-    accessAllowed: decision.accessAllowed,
-    effectiveStatus: decision.effectiveStatus,
+    roles,
+    accessAllowed: operatorOverride || decision.accessAllowed,
+    effectiveStatus: operatorOverride ? "operator_override" : decision.effectiveStatus,
   };
 }
 

@@ -131,6 +131,10 @@ export function hasBillingPermission(
   return roles.some((role) => allowedRoles.includes(role));
 }
 
+export function hasPrivilegedAccessBypassRole(roles: readonly AppRole[]): boolean {
+  return roles.includes("owner") || roles.includes("admin");
+}
+
 export function canAssignRole(
   actorRoles: readonly AppRole[],
   targetRole: AppRole,

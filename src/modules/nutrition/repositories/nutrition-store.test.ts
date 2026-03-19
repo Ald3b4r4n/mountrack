@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { DiaryItemSnapshot, FoodItem } from "@/modules/nutrition/domain/types";
 import { getNutritionMemoryStore } from "@/modules/nutrition/repositories/memory-store";
 import {
@@ -383,5 +385,31 @@ describe("nutrition-store authorization", () => {
 
     delete globalStore.__nutritionPool__;
     delete globalStore.__nutritionSchemaPromise__;
+  });
+
+  it("keeps nutrition schema hardening in runtime bootstrap and Supabase migration", () => {
+    const runtimeSchemaSource = readFileSync(
+      join(process.cwd(), "src/modules/nutrition/repositories/nutrition-store.ts"),
+      "utf8",
+    );
+    const migrationSource = readFileSync(
+      join(process.cwd(), "supabase/migrations/20260318_000003_public_rls_hardening.sql"),
+      "utf8",
+    );
+
+    for (const tableName of [
+      "nutrition_foods",
+      "nutrition_food_sources_raw",
+      "nutrition_brand_watchlist",
+      "nutrition_missing_food_queue",
+      "nutrition_goals",
+      "nutrition_diaries",
+      "nutrition_diary_items",
+      "nutrition_meal_plans",
+      "nutrition_user_foods_custom",
+    ]) {
+      expect(runtimeSchemaSource).toContain(`alter table ${tableName} enable row level security;`);
+      expect(migrationSource).toContain(`alter table if exists public.${tableName} enable row level security;`);
+    }
   });
 });

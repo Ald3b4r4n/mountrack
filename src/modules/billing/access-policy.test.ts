@@ -1,6 +1,7 @@
 import {
   canAssignRole,
   hasBillingPermission,
+  hasPrivilegedAccessBypassRole,
   isManualAccessGrantActive,
   resolveAccessDecision,
 } from "@/modules/billing/access-policy";
@@ -113,6 +114,12 @@ describe("billing access policy", () => {
     expect(hasBillingPermission(["finance"], "billing:payments:view")).toBe(true);
     expect(hasBillingPermission(["support"], "billing:user-access:view")).toBe(true);
     expect(hasBillingPermission(["support"], "billing:payments:view")).toBe(false);
+  });
+
+  it("treats owner and admin as privileged access bypass roles", () => {
+    expect(hasPrivilegedAccessBypassRole(["owner"])).toBe(true);
+    expect(hasPrivilegedAccessBypassRole(["admin"])).toBe(true);
+    expect(hasPrivilegedAccessBypassRole(["finance"])).toBe(false);
   });
 
   it("allows only owner to assign privileged roles", () => {

@@ -1,9 +1,11 @@
 import Link from "next/link";
 import {
   BILLING_CURRENCY,
+  BILLING_MONTHLY_PLAN_CODE,
   BILLING_MONTHLY_PRICE_CENTS,
   BILLING_TRIAL_DAYS,
 } from "@/modules/billing/domain/types";
+import { SubscribeCheckoutButton } from "@/components/billing/SubscribeCheckoutButton";
 import { getBillingPlan } from "@/modules/billing/repositories/billing-store";
 
 function formatCurrency(amountCents: number, currency: string): string {
@@ -96,6 +98,8 @@ export default async function SubscribePage() {
           A tela de checkout do Mercado Pago será conectada na próxima etapa. Enquanto isso, contas liberadas manualmente por
           administração continuam entrando normalmente.
         </p>
+
+        <SubscribeCheckoutButton planCode={plan?.code ?? BILLING_MONTHLY_PLAN_CODE} />
 
         <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
           <Link href="/nutrition" className="btn-primary" style={{ flex: "1 1 220px", textAlign: "center" }}>

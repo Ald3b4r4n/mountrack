@@ -77,6 +77,30 @@ export interface BillingPlan {
   isActive: boolean;
 }
 
+export const BILLING_CHECKOUT_SESSION_STATUSES = [
+  "pending",
+  "redirect_ready",
+  "completed",
+  "expired",
+  "cancelled",
+] as const;
+
+export type BillingCheckoutSessionStatus = (typeof BILLING_CHECKOUT_SESSION_STATUSES)[number];
+
+export interface BillingCheckoutSessionRecord {
+  id: string;
+  userId: string;
+  planId: string;
+  expectedAmountCents: number;
+  currency: string;
+  nonce: string;
+  providerCheckoutId?: string | null;
+  providerCheckoutUrl?: string | null;
+  status: BillingCheckoutSessionStatus;
+  expiresAt: string;
+  createdAt: string;
+}
+
 export interface BillingEntitlementRecord {
   id: string;
   userId: string;
@@ -85,6 +109,20 @@ export interface BillingEntitlementRecord {
   status: BillingAccessStatus;
   startsAt: string;
   endsAt?: string | null;
+}
+
+export interface BillingPaymentRecord {
+  id: string;
+  userId: string;
+  subscriptionId?: string | null;
+  provider: string;
+  providerPaymentId: string;
+  providerStatus: string;
+  internalStatus: string;
+  amountCents: number;
+  currency: string;
+  paidAt?: string | null;
+  rawReferenceId?: string | null;
 }
 
 export interface ManualAccessGrantRecord extends ManualAccessGrantSnapshot {

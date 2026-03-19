@@ -1,10 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
+import { getBootstrapRolesForEmail } from "@/modules/billing/config/bootstrap-operators";
 import type {
   AppRole,
   BillingAccessSnapshot,
+  BillingCheckoutSessionRecord,
+  BillingCheckoutSessionStatus,
   BillingEntitlementRecord,
   BillingEventRecord,
+  BillingPaymentRecord,
   BillingPlan,
   BillingEntitlementSourceType,
   BillingAccessStatus,
@@ -121,6 +125,7 @@ create table if not exists billing_checkout_sessions (
   currency text not null,
   nonce text not null unique,
   provider_checkout_id text,
+  provider_checkout_url text,
   status text not null,
   expires_at timestamptz not null,
   created_at timestamptz not null default now(),
@@ -128,6 +133,8 @@ create table if not exists billing_checkout_sessions (
 );
 
 create index if not exists billing_checkout_sessions_user_idx on billing_checkout_sessions (user_id, created_at desc);
+
+alter table billing_checkout_sessions add column if not exists provider_checkout_url text;
 
 create table if not exists billing_entitlements (
   id text primary key,
@@ -186,6 +193,18 @@ create table if not exists billing_audit_logs (
 );
 
 create index if not exists billing_audit_logs_actor_idx on billing_audit_logs (actor_user_id, created_at desc);
+
+alter table billing_plans enable row level security;
+alter table billing_roles enable row level security;
+alter table billing_user_roles enable row level security;
+alter table billing_customers enable row level security;
+alter table billing_subscriptions enable row level security;
+alter table billing_payments enable row level security;
+alter table billing_checkout_sessions enable row level security;
+alter table billing_entitlements enable row level security;
+alter table billing_manual_access_grants enable row level security;
+alter table billing_events enable row level security;
+alter table billing_audit_logs enable row level security;
 `;
 
 type QueryExecutor = Pick<Pool, "query">;
@@ -240,6 +259,51 @@ interface BillingEventRow {
   processed_at: string | null;
 }
 
+interface BillingPaymentRow {
+  id: string;
+  user_id: string;
+  subscription_id: string | null;
+  provider: string;
+  provider_payment_id: string;
+  provider_status: string;
+  internal_status: string;
+  amount_cents: number | string;
+  currency: string;
+  paid_at: string | null;
+  raw_reference_id: string | null;
+}
+
+interface BillingSubscriptionRow {
+  id: string;
+  user_id: string;
+  billing_customer_id: string | null;
+  plan_id: string | null;
+  provider_subscription_id: string | null;
+  status: string;
+  trial_ends_at: string | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  canceled_at: string | null;
+  grace_period_ends_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface BillingCheckoutSessionRow {
+  id: string;
+  user_id: string;
+  plan_id: string;
+  expected_amount_cents: number | string;
+  currency: string;
+  nonce: string;
+  provider_checkout_id: string | null;
+  provider_checkout_url: string | null;
+  status: BillingCheckoutSessionStatus;
+  expires_at: string;
+  created_at: string;
+}
+
 export interface RecordBillingEventInput {
   provider: string;
   providerEventId: string;
@@ -261,6 +325,24 @@ export interface UpsertBillingEntitlementInput {
   endsAt?: string | null;
 }
 
+export interface CreateBillingCheckoutSessionInput {
+  id: string;
+  userId: string;
+  planId: string;
+  expectedAmountCents: number;
+  currency: string;
+  nonce: string;
+  status: BillingCheckoutSessionStatus;
+  expiresAt: string;
+}
+
+export interface UpdateBillingCheckoutSessionInput {
+  sessionId: string;
+  status: BillingCheckoutSessionStatus;
+  providerCheckoutId?: string | null;
+  providerCheckoutUrl?: string | null;
+}
+
 export interface SaveManualAccessGrantInput {
   id: string;
   userId: string;
@@ -270,6 +352,34 @@ export interface SaveManualAccessGrantInput {
   startsAt: string;
   endsAt?: string | null;
   grantedBy: string;
+}
+
+export interface UpsertBillingPaymentInput {
+  id: string;
+  userId: string;
+  subscriptionId?: string | null;
+  provider: string;
+  providerPaymentId: string;
+  providerStatus: string;
+  internalStatus: string;
+  amountCents: number;
+  currency: string;
+  paidAt?: string | null;
+  rawReferenceId?: string | null;
+}
+
+export interface UpsertBillingSubscriptionInput {
+  id: string;
+  userId: string;
+  planId?: string | null;
+  providerSubscriptionId?: string | null;
+  status: string;
+  trialEndsAt?: string | null;
+  currentPeriodStart?: string | null;
+  currentPeriodEnd?: string | null;
+  cancelAtPeriodEnd?: boolean;
+  canceledAt?: string | null;
+  gracePeriodEndsAt?: string | null;
 }
 
 function getDatabaseUrl(): string {
@@ -299,10 +409,6 @@ function requireDatabaseUrl(): string {
 
 export function getBillingStorageResponse(): BillingStorageResponse {
   return hasDatabaseUrl() ? "database" : "unavailable";
-}
-
-function normalizeEmail(value: string): string {
-  return value.trim().toLowerCase();
 }
 
 function getPool(): Pool {
@@ -359,6 +465,72 @@ function mapBillingEventRow(row: BillingEventRow): BillingEventRecord {
     processingStatus: row.processing_status,
     idempotencyKey: row.idempotency_key,
     processedAt: row.processed_at,
+  };
+}
+
+function mapBillingPaymentRow(row: BillingPaymentRow): BillingPaymentRecord {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    subscriptionId: row.subscription_id,
+    provider: row.provider,
+    providerPaymentId: row.provider_payment_id,
+    providerStatus: row.provider_status,
+    internalStatus: row.internal_status,
+    amountCents: Number(row.amount_cents),
+    currency: row.currency,
+    paidAt: row.paid_at,
+    rawReferenceId: row.raw_reference_id,
+  };
+}
+
+function mapBillingSubscriptionRow(
+  row: BillingSubscriptionRow,
+): {
+  id: string;
+  userId: string;
+  planId: string | null;
+  providerSubscriptionId: string | null;
+  status: string;
+  trialEndsAt: string | null;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  canceledAt: string | null;
+  gracePeriodEndsAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+} {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    planId: row.plan_id,
+    providerSubscriptionId: row.provider_subscription_id,
+    status: row.status,
+    trialEndsAt: row.trial_ends_at,
+    currentPeriodStart: row.current_period_start,
+    currentPeriodEnd: row.current_period_end,
+    cancelAtPeriodEnd: Boolean(row.cancel_at_period_end),
+    canceledAt: row.canceled_at,
+    gracePeriodEndsAt: row.grace_period_ends_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapBillingCheckoutSessionRow(row: BillingCheckoutSessionRow): BillingCheckoutSessionRecord {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    planId: row.plan_id,
+    expectedAmountCents: Number(row.expected_amount_cents),
+    currency: row.currency,
+    nonce: row.nonce,
+    providerCheckoutId: row.provider_checkout_id,
+    providerCheckoutUrl: row.provider_checkout_url,
+    status: row.status,
+    expiresAt: row.expires_at,
+    createdAt: row.created_at,
   };
 }
 
@@ -481,6 +653,25 @@ export async function getBillingPlan(code = BILLING_MONTHLY_PLAN_CODE): Promise<
   return result.rows[0] ? mapBillingPlanRow(result.rows[0]) : null;
 }
 
+export async function getBillingPlanById(planId: string): Promise<BillingPlan | null> {
+  if (!hasDatabaseUrl()) {
+    return null;
+  }
+
+  await ensureSchema();
+  const result = await getPool().query<BillingPlanRow>(
+    `
+    select id, code, name, billing_interval, amount_cents, currency, trial_days, is_active
+    from billing_plans
+    where id = $1
+    limit 1
+    `,
+    [planId],
+  );
+
+  return result.rows[0] ? mapBillingPlanRow(result.rows[0]) : null;
+}
+
 export async function listBillingUserRoles(userId: string): Promise<AppRole[]> {
   if (!hasDatabaseUrl()) {
     return [];
@@ -508,21 +699,21 @@ export async function bootstrapBillingOwner(userId: string, email: string): Prom
 
   await ensureSchema();
 
-  const bootstrapOwnerEmail = process.env.BOOTSTRAP_OWNER_EMAIL?.trim();
-  if (!bootstrapOwnerEmail || normalizeEmail(email) !== normalizeEmail(bootstrapOwnerEmail)) {
+  const bootstrapRoles = getBootstrapRolesForEmail(email);
+  if (bootstrapRoles.length === 0) {
     return listBillingUserRoles(userId);
   }
 
   const insertResult = await getPool().query(
     `
     insert into billing_user_roles (user_id, role_id, granted_by)
-    select $1, id, $2
+    select $1, id, $3
     from billing_roles
-    where code = 'owner'
+    where code = any($2::text[])
     on conflict (user_id, role_id) do nothing
-    returning user_id
+    returning role_id
     `,
-    [userId, "system:bootstrap"],
+    [userId, bootstrapRoles, "system:bootstrap"],
   );
 
   if (insertResult.rows.length > 0) {
@@ -532,7 +723,7 @@ export async function bootstrapBillingOwner(userId: string, email: string): Prom
       "billing.owner_bootstrap",
       "user",
       userId,
-      { email },
+      { email, rolesGranted: bootstrapRoles },
     );
   }
 
@@ -760,6 +951,273 @@ export async function recordBillingEventIfNew(
     inserted: false,
     record: mapBillingEventRow(existingResult.rows[0]),
   };
+}
+
+export async function updateBillingEventProcessingStatus(
+  eventId: string,
+  processingStatus: string,
+  processedAt: string | null = new Date().toISOString(),
+): Promise<BillingEventRecord | null> {
+  requireDatabaseUrl();
+  await ensureSchema();
+
+  const result = await getPool().query<BillingEventRow>(
+    `
+    update billing_events
+    set
+      processing_status = $2,
+      processed_at = $3
+    where id = $1
+    returning id, provider, provider_event_id, event_type, signature_verified, processing_status, idempotency_key, processed_at
+    `,
+    [eventId, processingStatus, processedAt],
+  );
+
+  return result.rows[0] ? mapBillingEventRow(result.rows[0]) : null;
+}
+
+export async function createBillingCheckoutSession(
+  input: CreateBillingCheckoutSessionInput,
+): Promise<BillingCheckoutSessionRecord> {
+  requireDatabaseUrl();
+  await ensureSchema();
+
+  const result = await getPool().query<BillingCheckoutSessionRow>(
+    `
+    insert into billing_checkout_sessions (
+      id,
+      user_id,
+      plan_id,
+      expected_amount_cents,
+      currency,
+      nonce,
+      status,
+      expires_at
+    )
+    values ($1, $2, $3, $4, $5, $6, $7, $8)
+    returning
+      id,
+      user_id,
+      plan_id,
+      expected_amount_cents,
+      currency,
+      nonce,
+      provider_checkout_id,
+      provider_checkout_url,
+      status,
+      expires_at,
+      created_at::text
+    `,
+    [
+      input.id,
+      input.userId,
+      input.planId,
+      input.expectedAmountCents,
+      input.currency,
+      input.nonce,
+      input.status,
+      input.expiresAt,
+    ],
+  );
+
+  return mapBillingCheckoutSessionRow(result.rows[0]);
+}
+
+export async function getBillingCheckoutSessionById(
+  sessionId: string,
+): Promise<BillingCheckoutSessionRecord | null> {
+  requireDatabaseUrl();
+  await ensureSchema();
+
+  const result = await getPool().query<BillingCheckoutSessionRow>(
+    `
+    select
+      id,
+      user_id,
+      plan_id,
+      expected_amount_cents,
+      currency,
+      nonce,
+      provider_checkout_id,
+      provider_checkout_url,
+      status,
+      expires_at,
+      created_at::text
+    from billing_checkout_sessions
+    where id = $1
+    limit 1
+    `,
+    [sessionId],
+  );
+
+  return result.rows[0] ? mapBillingCheckoutSessionRow(result.rows[0]) : null;
+}
+
+export async function updateBillingCheckoutSession(
+  input: UpdateBillingCheckoutSessionInput,
+): Promise<BillingCheckoutSessionRecord | null> {
+  requireDatabaseUrl();
+  await ensureSchema();
+
+  const result = await getPool().query<BillingCheckoutSessionRow>(
+    `
+    update billing_checkout_sessions
+    set
+      status = $2,
+      provider_checkout_id = coalesce($3, provider_checkout_id),
+      provider_checkout_url = coalesce($4, provider_checkout_url)
+    where id = $1
+    returning
+      id,
+      user_id,
+      plan_id,
+      expected_amount_cents,
+      currency,
+      nonce,
+      provider_checkout_id,
+      provider_checkout_url,
+      status,
+      expires_at,
+      created_at::text
+    `,
+    [
+      input.sessionId,
+      input.status,
+      input.providerCheckoutId ?? null,
+      input.providerCheckoutUrl ?? null,
+    ],
+  );
+
+  return result.rows[0] ? mapBillingCheckoutSessionRow(result.rows[0]) : null;
+}
+
+export async function upsertBillingPayment(
+  input: UpsertBillingPaymentInput,
+): Promise<BillingPaymentRecord> {
+  requireDatabaseUrl();
+  await ensureSchema();
+
+  const result = await getPool().query<BillingPaymentRow>(
+    `
+    insert into billing_payments (
+      id,
+      user_id,
+      subscription_id,
+      provider,
+      provider_payment_id,
+      provider_status,
+      internal_status,
+      amount_cents,
+      currency,
+      paid_at,
+      raw_reference_id
+    )
+    values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    on conflict (provider, provider_payment_id) do update set
+      user_id = excluded.user_id,
+      subscription_id = excluded.subscription_id,
+      provider_status = excluded.provider_status,
+      internal_status = excluded.internal_status,
+      amount_cents = excluded.amount_cents,
+      currency = excluded.currency,
+      paid_at = excluded.paid_at,
+      raw_reference_id = excluded.raw_reference_id
+    returning
+      id,
+      user_id,
+      subscription_id,
+      provider,
+      provider_payment_id,
+      provider_status,
+      internal_status,
+      amount_cents,
+      currency,
+      paid_at,
+      raw_reference_id
+    `,
+    [
+      input.id,
+      input.userId,
+      input.subscriptionId ?? null,
+      input.provider,
+      input.providerPaymentId,
+      input.providerStatus,
+      input.internalStatus,
+      input.amountCents,
+      input.currency,
+      input.paidAt ?? null,
+      input.rawReferenceId ?? null,
+    ],
+  );
+
+  return mapBillingPaymentRow(result.rows[0]);
+}
+
+export async function upsertBillingSubscription(
+  input: UpsertBillingSubscriptionInput,
+): Promise<ReturnType<typeof mapBillingSubscriptionRow>> {
+  requireDatabaseUrl();
+  await ensureSchema();
+
+  const result = await getPool().query<BillingSubscriptionRow>(
+    `
+    insert into billing_subscriptions (
+      id,
+      user_id,
+      plan_id,
+      provider_subscription_id,
+      status,
+      trial_ends_at,
+      current_period_start,
+      current_period_end,
+      cancel_at_period_end,
+      canceled_at,
+      grace_period_ends_at
+    )
+    values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    on conflict (provider_subscription_id) do update set
+      user_id = excluded.user_id,
+      plan_id = excluded.plan_id,
+      status = excluded.status,
+      trial_ends_at = excluded.trial_ends_at,
+      current_period_start = excluded.current_period_start,
+      current_period_end = excluded.current_period_end,
+      cancel_at_period_end = excluded.cancel_at_period_end,
+      canceled_at = excluded.canceled_at,
+      grace_period_ends_at = excluded.grace_period_ends_at,
+      updated_at = now()
+    returning
+      id,
+      user_id,
+      billing_customer_id,
+      plan_id,
+      provider_subscription_id,
+      status,
+      trial_ends_at,
+      current_period_start,
+      current_period_end,
+      cancel_at_period_end,
+      canceled_at,
+      grace_period_ends_at,
+      created_at::text,
+      updated_at::text
+    `,
+    [
+      input.id,
+      input.userId,
+      input.planId ?? null,
+      input.providerSubscriptionId ?? null,
+      input.status,
+      input.trialEndsAt ?? null,
+      input.currentPeriodStart ?? null,
+      input.currentPeriodEnd ?? null,
+      input.cancelAtPeriodEnd ?? false,
+      input.canceledAt ?? null,
+      input.gracePeriodEndsAt ?? null,
+    ],
+  );
+
+  return mapBillingSubscriptionRow(result.rows[0]);
 }
 
 export async function getBillingAccessSnapshot(
