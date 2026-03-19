@@ -14,7 +14,6 @@ jest.mock("@/modules/billing/repositories/billing-store", () => ({
 
 jest.mock("@/modules/billing/config/mercado-pago", () => ({
   isMercadoPagoConfigured: jest.fn(),
-  resolveMercadoPagoCheckoutPayerEmail: jest.fn(),
   resolveBillingAppBaseUrl: jest.fn(),
 }));
 
@@ -22,11 +21,14 @@ jest.mock("@/modules/billing/providers/mercado-pago", () => ({
   createMercadoPagoPreapproval: jest.fn(),
 }));
 
+jest.mock("@/modules/billing/services/mercado-pago-checkout", () => ({
+  resolveMercadoPagoCheckoutPayerEmail: jest.fn(),
+}));
+
 import { POST } from "@/app/api/billing/checkout/route";
 import { verifyFirebaseIdToken } from "@/lib/firebase-admin";
 import {
   isMercadoPagoConfigured,
-  resolveMercadoPagoCheckoutPayerEmail,
   resolveBillingAppBaseUrl,
 } from "@/modules/billing/config/mercado-pago";
 import { createMercadoPagoPreapproval } from "@/modules/billing/providers/mercado-pago";
@@ -37,6 +39,7 @@ import {
   updateBillingCheckoutSession,
   upsertBillingSubscription,
 } from "@/modules/billing/repositories/billing-store";
+import { resolveMercadoPagoCheckoutPayerEmail } from "@/modules/billing/services/mercado-pago-checkout";
 
 const verifyFirebaseIdTokenMock = jest.mocked(verifyFirebaseIdToken);
 const isMercadoPagoConfiguredMock = jest.mocked(isMercadoPagoConfigured);
@@ -61,7 +64,7 @@ describe("POST /api/billing/checkout", () => {
       email: "user@example.com",
     } as never);
     isMercadoPagoConfiguredMock.mockReturnValue(true);
-    resolveMercadoPagoCheckoutPayerEmailMock.mockReturnValue("test_user_123456@testuser.com");
+    resolveMercadoPagoCheckoutPayerEmailMock.mockResolvedValue("test_user_123456@testuser.com");
     resolveBillingAppBaseUrlMock.mockReturnValue("http://localhost");
     getBillingStorageResponseMock.mockReturnValue("database");
     getBillingPlanMock.mockResolvedValue({
@@ -259,7 +262,7 @@ describe("POST /api/billing/checkout", () => {
   });
 
   it("returns 503 when sandbox checkout lacks a test buyer email", async () => {
-    resolveMercadoPagoCheckoutPayerEmailMock.mockImplementation(() => {
+    resolveMercadoPagoCheckoutPayerEmailMock.mockImplementation(async () => {
       throw new Error("MERCADO_PAGO_TEST_PAYER_EMAIL_REQUIRED");
     });
 
@@ -305,6 +308,34 @@ describe("POST /api/billing/checkout", () => {
     expect(updateBillingCheckoutSessionMock).toHaveBeenCalledWith({
       sessionId: "checkout-id",
       status: "cancelled",
+    });
+  });
+
+  it("returns a sandbox-specific error when Mercado Pago rejects mixed real and test actors", async () => {
+    createMercadoPagoPreapprovalMock.mockRejectedValue(
+      new Error(
+        'MERCADO_PAGO_PREAPPROVAL_FAILED:400:{"message":"Both payer and collector must be real or test users","status":400}',
+      ),
+    );
+
+    const response = await POST(
+      new Request("http://localhost/api/billing/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: "mt_session=session-token",
+        },
+        body: JSON.stringify({ planCode: "pro_monthly" }),
+      }),
+    );
+
+    expect(response.status).toBe(503);
+    expect(updateBillingCheckoutSessionMock).toHaveBeenCalledWith({
+      sessionId: "checkout-id",
+      status: "cancelled",
+    });
+    await expect(response.json()).resolves.toEqual({
+      error: "Mercado Pago sandbox mismatch: token e comprador precisam ser ambos de teste",
     });
   });
 });

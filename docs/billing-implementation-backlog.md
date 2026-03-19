@@ -263,6 +263,8 @@ Implement paid access for MounTrack with:
 
 - `POST /api/billing/checkout` creates and persists an internal checkout session bound to the authenticated user, plan, amount, currency, nonce, and expiration.
 - When `MERCADO_PAGO_ACCESS_TOKEN` is configured, the route creates a real Mercado Pago recurring `preapproval` checkout, persists `provider_checkout_id` and `provider_checkout_url`, and returns the redirect URL to the client.
+- Mercado Pago sandbox for recurring `preapproval` is stricter than one-off payment tests: collector and payer must both be test actors or both be real actors. Mixing a `TEST-...` buyer flow with a collector/token that Mercado Pago does not recognize as a matching test actor returns `400 Both payer and collector must be real or test users`.
+- The collector test check now uses `GET /users/me` so sandbox can also work with `APP_USR-...` credentials that belong to a seller test account created inside Mercado Pago Developers.
 - `POST /api/billing/webhooks/mercado-pago` now ingests webhook events, verifies the Mercado Pago signature when `MERCADO_PAGO_WEBHOOK_SECRET` is configured, and stores events idempotently in `billing_events`.
 - Payment webhook reconciliation now fetches the provider payment, validates `amount + currency + external_reference`, stores `billing_payments`, updates `billing_subscriptions` and `billing_checkout_sessions`, and grants or blocks entitlements accordingly.
 - Subscription lifecycle notifications beyond payment events remain the next increment for this workstream.

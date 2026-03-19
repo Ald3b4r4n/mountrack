@@ -2,6 +2,7 @@
 
 import {
   createMercadoPagoPreapproval,
+  fetchMercadoPagoCollectorProfile,
   fetchMercadoPagoPayment,
 } from "@/modules/billing/providers/mercado-pago";
 
@@ -122,6 +123,38 @@ describe("mercado-pago provider", () => {
       "https://api.mercadopago.com/v1/payments/777",
       expect.objectContaining({
         method: "GET",
+      }),
+    );
+  });
+
+  it("classifies a collector profile as a test user when Mercado Pago returns a TESTUSER nickname", async () => {
+    process.env.MERCADO_PAGO_ACCESS_TOKEN = "APP_USR-test-seller";
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        email: "test_user_999@testuser.com",
+        nickname: "TESTUSER999",
+      }),
+    } as Response);
+
+    const collector = await fetchMercadoPagoCollectorProfile();
+
+    expect(collector).toEqual({
+      email: "test_user_999@testuser.com",
+      nickname: "TESTUSER999",
+      isTestUser: true,
+      rawPayload: expect.objectContaining({
+        email: "test_user_999@testuser.com",
+        nickname: "TESTUSER999",
+      }),
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.mercadopago.com/users/me",
+      expect.objectContaining({
+        method: "GET",
+        headers: expect.objectContaining({
+          Authorization: "Bearer APP_USR-test-seller",
+        }),
       }),
     );
   });

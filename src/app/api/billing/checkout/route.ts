@@ -8,7 +8,6 @@ import {
 import { APP_SESSION_COOKIE_NAME } from "@/modules/billing/auth/session-cookie";
 import {
   isMercadoPagoConfigured,
-  resolveMercadoPagoCheckoutPayerEmail,
   resolveBillingAppBaseUrl,
 } from "@/modules/billing/config/mercado-pago";
 import { createMercadoPagoPreapproval } from "@/modules/billing/providers/mercado-pago";
@@ -19,6 +18,7 @@ import {
   updateBillingCheckoutSession,
   upsertBillingSubscription,
 } from "@/modules/billing/repositories/billing-store";
+import { resolveMercadoPagoCheckoutPayerEmail } from "@/modules/billing/services/mercado-pago-checkout";
 
 export const runtime = "nodejs";
 
@@ -46,6 +46,10 @@ function readSessionToken(request: Request): string | null {
 
 function createJsonError(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
+}
+
+function isMercadoPagoSandboxCollectorMismatch(error: Error): boolean {
+  return error.message.includes("Both payer and collector must be real or test users");
 }
 
 export async function POST(request: Request) {
@@ -99,7 +103,7 @@ export async function POST(request: Request) {
       planName: plan.name,
       amountCents: plan.amountCents,
       currency: plan.currency,
-      payerEmail: resolveMercadoPagoCheckoutPayerEmail(
+      payerEmail: await resolveMercadoPagoCheckoutPayerEmail(
         typeof decodedToken.email === "string" ? decodedToken.email : undefined,
       ),
       appBaseUrl: resolveBillingAppBaseUrl(request.url),
@@ -154,6 +158,13 @@ export async function POST(request: Request) {
 
     if (error instanceof Error && error.message === "MERCADO_PAGO_TEST_PAYER_EMAIL_REQUIRED") {
       return createJsonError("Mercado Pago test buyer email missing", 503);
+    }
+
+    if (error instanceof Error && isMercadoPagoSandboxCollectorMismatch(error)) {
+      return createJsonError(
+        "Mercado Pago sandbox mismatch: token e comprador precisam ser ambos de teste",
+        503,
+      );
     }
 
     if (error instanceof Error && error.message.startsWith("MERCADO_PAGO_")) {
