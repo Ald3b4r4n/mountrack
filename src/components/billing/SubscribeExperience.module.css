@@ -1,0 +1,542 @@
+.shell {
+  width: min(100%, 980px);
+  margin: 0 auto;
+  display: grid;
+  gap: 1rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: fit-content;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.18);
+  color: var(--accent-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.eyebrow::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 0 0.35rem rgba(52, 211, 153, 0.12);
+}
+
+.priceTag {
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  background: rgba(10, 18, 34, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: right;
+}
+
+.priceLabel {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.priceValue {
+  display: block;
+  margin-top: 0.2rem;
+  font-family: "Outfit", sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.stepButton {
+  background: rgba(10, 18, 34, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 1rem;
+  padding: 0.95rem 1rem;
+  color: var(--text-secondary);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) ease,
+    background-color var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
+}
+
+.stepButton:hover,
+.stepButton:focus-visible {
+  outline: none;
+  border-color: rgba(52, 211, 153, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+  transform: translateY(-1px);
+}
+
+.stepButtonActive {
+  border-color: rgba(52, 211, 153, 0.24);
+  background: rgba(52, 211, 153, 0.09);
+  color: var(--text-primary);
+}
+
+.stepIndex {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 999px;
+  margin-bottom: 0.55rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font-family: "Outfit", sans-serif;
+  font-weight: 700;
+}
+
+.stepButtonActive .stepIndex {
+  background: rgba(52, 211, 153, 0.16);
+  color: var(--accent-primary);
+}
+
+.stepTitle {
+  display: block;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.stepCopy {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.frame {
+  overflow: hidden;
+  border-radius: 1.9rem;
+  scroll-margin-top: 1rem;
+}
+
+.track {
+  display: flex;
+  width: 100%;
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.slide {
+  flex: 0 0 100%;
+}
+
+.slideCard {
+  min-height: 680px;
+  padding: clamp(1.35rem, 3vw, 2.5rem);
+  display: grid;
+  gap: 1.4rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.slideCard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at top left, rgba(6, 182, 212, 0.12), transparent 38%),
+    radial-gradient(circle at 82% 18%, rgba(52, 211, 153, 0.12), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 45%);
+  pointer-events: none;
+}
+
+.slideCard > * {
+  position: relative;
+  z-index: 1;
+}
+
+.slideHead {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.slideKicker {
+  color: var(--accent-secondary);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.slideTitle {
+  max-width: 12ch;
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 0.94;
+  letter-spacing: -0.05em;
+}
+
+.slideText {
+  max-width: 58ch;
+  color: var(--text-secondary);
+  line-height: 1.75;
+  font-size: 1rem;
+}
+
+.highlight {
+  color: var(--accent-primary);
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.metricCard {
+  padding: 1rem;
+  border-radius: 1.2rem;
+  background: rgba(10, 18, 34, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.metricLabel {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.metricValue {
+  display: block;
+  margin-top: 0.35rem;
+  font-family: "Outfit", sans-serif;
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.metricHelper {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.panelGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr);
+  gap: 1rem;
+}
+
+.infoPanel,
+.sidePanel,
+.checkoutPanel {
+  padding: 1.15rem;
+  border-radius: 1.25rem;
+  background: rgba(10, 18, 34, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.infoPanel h2,
+.sidePanel h2,
+.checkoutPanel h2 {
+  font-size: 1.4rem;
+  line-height: 1.05;
+}
+
+.infoPanel p,
+.sidePanel p,
+.checkoutPanel p {
+  margin-top: 0.65rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.list {
+  list-style: none;
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.listItem {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.listDot,
+.timelineNumber {
+  flex-shrink: 0;
+}
+
+.listDot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 999px;
+  margin-top: 0.35rem;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  box-shadow: 0 0 0 0.3rem rgba(52, 211, 153, 0.1);
+}
+
+.listTitle {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.listText {
+  margin-top: 0.2rem;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.timeline {
+  list-style: none;
+  display: grid;
+  gap: 0.95rem;
+}
+
+.timelineItem {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.8rem;
+  align-items: start;
+}
+
+.timelineNumber {
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(52, 211, 153, 0.14);
+  border: 1px solid rgba(52, 211, 153, 0.18);
+  color: var(--accent-primary);
+  font-family: "Outfit", sans-serif;
+  font-weight: 700;
+}
+
+.timelineTitle {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.timelineText {
+  margin-top: 0.2rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  font-size: 0.88rem;
+}
+
+.noteBand {
+  padding: 1rem 1.1rem;
+  border-radius: 1rem;
+  background: rgba(6, 182, 212, 0.08);
+  border: 1px solid rgba(6, 182, 212, 0.14);
+  color: var(--text-secondary);
+  line-height: 1.65;
+  font-size: 0.9rem;
+}
+
+.checkoutSummary {
+  list-style: none;
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.checkoutSummary li {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  font-size: 0.9rem;
+}
+
+.checkoutSummary li::before {
+  content: "";
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-top: 0.42rem;
+  border-radius: 999px;
+  background: var(--accent-primary);
+  box-shadow: 0 0 0 0.25rem rgba(52, 211, 153, 0.1);
+  flex-shrink: 0;
+}
+
+.utilityRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
+}
+
+.textLink {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: color var(--duration-fast) ease;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.textLink:hover,
+.textLink:focus-visible {
+  outline: none;
+  color: var(--accent-primary);
+}
+
+.controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.controlLeft,
+.controlRight {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.actionButton,
+.ghostButton {
+  min-height: 3.1rem;
+  padding: 0.85rem 1.2rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition:
+    transform var(--duration-fast) ease,
+    border-color var(--duration-fast) ease,
+    background-color var(--duration-fast) ease;
+}
+
+.actionButton {
+  border: 0;
+  background: linear-gradient(135deg, var(--accent-primary) 0%, #0f9f78 100%);
+  color: #fff;
+  box-shadow: 0 10px 28px rgba(52, 211, 153, 0.22);
+}
+
+.ghostButton {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 18, 34, 0.55);
+  color: var(--text-secondary);
+}
+
+.actionButton:hover,
+.ghostButton:hover,
+.actionButton:focus-visible,
+.ghostButton:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.progressText {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+@media (max-width: 900px) {
+  .metrics,
+  .panelGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .stepButton {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 0.4rem;
+    min-width: 0;
+    padding: 0.8rem 0.75rem;
+  }
+
+  .stepIndex {
+    margin-bottom: 0.1rem;
+  }
+
+  .stepCopy {
+    display: none;
+  }
+
+  .stepTitle {
+    font-size: 0.84rem;
+    line-height: 1.2;
+    word-break: break-word;
+  }
+
+  .slideCard {
+    min-height: auto;
+  }
+
+  .slideTitle {
+    max-width: 14ch;
+  }
+}
+
+@media (max-width: 640px) {
+  .header,
+  .controls,
+  .controlLeft,
+  .controlRight {
+    align-items: stretch;
+  }
+
+  .header,
+  .controls {
+    flex-direction: column;
+  }
+
+  .priceTag,
+  .actionButton,
+  .ghostButton {
+    width: 100%;
+    text-align: center;
+  }
+
+  .stepButton {
+    padding: 0.72rem 0.65rem;
+  }
+
+  .slideTitle {
+    font-size: 1.85rem;
+    max-width: none;
+  }
+}

@@ -1,42 +1,46 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FatSecretAttribution } from "@/components/FatSecretAttribution";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
+import { sanitizeNextPath } from "@/modules/billing/auth/login-navigation";
 
-/**
- * Página de login com identidade visual do produto e entrada com Google.
- */
-export default function Login() {
+function LoginLoadingState() {
+  return (
+    <main
+      className="container"
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+      }}
+    >
+      <div
+        className="skeleton-pulse"
+        style={{ width: "400px", height: "350px" }}
+      ></div>
+    </main>
+  );
+}
+
+function LoginContent() {
   const { user, loading, sessionReady, signInWithGoogle } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = sanitizeNextPath(searchParams.get("next"));
 
   useEffect(() => {
     if (!loading && sessionReady && user) {
-      router.push("/");
+      router.push(nextPath);
     }
-  }, [user, loading, sessionReady, router]);
+  }, [user, loading, sessionReady, nextPath, router]);
 
   if (loading) {
-    return (
-      <main
-        className="container"
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "100vh",
-        }}
-      >
-        <div
-          className="skeleton-pulse"
-          style={{ width: "400px", height: "350px" }}
-        ></div>
-      </main>
-    );
+    return <LoginLoadingState />;
   }
 
   return (
@@ -110,7 +114,7 @@ export default function Login() {
         >
           Acompanhe sua jornada com
           <br />
-          segurança e privacidade.
+          seguranca e privacidade.
         </p>
 
         <button
@@ -163,8 +167,8 @@ export default function Login() {
             lineHeight: "1.5",
           }}
         >
-          Seus registros ficam vinculados à sua conta
-          <br />e protegidos pela autenticação.
+          Seus registros ficam vinculados a sua conta
+          <br />e protegidos pela autenticacao.
         </p>
 
         <div
@@ -179,5 +183,13 @@ export default function Login() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function Login() {
+  return (
+    <Suspense fallback={<LoginLoadingState />}>
+      <LoginContent />
+    </Suspense>
   );
 }

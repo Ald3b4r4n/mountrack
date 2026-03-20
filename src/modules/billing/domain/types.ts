@@ -147,6 +147,8 @@ export interface BillingEventRecord {
 
 export interface BillingAccessSnapshot {
   entitlementStatus: BillingAccessStatus | null;
+  entitlementStartsAt: string | null;
+  entitlementEndsAt: string | null;
   manualGrant: ManualAccessGrantSnapshot | null;
   roles: AppRole[];
 }

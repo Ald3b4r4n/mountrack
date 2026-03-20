@@ -24,6 +24,8 @@ describe("GET /api/billing/access", () => {
       authenticated: false,
       accessAllowed: false,
       effectiveStatus: "missing",
+      entitlementStartsAt: null,
+      entitlementEndsAt: null,
       roles: [],
     });
   });
@@ -37,6 +39,8 @@ describe("GET /api/billing/access", () => {
       roles: ["user"],
       accessAllowed: false,
       effectiveStatus: "past_due",
+      entitlementStartsAt: null,
+      entitlementEndsAt: null,
     });
 
     const response = await GET();
@@ -46,6 +50,8 @@ describe("GET /api/billing/access", () => {
       authenticated: true,
       accessAllowed: false,
       effectiveStatus: "past_due",
+      entitlementStartsAt: null,
+      entitlementEndsAt: null,
       roles: ["user"],
     });
   });
@@ -59,6 +65,8 @@ describe("GET /api/billing/access", () => {
       roles: ["user"],
       accessAllowed: true,
       effectiveStatus: "active",
+      entitlementStartsAt: "2026-03-20T12:00:00.000Z",
+      entitlementEndsAt: "2026-04-20T12:00:00.000Z",
     });
 
     const response = await GET();
@@ -68,6 +76,8 @@ describe("GET /api/billing/access", () => {
       authenticated: true,
       accessAllowed: true,
       effectiveStatus: "active",
+      entitlementStartsAt: "2026-03-20T12:00:00.000Z",
+      entitlementEndsAt: "2026-04-20T12:00:00.000Z",
       roles: ["user"],
     });
   });

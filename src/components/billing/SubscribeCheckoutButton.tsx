@@ -4,6 +4,7 @@ import { loadMercadoPago } from "@mercadopago/sdk-js";
 import type { FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { buildLoginNavigationUrl } from "@/modules/billing/auth/login-navigation";
 import styles from "./SubscribeCheckoutButton.module.css";
 
 interface SubscribeCheckoutButtonProps {
@@ -59,23 +60,52 @@ type MercadoPagoWindow = Window & {
 
 function resolveSuccessMessage(status?: string): string {
   if (status === "authorized") {
-    return "Assinatura autorizada. Aguarde a confirmacao segura do primeiro pagamento.";
+    return "Assinatura autorizada. Aguarde a confirmacao do primeiro pagamento.";
   }
 
   if (status === "pending" || status === "in_process") {
-    return "Assinatura criada. Aguarde a confirmacao do Mercado Pago para liberar o acesso.";
+    return "Assinatura criada. Aguarde a confirmacao do pagamento para liberar o acesso.";
   }
 
-  return "Checkout preparado. Se a confirmacao nao chegar em instantes, tente novamente.";
+  return "Pedido criado. Se a confirmacao nao chegar em instantes, tente novamente.";
 }
 
-function resolveCardholderEmail(userEmail?: string | null, sandboxPayerEmail?: string | null): string {
+function resolveCardholderEmail(
+  userEmail?: string | null,
+  sandboxPayerEmail?: string | null,
+): string {
   const sandboxEmail = sandboxPayerEmail?.trim() ?? "";
   if (sandboxEmail) {
     return sandboxEmail;
   }
 
   return userEmail?.trim() ?? "";
+}
+
+function resolveDisplayError(errorMessage?: string | null): string {
+  const normalized = errorMessage?.trim().toLowerCase() ?? "";
+
+  if (!normalized) {
+    return "Nao foi possivel iniciar o pagamento agora. Tente novamente em instantes.";
+  }
+
+  if (normalized.includes("missing authenticated session")) {
+    return "Sua sessao expirou. Faca login novamente para continuar.";
+  }
+
+  if (normalized.includes("test buyer email missing")) {
+    return "O pagamento nao esta disponivel agora. Tente novamente em instantes.";
+  }
+
+  if (normalized.includes("public key")) {
+    return "O pagamento por cartao ainda nao esta disponivel no momento.";
+  }
+
+  if (normalized.includes("service unavailable")) {
+    return "O checkout nao esta disponivel agora. Tente novamente em instantes.";
+  }
+
+  return "Nao foi possivel iniciar o pagamento agora. Tente novamente em instantes.";
 }
 
 export function SubscribeCheckoutButton({
@@ -94,8 +124,21 @@ export function SubscribeCheckoutButton({
   const [sdkError, setSdkError] = useState<string | null>(null);
   const cardFormRef = useRef<MercadoPagoCardFormInstance | null>(null);
   const requiresLogin = !loading && !user;
-  const payerEmail = resolveCardholderEmail(typeof user?.email === "string" ? user.email : null, sandboxPayerEmail);
+  const payerEmail = resolveCardholderEmail(
+    typeof user?.email === "string" ? user.email : null,
+    sandboxPayerEmail,
+  );
   const formPrefix = "subscribe-checkout";
+
+  function navigateToLogin() {
+    if (typeof window === "undefined") {
+      navigate("/login");
+      return;
+    }
+
+    const nextPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    navigate(buildLoginNavigationUrl(window.location, nextPath));
+  }
 
   async function requestCheckout(cardTokenId?: string): Promise<void> {
     const response = await fetch("/api/billing/checkout", {
@@ -109,9 +152,11 @@ export function SubscribeCheckoutButton({
       }),
     });
 
-    const data = (await response.json().catch(() => null)) as CheckoutResponse | null;
+    const data = (await response.json().catch(() => null)) as
+      | CheckoutResponse
+      | null;
     if (!response.ok) {
-      setError(data?.error ?? "Nao foi possivel preparar o checkout agora.");
+      setError(resolveDisplayError(data?.error));
       return;
     }
 
@@ -128,7 +173,7 @@ export function SubscribeCheckoutButton({
     setMessage(null);
 
     if (!user) {
-      navigate("/login");
+      navigateToLogin();
       return;
     }
 
@@ -142,8 +187,13 @@ export function SubscribeCheckoutButton({
     try {
       await requestCheckout();
     } catch (requestError) {
-      console.error("Failed to create hosted billing checkout session", requestError);
-      setError("Nao foi possivel preparar o checkout agora.");
+      console.error(
+        "Failed to create hosted billing checkout session",
+        requestError,
+      );
+      setError(
+        "Nao foi possivel iniciar o pagamento agora. Tente novamente em instantes.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -155,13 +205,15 @@ export function SubscribeCheckoutButton({
     setMessage(null);
 
     if (!cardFormRef.current) {
-      setError("O formulario seguro ainda nao terminou de carregar. Tente novamente em alguns segundos.");
+      setError(
+        "O formulario de pagamento ainda esta carregando. Tente novamente em alguns segundos.",
+      );
       return;
     }
 
     const cardTokenId = cardFormRef.current.getCardFormData().token?.trim();
     if (!cardTokenId) {
-      setError("Nao foi possivel tokenizar o cartao. Revise os dados e tente novamente.");
+      setError("Revise os dados do cartao e tente novamente.");
       return;
     }
 
@@ -170,7 +222,10 @@ export function SubscribeCheckoutButton({
     try {
       await requestCheckout(cardTokenId);
     } catch (requestError) {
-      console.error("Failed to create direct billing checkout session", requestError);
+      console.error(
+        "Failed to create direct billing checkout session",
+        requestError,
+      );
       setError("Nao foi possivel autorizar a assinatura agora.");
     } finally {
       setIsSubmitting(false);
@@ -188,16 +243,14 @@ export function SubscribeCheckoutButton({
     if (!mercadoPagoPublicKey.trim()) {
       cardFormRef.current = null;
       setIsDirectFormReady(false);
-      setSdkError(
-        "Checkout direto indisponivel: configure NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY para liberar o formulario seguro.",
-      );
+      setSdkError("O pagamento por cartao ainda nao esta disponivel no momento.");
       return;
     }
 
     if (!payerEmail) {
       cardFormRef.current = null;
       setIsDirectFormReady(false);
-      setSdkError("Nao foi possivel determinar o email do pagador para tokenizar o cartao.");
+      setSdkError("Nao foi possivel preparar o pagamento agora.");
       return;
     }
 
@@ -270,8 +323,11 @@ export function SubscribeCheckoutButton({
               }
 
               if (mountError) {
-                console.error("Failed to mount Mercado Pago card form", mountError);
-                setSdkError("Nao foi possivel carregar o formulario seguro do Mercado Pago.");
+                console.error(
+                  "Failed to mount Mercado Pago card form",
+                  mountError,
+                );
+                setSdkError("Nao foi possivel carregar o formulario de pagamento.");
                 setIsFormLoading(false);
                 return;
               }
@@ -298,12 +354,15 @@ export function SubscribeCheckoutButton({
           },
         });
       } catch (mountError) {
-        console.error("Failed to bootstrap Mercado Pago card form", mountError);
+        console.error(
+          "Failed to bootstrap Mercado Pago card form",
+          mountError,
+        );
         if (!isMounted) {
           return;
         }
 
-        setSdkError("Nao foi possivel iniciar o formulario seguro do Mercado Pago.");
+        setSdkError("Nao foi possivel iniciar o formulario de pagamento.");
         setIsFormLoading(false);
       }
     })();
@@ -315,7 +374,14 @@ export function SubscribeCheckoutButton({
         cardFormInstance.unmount();
       }
     };
-  }, [amountCents, formPrefix, mercadoPagoPublicKey, payerEmail, sessionReady, user]);
+  }, [
+    amountCents,
+    formPrefix,
+    mercadoPagoPublicKey,
+    payerEmail,
+    sessionReady,
+    user,
+  ]);
 
   if (requiresLogin) {
     return (
@@ -323,18 +389,22 @@ export function SubscribeCheckoutButton({
         <button
           type="button"
           className={`btn-primary ${styles.loginButton}`}
-          onClick={() => navigate("/login")}
+          onClick={navigateToLogin}
           disabled={loading}
         >
           Entrar para pagar
         </button>
 
-        <p className={styles.guestCopy}>Faca login com sua conta para abrir o checkout do Mercado Pago.</p>
+        <p className={styles.guestCopy}>
+          Entre com sua conta para concluir a assinatura.
+        </p>
       </div>
     );
   }
 
-  const canUseDirectCheckout = Boolean(mercadoPagoPublicKey.trim() && payerEmail && !sdkError);
+  const canUseDirectCheckout = Boolean(
+    mercadoPagoPublicKey.trim() && payerEmail && !sdkError,
+  );
   const directButtonLabel = isSubmitting
     ? "Autorizando assinatura..."
     : isFormLoading
@@ -344,27 +414,49 @@ export function SubscribeCheckoutButton({
   return (
     <div className={styles.root}>
       {canUseDirectCheckout ? (
-        <form id={`${formPrefix}__form`} onSubmit={handleDirectCheckout} className={styles.form}>
+        <form
+          id={`${formPrefix}__form`}
+          onSubmit={handleDirectCheckout}
+          className={styles.form}
+        >
           <div className={styles.fieldGroup}>
-            <label htmlFor={`${formPrefix}__card-number`} className={styles.label}>
+            <label
+              htmlFor={`${formPrefix}__card-number`}
+              className={styles.label}
+            >
               Numero do cartao
             </label>
-            <div id={`${formPrefix}__card-number`} className={styles.secureMount} />
+            <div
+              id={`${formPrefix}__card-number`}
+              className={styles.secureMount}
+            />
           </div>
 
           <div className={styles.fieldRowTwo}>
             <div className={styles.fieldGroup}>
-              <label htmlFor={`${formPrefix}__expiration-date`} className={styles.label}>
+              <label
+                htmlFor={`${formPrefix}__expiration-date`}
+                className={styles.label}
+              >
                 Validade
               </label>
-              <div id={`${formPrefix}__expiration-date`} className={styles.secureMount} />
+              <div
+                id={`${formPrefix}__expiration-date`}
+                className={styles.secureMount}
+              />
             </div>
 
             <div className={styles.fieldGroup}>
-              <label htmlFor={`${formPrefix}__security-code`} className={styles.label}>
+              <label
+                htmlFor={`${formPrefix}__security-code`}
+                className={styles.label}
+              >
                 Codigo de seguranca
               </label>
-              <div id={`${formPrefix}__security-code`} className={styles.secureMount} />
+              <div
+                id={`${formPrefix}__security-code`}
+                className={styles.secureMount}
+              />
             </div>
           </div>
 
@@ -440,7 +532,12 @@ export function SubscribeCheckoutButton({
           <button
             type="submit"
             className={`btn-primary ${styles.submitButton}`}
-            disabled={!sessionReady || !isDirectFormReady || isSubmitting || isFormLoading}
+            disabled={
+              !sessionReady ||
+              !isDirectFormReady ||
+              isSubmitting ||
+              isFormLoading
+            }
           >
             {directButtonLabel}
           </button>
@@ -456,14 +553,22 @@ export function SubscribeCheckoutButton({
         </button>
       )}
 
-      {sdkError ? <p className={`${styles.message} ${styles.messageError}`}>{sdkError}</p> : null}
-      {error ? <p className={`${styles.message} ${styles.messageError}`}>{error}</p> : null}
-      {message ? <p className={`${styles.message} ${styles.messageSuccess}`}>{message}</p> : null}
+      {sdkError ? (
+        <p className={`${styles.message} ${styles.messageError}`}>{sdkError}</p>
+      ) : null}
+      {error ? (
+        <p className={`${styles.message} ${styles.messageError}`}>{error}</p>
+      ) : null}
+      {message ? (
+        <p className={`${styles.message} ${styles.messageSuccess}`}>{message}</p>
+      ) : null}
 
       {canUseDirectCheckout ? (
-        <p className={styles.footerNote}>Pagamento processado com seguranca pelo Mercado Pago.</p>
+        <p className={styles.footerNote}>Pagamento seguro via Mercado Pago.</p>
       ) : (
-        <p className={styles.footerNote}>Se este formulario nao abrir, o app usa o checkout hospedado do Mercado Pago.</p>
+        <p className={styles.footerNote}>
+          Se preferir, voce tambem pode continuar no checkout do Mercado Pago.
+        </p>
       )}
     </div>
   );

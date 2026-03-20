@@ -21,6 +21,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { BillingTrialBanner } from "@/components/billing/BillingTrialBanner";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/lib/firebase";
@@ -536,6 +537,8 @@ export default function Home() {
             Ampolas
           </Link>
         </nav>
+
+        <BillingTrialBanner />
 
         {loading ? (
           <section

@@ -9,11 +9,13 @@ export async function GET() {
   if (!access?.user) {
     return NextResponse.json(
       {
-        authenticated: false,
-        accessAllowed: false,
-        effectiveStatus: "missing",
-        roles: [],
-      },
+      authenticated: false,
+      accessAllowed: false,
+      effectiveStatus: "missing",
+      entitlementStartsAt: null,
+      entitlementEndsAt: null,
+      roles: [],
+    },
       { status: 401 },
     );
   }
@@ -22,6 +24,8 @@ export async function GET() {
     authenticated: true,
     accessAllowed: access.accessAllowed,
     effectiveStatus: access.effectiveStatus,
+    entitlementStartsAt: access.entitlementStartsAt,
+    entitlementEndsAt: access.entitlementEndsAt,
     roles: access.roles,
   };
 

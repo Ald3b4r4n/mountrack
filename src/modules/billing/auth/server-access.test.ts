@@ -53,6 +53,8 @@ describe("server-access", () => {
   it("allows access when the billing snapshot resolves to an allowed entitlement", async () => {
     getBillingAccessSnapshotMock.mockResolvedValue({
       entitlementStatus: "trialing",
+      entitlementStartsAt: "2026-03-15T12:00:00.000Z",
+      entitlementEndsAt: "2026-03-18T12:00:00.000Z",
       manualGrant: null,
       roles: ["owner"],
     });
@@ -67,6 +69,8 @@ describe("server-access", () => {
       roles: ["owner"],
       accessAllowed: true,
       effectiveStatus: "trialing",
+      entitlementStartsAt: "2026-03-15T12:00:00.000Z",
+      entitlementEndsAt: "2026-03-18T12:00:00.000Z",
     });
 
     expect(bootstrapBillingOwnerMock).toHaveBeenCalledWith("user-123", "owner@mountrack.app");
@@ -85,6 +89,8 @@ describe("server-access", () => {
   it("blocks access when the entitlement snapshot is not allowed", async () => {
     getBillingAccessSnapshotMock.mockResolvedValue({
       entitlementStatus: "past_due",
+      entitlementStartsAt: "2026-03-15T12:00:00.000Z",
+      entitlementEndsAt: "2026-03-18T12:00:00.000Z",
       manualGrant: null,
       roles: ["user"],
     });
@@ -95,14 +101,18 @@ describe("server-access", () => {
         email: "owner@mountrack.app",
       },
       roles: ["user"],
-      accessAllowed: false,
+      accessAllowed: true,
       effectiveStatus: "past_due",
+      entitlementStartsAt: "2026-03-15T12:00:00.000Z",
+      entitlementEndsAt: "2026-03-18T12:00:00.000Z",
     });
   });
 
   it("blocks owner and admin when entitlement is blocked", async () => {
     getBillingAccessSnapshotMock.mockResolvedValue({
       entitlementStatus: "past_due",
+      entitlementStartsAt: "2026-03-15T12:00:00.000Z",
+      entitlementEndsAt: "2026-03-18T12:00:00.000Z",
       manualGrant: null,
       roles: ["owner", "admin"],
     });
@@ -113,8 +123,10 @@ describe("server-access", () => {
         email: "owner@mountrack.app",
       },
       roles: ["owner", "admin"],
-      accessAllowed: false,
+      accessAllowed: true,
       effectiveStatus: "past_due",
+      entitlementStartsAt: "2026-03-15T12:00:00.000Z",
+      entitlementEndsAt: "2026-03-18T12:00:00.000Z",
     });
   });
 
@@ -129,6 +141,8 @@ describe("server-access", () => {
       roles: [],
       accessAllowed: true,
       effectiveStatus: "missing",
+      entitlementStartsAt: null,
+      entitlementEndsAt: null,
     });
     expect(ensureBillingTrialEntitlementMock).not.toHaveBeenCalled();
     expect(getBillingAccessSnapshotMock).not.toHaveBeenCalled();
@@ -146,8 +160,10 @@ describe("server-access", () => {
         email: "owner@mountrack.app",
       },
       roles: ["owner", "admin"],
-      accessAllowed: false,
+      accessAllowed: true,
       effectiveStatus: "missing",
+      entitlementStartsAt: null,
+      entitlementEndsAt: null,
     });
   });
 });

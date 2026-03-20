@@ -39,6 +39,7 @@ describe("SubscribeCheckoutButton", () => {
     global.fetch = jest.fn();
     loadMercadoPagoMock.mockResolvedValue(undefined);
     (window as Window & { MercadoPago?: unknown }).MercadoPago = mercadoPagoConstructorMock;
+    window.history.replaceState({}, "", "/subscribe");
   });
 
   afterEach(() => {
@@ -69,11 +70,11 @@ describe("SubscribeCheckoutButton", () => {
     );
 
     expect(screen.getByRole("button", { name: "Entrar para pagar" })).toBeInTheDocument();
-    expect(screen.getByText("Faca login com sua conta para abrir o checkout do Mercado Pago.")).toBeInTheDocument();
+    expect(screen.getByText("Entre com sua conta para concluir a assinatura.")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Entrar para pagar" }));
 
-    expect(assignMock).toHaveBeenCalledWith("/login");
+    expect(assignMock).toHaveBeenCalledWith("/login?next=%2Fsubscribe");
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
@@ -104,9 +105,7 @@ describe("SubscribeCheckoutButton", () => {
     );
 
     expect(
-      await screen.findByText(
-        "Checkout direto indisponivel: configure NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY para liberar o formulario seguro.",
-      ),
+      await screen.findByText("O pagamento por cartao ainda nao esta disponivel no momento."),
     ).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Continuar para pagamento" }));
@@ -174,7 +173,7 @@ describe("SubscribeCheckoutButton", () => {
     });
     expect(
       await screen.findByText(
-        "Assinatura autorizada. Aguarde a confirmacao segura do primeiro pagamento.",
+        "Assinatura autorizada. Aguarde a confirmacao do primeiro pagamento.",
       ),
     ).toBeInTheDocument();
     expect(assignMock).not.toHaveBeenCalled();

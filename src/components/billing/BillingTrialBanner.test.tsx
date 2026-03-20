@@ -1,0 +1,75 @@
+import { act, render, screen, waitFor } from "@testing-library/react";
+import { BillingTrialBanner } from "@/components/billing/BillingTrialBanner";
+
+describe("BillingTrialBanner", () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-03-20T12:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    jest.useRealTimers();
+  });
+
+  it("renders the trial countdown and the subscribe CTA", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        authenticated: true,
+        accessAllowed: true,
+        effectiveStatus: "trialing",
+        entitlementStartsAt: "2026-03-20T09:00:00.000Z",
+        entitlementEndsAt: "2026-03-22T09:00:00.000Z",
+      }),
+    }) as typeof fetch;
+
+    await act(async () => {
+      render(<BillingTrialBanner />);
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", {
+          name: /Seu teste esta correndo:/,
+        }),
+      ).toBeInTheDocument();
+    });
+    expect(
+      screen.getByRole("heading", {
+        name: /Seu teste esta correndo:\s*faltam 2 dias para decidir\./i,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", {
+        name: "Ver assinatura",
+      }),
+    ).toHaveAttribute("href", "/subscribe");
+  });
+
+  it("stays hidden when the user is not in trial", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        authenticated: true,
+        accessAllowed: true,
+        effectiveStatus: "active",
+        entitlementStartsAt: "2026-03-20T09:00:00.000Z",
+        entitlementEndsAt: "2026-04-20T09:00:00.000Z",
+      }),
+    }) as typeof fetch;
+
+    await act(async () => {
+      render(<BillingTrialBanner />);
+    });
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalled();
+    });
+
+    expect(
+      screen.queryByRole("heading", { name: /Seu teste esta correndo:/ }),
+    ).not.toBeInTheDocument();
+  });
+});

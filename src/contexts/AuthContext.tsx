@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, onIdTokenChanged, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { needsLocalAuthHost, resolveLocalAuthUrl } from '@/modules/billing/auth/login-navigation';
 
 interface AuthContextType {
   user: User | null;
@@ -100,6 +101,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     try {
+      if (typeof window !== "undefined" && needsLocalAuthHost(window.location)) {
+        window.location.assign(
+          resolveLocalAuthUrl(
+            window.location,
+            `${window.location.pathname}${window.location.search}${window.location.hash}`,
+          ),
+        );
+        return;
+      }
+
       await signInWithPopup(auth, provider);
     } catch (error) {
       console.error("Error signing in with Google", error);

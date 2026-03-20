@@ -21,7 +21,11 @@ export interface ServerAppAccessContext {
   roles: string[];
   accessAllowed: boolean;
   effectiveStatus: string;
+  entitlementStartsAt: string | null;
+  entitlementEndsAt: string | null;
 }
+
+const TEMPORARY_OPEN_ACCESS = true;
 
 function coerceEmail(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
@@ -49,8 +53,13 @@ export async function resolveServerAppAccessFromToken(
     return {
       user,
       roles: bootstrapRoles,
-      accessAllowed: operatorOverride || process.env.NODE_ENV !== "production",
+      accessAllowed:
+        TEMPORARY_OPEN_ACCESS ||
+        operatorOverride ||
+        process.env.NODE_ENV !== "production",
       effectiveStatus: operatorOverride ? "operator_override" : "missing",
+      entitlementStartsAt: null,
+      entitlementEndsAt: null,
     };
   }
 
@@ -73,8 +82,10 @@ export async function resolveServerAppAccessFromToken(
   return {
     user,
     roles,
-    accessAllowed: operatorOverride || decision.accessAllowed,
+    accessAllowed: TEMPORARY_OPEN_ACCESS || operatorOverride || decision.accessAllowed,
     effectiveStatus: operatorOverride ? "operator_override" : decision.effectiveStatus,
+    entitlementStartsAt: snapshot.entitlementStartsAt,
+    entitlementEndsAt: snapshot.entitlementEndsAt,
   };
 }
 

@@ -1224,13 +1224,15 @@ export async function getBillingAccessSnapshot(
   userId: string,
   now = new Date(),
 ): Promise<BillingAccessSnapshot> {
-  if (!hasDatabaseUrl()) {
-    return {
-      entitlementStatus: null,
-      manualGrant: null,
-      roles: [],
-    };
-  }
+    if (!hasDatabaseUrl()) {
+      return {
+        entitlementStatus: null,
+        entitlementStartsAt: null,
+        entitlementEndsAt: null,
+        manualGrant: null,
+        roles: [],
+      };
+    }
 
   await ensureSchema();
   const timestamp = now.toISOString();
@@ -1265,6 +1267,8 @@ export async function getBillingAccessSnapshot(
   ]);
 
   const entitlementStatus = entitlementResult.rows[0]?.status ?? null;
+  const entitlementStartsAt = entitlementResult.rows[0]?.starts_at ?? null;
+  const entitlementEndsAt = entitlementResult.rows[0]?.ends_at ?? null;
   const manualGrant = manualGrantResult.rows[0]
     ? ({
         grantType: manualGrantResult.rows[0].grant_type,
@@ -1276,6 +1280,8 @@ export async function getBillingAccessSnapshot(
 
   return {
     entitlementStatus,
+    entitlementStartsAt,
+    entitlementEndsAt,
     manualGrant,
     roles,
   };
