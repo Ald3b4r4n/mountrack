@@ -1,0 +1,33 @@
+import { NextResponse } from "next/server";
+import { readServerAppAccess } from "@/modules/billing/auth/server-access";
+
+export const runtime = "nodejs";
+
+export async function GET() {
+  const access = await readServerAppAccess();
+
+  if (!access?.user) {
+    return NextResponse.json(
+      {
+        authenticated: false,
+        accessAllowed: false,
+        effectiveStatus: "missing",
+        roles: [],
+      },
+      { status: 401 },
+    );
+  }
+
+  const body = {
+    authenticated: true,
+    accessAllowed: access.accessAllowed,
+    effectiveStatus: access.effectiveStatus,
+    roles: access.roles,
+  };
+
+  if (!access.accessAllowed) {
+    return NextResponse.json(body, { status: 403 });
+  }
+
+  return NextResponse.json(body, { status: 200 });
+}

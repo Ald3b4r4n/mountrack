@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { hasPrivilegedAccessBypassRole, resolveAccessDecision } from "@/modules/billing/access-policy";
+import { resolveAccessDecision } from "@/modules/billing/access-policy";
 import { APP_SESSION_COOKIE_NAME } from "@/modules/billing/auth/session-cookie";
 import { getBootstrapRolesForEmail } from "@/modules/billing/config/bootstrap-operators";
 import {
@@ -43,7 +43,8 @@ export async function resolveServerAppAccessFromToken(
   const bootstrapRoles = getBootstrapRolesForEmail(user.email);
 
   if (getBillingStorageResponse() === "unavailable") {
-    const operatorOverride = hasPrivilegedAccessBypassRole(bootstrapRoles);
+    // const operatorOverride = hasPrivilegedAccessBypassRole(bootstrapRoles);
+    const operatorOverride = false;
 
     return {
       user,
@@ -66,7 +67,8 @@ export async function resolveServerAppAccessFromToken(
     now,
   });
   const roles = Array.from(new Set([...snapshot.roles, ...bootstrapRoles]));
-  const operatorOverride = hasPrivilegedAccessBypassRole(roles) && !decision.accessAllowed;
+  // const operatorOverride = hasPrivilegedAccessBypassRole(roles) && !decision.accessAllowed;
+  const operatorOverride = false;
 
   return {
     user,
