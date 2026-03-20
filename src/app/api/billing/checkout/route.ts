@@ -25,6 +25,7 @@ export const runtime = "nodejs";
 const checkoutRequestSchema = z
   .object({
     planCode: z.string().trim().min(1).optional(),
+    cardTokenId: z.string().trim().min(1).optional(),
   })
   .strict();
 
@@ -107,7 +108,12 @@ export async function POST(request: Request) {
         typeof decodedToken.email === "string" ? decodedToken.email : undefined,
       ),
       appBaseUrl: resolveBillingAppBaseUrl(request.url),
+      cardTokenId: payload.cardTokenId,
     });
+
+    const checkoutSessionStatus: BillingCheckoutSessionStatus = subscription.providerCheckoutUrl
+      ? "redirect_ready"
+      : "pending";
 
     await upsertBillingSubscription({
       id: `billing-subscription:${subscription.providerSubscriptionId}`,
@@ -119,12 +125,12 @@ export async function POST(request: Request) {
 
     const readySession = await updateBillingCheckoutSession({
       sessionId: session.id,
-      status: "redirect_ready",
+      status: checkoutSessionStatus,
       providerCheckoutId: subscription.providerSubscriptionId,
       providerCheckoutUrl: subscription.providerCheckoutUrl,
     });
 
-    if (!readySession?.providerCheckoutUrl) {
+    if (!readySession) {
       return createJsonError("Failed to prepare Mercado Pago subscription checkout", 502);
     }
 
@@ -135,8 +141,10 @@ export async function POST(request: Request) {
           status: readySession.status,
           expiresAt: readySession.expiresAt,
         },
-        checkoutUrl: readySession.providerCheckoutUrl,
+        checkoutUrl: readySession.providerCheckoutUrl ?? null,
         provider: "mercado_pago",
+        flow: readySession.providerCheckoutUrl ? "redirect" : "direct",
+        subscriptionStatus: subscription.providerStatus,
       },
       { status: 201 },
     );

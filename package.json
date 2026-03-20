@@ -16,6 +16,7 @@
     "nutrition:catalog:refresh-missing": "node scripts/nutrition/catalog/build-public-catalog.mjs --only-missing --fetch-timeout-ms 1800 --retry-attempts 1 --concurrency 1"
   },
   "dependencies": {
+    "@mercadopago/sdk-js": "^0.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "firebase": "^12.10.0",

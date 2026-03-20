@@ -11,11 +11,12 @@ export interface CreateMercadoPagoPreapprovalInput {
   currency: string;
   payerEmail?: string;
   appBaseUrl: string | null;
+  cardTokenId?: string;
 }
 
 export interface MercadoPagoPreapproval {
   providerSubscriptionId: string;
-  providerCheckoutUrl: string;
+  providerCheckoutUrl: string | null;
   providerStatus: string;
 }
 
@@ -39,7 +40,7 @@ export interface MercadoPagoCollectorProfile {
 
 const mercadoPagoPreapprovalResponseSchema = z.object({
   id: z.string().trim().min(1),
-  init_point: z.string().trim().url(),
+  init_point: z.string().trim().url().nullable().optional(),
   status: z.string().trim().min(1),
 });
 
@@ -82,6 +83,8 @@ export async function createMercadoPagoPreapproval(
     throw new Error("MERCADO_PAGO_NOT_CONFIGURED");
   }
 
+  const isDirectCardAuthorization = Boolean(input.cardTokenId?.trim());
+
   const response = await fetch(`${getMercadoPagoApiBaseUrl()}/preapproval`, {
     method: "POST",
     headers: {
@@ -93,7 +96,8 @@ export async function createMercadoPagoPreapproval(
       external_reference: input.sessionId,
       payer_email: input.payerEmail,
       back_url: input.appBaseUrl ? `${input.appBaseUrl}/subscribe?checkout=subscription` : undefined,
-      status: "pending",
+      card_token_id: input.cardTokenId?.trim() || undefined,
+      status: isDirectCardAuthorization ? "authorized" : "pending",
       auto_recurring: {
         frequency: 1,
         frequency_type: "months",
@@ -114,7 +118,7 @@ export async function createMercadoPagoPreapproval(
 
   return {
     providerSubscriptionId: parsed.id,
-    providerCheckoutUrl: parsed.init_point,
+    providerCheckoutUrl: parsed.init_point ?? null,
     providerStatus: parsed.status,
   };
 }

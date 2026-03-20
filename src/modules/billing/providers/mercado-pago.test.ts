@@ -76,6 +76,40 @@ describe("mercado-pago provider", () => {
     );
   });
 
+  it("creates a direct authorized subscription when a card token is provided", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        id: "preapproval-456",
+        status: "authorized",
+      }),
+    } as Response);
+
+    const subscription = await createMercadoPagoPreapproval({
+      sessionId: "checkout-2",
+      planName: "MounTrack Pro Mensal",
+      amountCents: 1499,
+      currency: "BRL",
+      payerEmail: "buyer@testuser.com",
+      appBaseUrl: "https://mountrack.app",
+      cardTokenId: "card-token-123",
+    });
+
+    expect(subscription).toEqual({
+      providerSubscriptionId: "preapproval-456",
+      providerCheckoutUrl: null,
+      providerStatus: "authorized",
+    });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body as string)).toEqual(
+      expect.objectContaining({
+        external_reference: "checkout-2",
+        payer_email: "buyer@testuser.com",
+        card_token_id: "card-token-123",
+        status: "authorized",
+      }),
+    );
+  });
+
   it("fails fast when Mercado Pago credentials are missing", async () => {
     process.env.MERCADO_PAGO_ACCESS_TOKEN = "";
 

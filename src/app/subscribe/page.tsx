@@ -99,7 +99,12 @@ export default async function SubscribePage() {
           concluída somente após a confirmação segura do pagamento no backend.
         </p>
 
-        <SubscribeCheckoutButton planCode={plan?.code ?? BILLING_MONTHLY_PLAN_CODE} />
+        <SubscribeCheckoutButton
+          planCode={plan?.code ?? BILLING_MONTHLY_PLAN_CODE}
+          amountCents={plan?.amountCents ?? BILLING_MONTHLY_PRICE_CENTS}
+          mercadoPagoPublicKey={process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY ?? ""}
+          sandboxPayerEmail={process.env.NEXT_PUBLIC_MERCADO_PAGO_TEST_PAYER_EMAIL ?? ""}
+        />
 
         <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
           <Link href="/nutrition" className="btn-primary" style={{ flex: "1 1 220px", textAlign: "center" }}>

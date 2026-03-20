@@ -189,6 +189,69 @@ describe("POST /api/billing/checkout", () => {
       },
       checkoutUrl: "https://www.mercadopago.com.br/subscriptions/checkout?preapproval_id=preapproval-123",
       provider: "mercado_pago",
+      flow: "redirect",
+      subscriptionStatus: "pending",
+    });
+  });
+
+  it("creates a direct authorized subscription when the client sends a card token", async () => {
+    createMercadoPagoPreapprovalMock.mockResolvedValue({
+      providerSubscriptionId: "preapproval-456",
+      providerCheckoutUrl: null,
+      providerStatus: "authorized",
+    });
+    updateBillingCheckoutSessionMock.mockResolvedValue({
+      id: "checkout-id",
+      userId: "user-123",
+      planId: "billing-plan-pro-monthly",
+      expectedAmountCents: 1499,
+      currency: "BRL",
+      nonce: "checkout-nonce",
+      providerCheckoutId: "preapproval-456",
+      providerCheckoutUrl: null,
+      status: "pending",
+      expiresAt: "2026-03-19T14:30:00.000Z",
+      createdAt: "2026-03-19T14:00:00.000Z",
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/billing/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: "mt_session=session-token",
+        },
+        body: JSON.stringify({
+          planCode: "pro_monthly",
+          cardTokenId: "card-token-123",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(createMercadoPagoPreapprovalMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: "checkout-id",
+        cardTokenId: "card-token-123",
+      }),
+    );
+    expect(updateBillingCheckoutSessionMock).toHaveBeenCalledWith({
+      sessionId: "checkout-id",
+      status: "pending",
+      providerCheckoutId: "preapproval-456",
+      providerCheckoutUrl: null,
+    });
+
+    await expect(response.json()).resolves.toEqual({
+      session: {
+        id: "checkout-id",
+        status: "pending",
+        expiresAt: "2026-03-19T14:30:00.000Z",
+      },
+      checkoutUrl: null,
+      provider: "mercado_pago",
+      flow: "direct",
+      subscriptionStatus: "authorized",
     });
   });
 
