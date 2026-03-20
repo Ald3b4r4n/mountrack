@@ -1,0 +1,156 @@
+.root {
+  display: grid;
+  gap: 1rem;
+}
+
+.guestState {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.loginButton,
+.submitButton,
+.fallbackButton {
+  width: 100%;
+  min-height: 3.5rem;
+  justify-content: center;
+  display: inline-flex;
+  align-items: center;
+}
+
+.guestCopy,
+.footerNote {
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.form {
+  display: grid;
+  gap: 1rem;
+}
+
+.fieldGroup {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.fieldRowTwo {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.fieldRowDoc {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: 140px minmax(0, 1fr);
+}
+
+.label {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.secureMount,
+.input,
+.select {
+  min-height: 3.75rem;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(8, 14, 26, 0.08)),
+    rgba(255, 255, 255, 0.015);
+  color: var(--text-primary);
+  transition:
+    border-color var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease,
+    background-color var(--duration-fast) ease;
+}
+
+.secureMount {
+  padding: 0.95rem 1rem;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.secureMount:focus-within,
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: rgba(52, 211, 153, 0.28);
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.12);
+}
+
+.secureMount :global(iframe) {
+  width: 100% !important;
+  min-height: 1.6rem !important;
+  border: 0 !important;
+}
+
+.secureMount :global(input) {
+  color: var(--text-primary) !important;
+  font-family: "DM Sans", sans-serif !important;
+  font-size: 1rem !important;
+  background: transparent !important;
+}
+
+.secureMount :global(input::placeholder) {
+  color: var(--text-muted) !important;
+  opacity: 1 !important;
+}
+
+.secureMount :global(body) {
+  background: transparent !important;
+}
+
+.input,
+.select {
+  width: 100%;
+  padding: 0.95rem 1rem;
+  font-family: "DM Sans", sans-serif;
+  font-size: 0.98rem;
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+.select {
+  appearance: none;
+}
+
+.hiddenNative {
+  display: none;
+}
+
+.message {
+  padding: 0.85rem 0.95rem;
+  border-radius: 1rem;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.messageError {
+  color: #fecaca;
+  background: rgba(244, 63, 94, 0.08);
+  border-color: rgba(244, 63, 94, 0.18);
+}
+
+.messageSuccess {
+  color: #bbf7d0;
+  background: rgba(52, 211, 153, 0.08);
+  border-color: rgba(52, 211, 153, 0.18);
+}
+
+@media (max-width: 720px) {
+  .fieldRowTwo,
+  .fieldRowDoc {
+    grid-template-columns: 1fr;
+  }
+}

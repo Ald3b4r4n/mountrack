@@ -7,6 +7,7 @@ import {
 } from "@/modules/billing/domain/types";
 import { SubscribeCheckoutButton } from "@/components/billing/SubscribeCheckoutButton";
 import { getBillingPlan } from "@/modules/billing/repositories/billing-store";
+import styles from "./subscribe.module.css";
 
 function formatCurrency(amountCents: number, currency: string): string {
   return new Intl.NumberFormat("pt-BR", {
@@ -22,98 +23,192 @@ export default async function SubscribePage() {
     plan?.currency ?? BILLING_CURRENCY,
   );
   const trialDays = plan?.trialDays ?? BILLING_TRIAL_DAYS;
+  const valueReadouts = [
+    {
+      label: "Valor mensal",
+      value: monthlyPrice,
+      helper: "Um unico plano para manter seu acompanhamento completo.",
+    },
+    {
+      label: "Pagamento",
+      value: "Mercado Pago",
+      helper: "Checkout seguro para concluir a assinatura sem sair do app.",
+    },
+    {
+      label: "Periodo gratis",
+      value: `${trialDays} dias`,
+      helper: "Voce ja usou o tempo de teste e agora precisa ativar o plano.",
+    },
+  ];
+  const benefitCards = [
+    {
+      title: "Historico completo",
+      text: "Peso, doses, metas e nutricao continuam no mesmo lugar, sem perder sua linha do tempo.",
+    },
+    {
+      title: "Acesso sem ruptura",
+      text: "Assim que o pagamento for confirmado, sua conta volta ao fluxo completo do app.",
+    },
+    {
+      title: "Pagamento seguro",
+      text: "Seu cartao e processado pelo Mercado Pago para concluir a assinatura com seguranca.",
+    },
+  ];
+  const assuranceSteps = [
+    {
+      title: "Preencha o pagamento",
+      text: "Revise o plano, informe o cartao e finalize a autorizacao da assinatura.",
+    },
+    {
+      title: "Aguarde a confirmacao",
+      text: "O pagamento precisa ser confirmado para que a assinatura volte a valer para esta conta.",
+    },
+    {
+      title: "Volte ao app",
+      text: "Depois da aprovacao, seu acesso retorna e seus registros continuam preservados.",
+    },
+  ];
 
   return (
-    <main
-      className="container"
-      style={{
-        minHeight: "85vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        paddingBlock: "3rem",
-      }}
-    >
-      <section
-        className="glass-panel anim-enter"
-        style={{
-          maxWidth: "620px",
-          width: "100%",
-          padding: "2.5rem",
-          display: "grid",
-          gap: "1.25rem",
-        }}
-      >
-        <span
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "fit-content",
-            padding: "0.4rem 0.75rem",
-            borderRadius: "999px",
-            background: "rgba(16, 185, 129, 0.12)",
-            color: "var(--accent-primary)",
-            fontSize: "0.78rem",
-            fontWeight: 700,
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
-          }}
-        >
-          Trial de {trialDays} dias
-        </span>
-
-        <div>
-          <h1 style={{ fontSize: "2rem", lineHeight: 1.1, marginBottom: "0.6rem" }}>
-            Continue com o MounTrack Pro
-          </h1>
-          <p style={{ color: "var(--text-secondary)", lineHeight: 1.7 }}>
-            Seu período gratuito terminou ou o acesso pago ainda não foi liberado para esta conta.
-            O plano atual fica em <strong>{monthlyPrice}/mês</strong>.
-          </p>
-        </div>
-
-        <div
-          style={{
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: "1.25rem",
-            padding: "1.25rem",
-            background: "rgba(255,255,255,0.02)",
-            display: "grid",
-            gap: "0.75rem",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
-            <strong>MounTrack Pro Mensal</strong>
-            <strong>{monthlyPrice}</strong>
+    <main className={`container ${styles.page}`}>
+      <section className={styles.layout}>
+        <section className={`glass-panel static-panel anim-enter ${styles.hero}`}>
+          <div className={styles.headerBand}>
+            <span className={styles.eyebrow}>MounTrack Pro</span>
+            <div className={styles.protocolStamp}>
+              Plano mensal
+              <br />
+              Pagamento seguro
+            </div>
           </div>
-          <ul style={{ color: "var(--text-secondary)", lineHeight: 1.7, paddingLeft: "1rem" }}>
-            <li>Acesso ao fluxo completo do app</li>
-            <li>Controle validado por assinatura ou liberação manual</li>
-            <li>Segurança reforçada para billing, acesso e auditoria</li>
-          </ul>
-        </div>
 
-        <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", lineHeight: 1.6 }}>
-          O checkout do Mercado Pago já está disponível para contas autenticadas. A liberação do acesso continua sendo
-          concluída somente após a confirmação segura do pagamento no backend.
-        </p>
+          <div className={styles.heroCopy}>
+            <h1 className={styles.heroTitle}>
+              Continue com o <span className={styles.heroAccent}>MounTrack Pro</span> sem interromper sua jornada.
+            </h1>
+            <p className={styles.heroLead}>
+              Seus registros ja estao aqui. Esta etapa serve apenas para ativar a assinatura e manter o acesso completo ao
+              que voce ja acompanha no app.
+            </p>
+          </div>
 
-        <SubscribeCheckoutButton
-          planCode={plan?.code ?? BILLING_MONTHLY_PLAN_CODE}
-          amountCents={plan?.amountCents ?? BILLING_MONTHLY_PRICE_CENTS}
-          mercadoPagoPublicKey={process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY ?? ""}
-          sandboxPayerEmail={process.env.NEXT_PUBLIC_MERCADO_PAGO_TEST_PAYER_EMAIL ?? ""}
-        />
+          <div className={styles.readoutRail}>
+            {valueReadouts.map((item) => (
+              <article key={item.label} className={styles.readoutCard}>
+                <span className={styles.readoutLabel}>{item.label}</span>
+                <strong className={styles.readoutValue}>{item.value}</strong>
+                <span className={styles.readoutHelper}>{item.helper}</span>
+              </article>
+            ))}
+          </div>
 
-        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-          <Link href="/nutrition" className="btn-primary" style={{ flex: "1 1 220px", textAlign: "center" }}>
-            Tentar novamente
-          </Link>
-          <Link href="/login" className="btn-secondary" style={{ flex: "1 1 220px", textAlign: "center" }}>
-            Trocar de conta
-          </Link>
-        </div>
+          <div className={styles.storyGrid}>
+            <article className={styles.storyCard}>
+              <span className={styles.storyKicker}>Por que continuar</span>
+              <h2>Seu acompanhamento continua no mesmo ritmo.</h2>
+              <p>
+                O plano mensal mantem dashboard, diario, metas, nutricao e historico dentro da mesma experiencia, sem
+                resetar a conta e sem perder contexto.
+              </p>
+
+              <ul className={styles.benefitsList}>
+                {benefitCards.map((item) => (
+                  <li key={item.title} className={styles.benefitItem}>
+                    <span className={styles.benefitDot} aria-hidden="true" />
+                    <div>
+                      <strong className={styles.benefitTitle}>{item.title}</strong>
+                      <p className={styles.benefitText}>{item.text}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </article>
+
+            <aside className={styles.assuranceCard}>
+              <span className={styles.assuranceKicker}>Como funciona</span>
+              <h2>Uma assinatura simples, com liberacao automatica.</h2>
+              <p>Sem burocracia: voce paga, o app confirma e o acesso volta para a sua conta.</p>
+
+              <ol className={styles.assuranceList}>
+                {assuranceSteps.map((item, index) => (
+                  <li key={item.title} className={styles.assuranceItem}>
+                    <span className={styles.assuranceIndex}>{index + 1}</span>
+                    <div className={styles.assuranceText}>
+                      <strong>{item.title}</strong>
+                      <span>{item.text}</span>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </aside>
+          </div>
+
+          <div className={styles.footline}>
+            <span className={styles.footTag}>Seus registros permanecem intactos.</span>
+            <span className={styles.footTag}>Pagamento seguro pelo Mercado Pago.</span>
+            <span className={styles.footTag}>Um unico plano para destravar tudo.</span>
+          </div>
+        </section>
+
+        <aside className={`glass-panel static-panel anim-enter anim-delay-1 ${styles.checkout}`}>
+          <header className={styles.checkoutHeader}>
+            <span className={styles.checkoutEyebrow}>Assinatura</span>
+            <h2 className={styles.checkoutTitle}>Ative seu acesso.</h2>
+            <p className={styles.checkoutLead}>
+              Seu periodo gratuito terminou ou sua assinatura ainda nao foi confirmada. Resolva isso aqui em poucos passos.
+            </p>
+          </header>
+
+          <section className={styles.planCard}>
+            <div className={styles.planTop}>
+              <div>
+                <span className={styles.planLabel}>Plano atual</span>
+                <strong className={styles.planName}>MounTrack Pro Mensal</strong>
+              </div>
+              <strong className={styles.planPrice}>
+                {monthlyPrice}
+                <span>por mes</span>
+              </strong>
+            </div>
+
+            <ul className={styles.planFeatures}>
+              <li className={styles.planFeature}>Acesso ao fluxo completo do app sem perder historico.</li>
+              <li className={styles.planFeature}>Dashboard, diario, metas e nutricao liberados na mesma conta.</li>
+              <li className={styles.planFeature}>Pagamento processado com seguranca pelo Mercado Pago.</li>
+            </ul>
+          </section>
+
+          <div className={styles.metaStrip}>
+            <div className={styles.metaCard}>
+              <strong>Trial</strong>
+              <span>{trialDays} dias gratis antes da assinatura mensal entrar em cena.</span>
+            </div>
+            <div className={styles.metaCard}>
+              <strong>Acesso</strong>
+              <span>Depois da confirmacao do pagamento, sua conta volta automaticamente.</span>
+            </div>
+          </div>
+
+          <SubscribeCheckoutButton
+            planCode={plan?.code ?? BILLING_MONTHLY_PLAN_CODE}
+            amountCents={plan?.amountCents ?? BILLING_MONTHLY_PRICE_CENTS}
+            mercadoPagoPublicKey={process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY ?? ""}
+            sandboxPayerEmail={process.env.NEXT_PUBLIC_MERCADO_PAGO_TEST_PAYER_EMAIL ?? ""}
+          />
+
+          <div className={styles.actions}>
+            <Link href="/" className={`btn-primary ${styles.actionPrimary}`}>
+              Revalidar acesso
+            </Link>
+            <Link href="/login" className={`btn-outline ${styles.actionSecondary}`}>
+              Trocar de conta
+            </Link>
+          </div>
+
+          <p className={styles.miniNote}>
+            Se voce ja concluiu o pagamento, toque em Revalidar acesso depois de alguns segundos.
+          </p>
+        </aside>
       </section>
     </main>
   );

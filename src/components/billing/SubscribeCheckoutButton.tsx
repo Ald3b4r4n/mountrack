@@ -4,6 +4,7 @@ import { loadMercadoPago } from "@mercadopago/sdk-js";
 import type { FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import styles from "./SubscribeCheckoutButton.module.css";
 
 interface SubscribeCheckoutButtonProps {
   planCode: string;
@@ -94,7 +95,6 @@ export function SubscribeCheckoutButton({
   const cardFormRef = useRef<MercadoPagoCardFormInstance | null>(null);
   const requiresLogin = !loading && !user;
   const payerEmail = resolveCardholderEmail(typeof user?.email === "string" ? user.email : null, sandboxPayerEmail);
-  const showSandboxPayerHint = Boolean(sandboxPayerEmail?.trim());
   const formPrefix = "subscribe-checkout";
 
   async function requestCheckout(cardTokenId?: string): Promise<void> {
@@ -319,20 +319,17 @@ export function SubscribeCheckoutButton({
 
   if (requiresLogin) {
     return (
-      <div style={{ display: "grid", gap: "0.65rem" }}>
+      <div className={styles.guestState}>
         <button
           type="button"
-          className="btn-primary"
+          className={`btn-primary ${styles.loginButton}`}
           onClick={() => navigate("/login")}
           disabled={loading}
-          style={{ width: "100%" }}
         >
           Entrar para pagar
         </button>
 
-        <p style={{ color: "var(--text-secondary)", fontSize: "0.92rem", lineHeight: 1.6 }}>
-          Faca login com sua conta para abrir o checkout do Mercado Pago.
-        </p>
+        <p className={styles.guestCopy}>Faca login com sua conta para abrir o checkout do Mercado Pago.</p>
       </div>
     );
   }
@@ -345,97 +342,58 @@ export function SubscribeCheckoutButton({
       : "Autorizar assinatura";
 
   return (
-    <div style={{ display: "grid", gap: "1rem" }}>
+    <div className={styles.root}>
       {canUseDirectCheckout ? (
-        <form
-          id={`${formPrefix}__form`}
-          onSubmit={handleDirectCheckout}
-          style={{ display: "grid", gap: "0.9rem" }}
-        >
-          <div style={{ display: "grid", gap: "0.45rem" }}>
-            <span style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>Numero do cartao</span>
-            <div
-              id={`${formPrefix}__card-number`}
-              style={{
-                minHeight: "52px",
-                borderRadius: "1rem",
-                border: "1px solid rgba(255,255,255,0.12)",
-                background: "rgba(255,255,255,0.02)",
-                padding: "0.9rem 1rem",
-              }}
-            />
+        <form id={`${formPrefix}__form`} onSubmit={handleDirectCheckout} className={styles.form}>
+          <div className={styles.fieldGroup}>
+            <label htmlFor={`${formPrefix}__card-number`} className={styles.label}>
+              Numero do cartao
+            </label>
+            <div id={`${formPrefix}__card-number`} className={styles.secureMount} />
           </div>
 
-          <div style={{ display: "grid", gap: "0.9rem", gridTemplateColumns: "1fr 1fr" }}>
-            <div style={{ display: "grid", gap: "0.45rem" }}>
-              <span style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>Validade</span>
-              <div
-                id={`${formPrefix}__expiration-date`}
-                style={{
-                  minHeight: "52px",
-                  borderRadius: "1rem",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  background: "rgba(255,255,255,0.02)",
-                  padding: "0.9rem 1rem",
-                }}
-              />
+          <div className={styles.fieldRowTwo}>
+            <div className={styles.fieldGroup}>
+              <label htmlFor={`${formPrefix}__expiration-date`} className={styles.label}>
+                Validade
+              </label>
+              <div id={`${formPrefix}__expiration-date`} className={styles.secureMount} />
             </div>
 
-            <div style={{ display: "grid", gap: "0.45rem" }}>
-              <span style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>Codigo de seguranca</span>
-              <div
-                id={`${formPrefix}__security-code`}
-                style={{
-                  minHeight: "52px",
-                  borderRadius: "1rem",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  background: "rgba(255,255,255,0.02)",
-                  padding: "0.9rem 1rem",
-                }}
-              />
+            <div className={styles.fieldGroup}>
+              <label htmlFor={`${formPrefix}__security-code`} className={styles.label}>
+                Codigo de seguranca
+              </label>
+              <div id={`${formPrefix}__security-code`} className={styles.secureMount} />
             </div>
           </div>
 
-          <label style={{ display: "grid", gap: "0.45rem" }}>
-            <span style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>Nome do titular</span>
+          <label className={styles.fieldGroup}>
+            <span className={styles.label}>Nome do titular</span>
             <input
               id={`${formPrefix}__cardholder-name`}
               type="text"
               placeholder="Nome como impresso no cartao"
               required
               autoComplete="cc-name"
-              style={{
-                minHeight: "52px",
-                borderRadius: "1rem",
-                border: "1px solid rgba(255,255,255,0.12)",
-                background: "rgba(255,255,255,0.02)",
-                padding: "0.9rem 1rem",
-                color: "var(--text-primary)",
-              }}
+              className={styles.input}
             />
           </label>
 
-          <div style={{ display: "grid", gap: "0.9rem", gridTemplateColumns: "140px 1fr" }}>
-            <label style={{ display: "grid", gap: "0.45rem" }}>
-              <span style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>Documento</span>
+          <div className={styles.fieldRowDoc}>
+            <label className={styles.fieldGroup}>
+              <span className={styles.label}>Documento</span>
               <select
                 id={`${formPrefix}__identification-type`}
                 defaultValue="CPF"
-                style={{
-                  minHeight: "52px",
-                  borderRadius: "1rem",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  background: "rgba(255,255,255,0.02)",
-                  padding: "0.9rem 1rem",
-                  color: "var(--text-primary)",
-                }}
+                className={styles.select}
               >
                 <option value="CPF">CPF</option>
               </select>
             </label>
 
-            <label style={{ display: "grid", gap: "0.45rem" }}>
-              <span style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>Numero do documento</span>
+            <label className={styles.fieldGroup}>
+              <span className={styles.label}>Numero do documento</span>
               <input
                 id={`${formPrefix}__identification-number`}
                 type="text"
@@ -443,55 +401,46 @@ export function SubscribeCheckoutButton({
                 placeholder="CPF do titular"
                 required
                 autoComplete="off"
-                style={{
-                  minHeight: "52px",
-                  borderRadius: "1rem",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  background: "rgba(255,255,255,0.02)",
-                  padding: "0.9rem 1rem",
-                  color: "var(--text-primary)",
-                }}
+                className={styles.input}
               />
             </label>
           </div>
 
-          <label style={{ display: "grid", gap: "0.45rem" }}>
-            <span style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>Email do pagador</span>
+          <label className={styles.fieldGroup}>
+            <span className={styles.label}>Email do pagador</span>
             <input
               id={`${formPrefix}__cardholder-email`}
               type="email"
               value={payerEmail}
               readOnly
               required
-              style={{
-                minHeight: "52px",
-                borderRadius: "1rem",
-                border: "1px solid rgba(255,255,255,0.12)",
-                background: "rgba(255,255,255,0.02)",
-                padding: "0.9rem 1rem",
-                color: "var(--text-primary)",
-              }}
+              className={styles.input}
             />
           </label>
 
-          <select id={`${formPrefix}__issuer`} defaultValue="" hidden aria-hidden="true">
+          <select
+            id={`${formPrefix}__issuer`}
+            defaultValue=""
+            hidden
+            aria-hidden="true"
+            className={styles.hiddenNative}
+          >
             <option value="">Selecionado automaticamente</option>
           </select>
-          <select id={`${formPrefix}__installments`} defaultValue="1" hidden aria-hidden="true">
+          <select
+            id={`${formPrefix}__installments`}
+            defaultValue="1"
+            hidden
+            aria-hidden="true"
+            className={styles.hiddenNative}
+          >
             <option value="1">1x</option>
           </select>
 
-          {showSandboxPayerHint ? (
-            <p style={{ color: "var(--text-muted)", fontSize: "0.86rem", lineHeight: 1.6 }}>
-              Sandbox do Mercado Pago ativo: o checkout usa o comprador de teste configurado na Vercel.
-            </p>
-          ) : null}
-
           <button
             type="submit"
-            className="btn-primary"
+            className={`btn-primary ${styles.submitButton}`}
             disabled={!sessionReady || !isDirectFormReady || isSubmitting || isFormLoading}
-            style={{ width: "100%" }}
           >
             {directButtonLabel}
           </button>
@@ -499,35 +448,22 @@ export function SubscribeCheckoutButton({
       ) : (
         <button
           type="button"
-          className="btn-primary"
+          className={`btn-primary ${styles.fallbackButton}`}
           onClick={handleHostedCheckout}
           disabled={loading || isSubmitting}
-          style={{ width: "100%" }}
         >
           {isSubmitting ? "Preparando checkout..." : "Continuar para pagamento"}
         </button>
       )}
 
-      {sdkError ? (
-        <p style={{ color: "#fca5a5", fontSize: "0.92rem", lineHeight: 1.6 }}>{sdkError}</p>
-      ) : null}
-
-      {error ? (
-        <p style={{ color: "#fca5a5", fontSize: "0.92rem", lineHeight: 1.6 }}>{error}</p>
-      ) : null}
-
-      {message ? (
-        <p style={{ color: "var(--text-secondary)", fontSize: "0.92rem", lineHeight: 1.6 }}>{message}</p>
-      ) : null}
+      {sdkError ? <p className={`${styles.message} ${styles.messageError}`}>{sdkError}</p> : null}
+      {error ? <p className={`${styles.message} ${styles.messageError}`}>{error}</p> : null}
+      {message ? <p className={`${styles.message} ${styles.messageSuccess}`}>{message}</p> : null}
 
       {canUseDirectCheckout ? (
-        <p style={{ color: "var(--text-muted)", fontSize: "0.86rem", lineHeight: 1.6 }}>
-          Os dados do cartao sao tokenizados no navegador pelo Mercado Pago antes de chegarem ao backend.
-        </p>
+        <p className={styles.footerNote}>Pagamento processado com seguranca pelo Mercado Pago.</p>
       ) : (
-        <p style={{ color: "var(--text-muted)", fontSize: "0.86rem", lineHeight: 1.6 }}>
-          Se o formulario seguro nao estiver disponivel, o app usa o checkout hospedado como fallback.
-        </p>
+        <p className={styles.footerNote}>Se este formulario nao abrir, o app usa o checkout hospedado do Mercado Pago.</p>
       )}
     </div>
   );
