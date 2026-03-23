@@ -74,7 +74,7 @@ Implement paid access for MounTrack with:
 
 ### 3. Trial
 
-- first eligible login creates `trialing` entitlement for `3 days`
+- first eligible login creates `trialing` entitlement for `7 days`
 - trial expiration is computed on the server
 - once expired, protected routes redirect to paywall
 
@@ -425,6 +425,33 @@ Implement paid access for MounTrack with:
 
 - Regular users follow the billing decision again.
 - Owner and admin keep the controlled bypass in [server-access.ts](G:/Apps/MounTrack/src/modules/billing/auth/server-access.ts) so internal operation is not blocked by billing incidents.
+
+## Production credential cutover note
+
+- Sandbox checkout, webhook delivery, reconciliation, entitlement unlock, and recurring subscription updates are already validated end to end.
+- You can switch to real Mercado Pago credentials as soon as you want to start charging real customers.
+- Vercel variables to replace together:
+  - `MERCADO_PAGO_ACCESS_TOKEN`
+  - `NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY`
+  - `MERCADO_PAGO_WEBHOOK_SECRET`
+- Variables that stay the same if the production domain does not change:
+  - `APP_BASE_URL`
+  - `MERCADO_PAGO_NOTIFICATION_URL`
+- Before opening the gate for real users:
+  - point the Mercado Pago production webhook to `https://mountrack.vercel.app/api/billing/webhooks/mercado-pago`
+  - confirm the webhook secret shown in the Mercado Pago production app matches Vercel exactly
+  - run one real low-risk payment and confirm `checkout_session`, `payment`, `subscription`, and `entitlement` move to the expected states
+
+## Webhook observability note
+
+- Operator health check endpoint now exists at `GET /api/billing/webhook-health`.
+- Access is restricted to `owner`, `admin`, and `finance`.
+- The endpoint summarizes:
+  - processed events in the last 24h
+  - reconciliation failures in the last 24h
+  - `received` events older than 10 minutes
+  - latest processed timestamp
+  - latest failure timestamp and event type
 
 ## Manual sandbox validation note (2026-03-23)
 

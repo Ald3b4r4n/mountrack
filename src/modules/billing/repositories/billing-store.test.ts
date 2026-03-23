@@ -13,6 +13,7 @@ import {
   getBillingAccessSnapshot,
   getBillingCheckoutSessionById,
   getBillingPlanById,
+  getBillingWebhookHealthSummary,
   listBillingPlans,
   recordBillingEventIfNew,
   updateBillingEventProcessingStatus,
@@ -222,6 +223,46 @@ describe("billing-store", () => {
       processingStatus: "processed",
       idempotencyKey: "event:provider-event-1",
       processedAt: "2026-03-19T16:00:00.000Z",
+    });
+  });
+
+  it("summarizes Mercado Pago webhook health for operator visibility", async () => {
+    const query = makeQueryMock((sql) => {
+      if (sql.includes("with latest_processed as")) {
+        return {
+          rows: [
+            {
+              recent_processed_count: 12,
+              recent_failure_count: 1,
+              stale_received_count: 2,
+              latest_processed_at: "2026-03-23T18:44:23.000Z",
+              latest_failure_at: "2026-03-23T17:10:00.000Z",
+              latest_failure_event_type: "subscription_preapproval.updated",
+            },
+          ],
+        };
+      }
+
+      return { rows: [] };
+    });
+
+    globalStore.__billingPool__ = { query };
+
+    const summary = await getBillingWebhookHealthSummary(
+      "mercado_pago",
+      new Date("2026-03-23T18:45:00.000Z"),
+      24,
+      10,
+    );
+
+    expect(summary).toEqual({
+      provider: "mercado_pago",
+      recentProcessedCount: 12,
+      recentFailureCount: 1,
+      staleReceivedCount: 2,
+      latestProcessedAt: "2026-03-23T18:44:23.000Z",
+      latestFailureAt: "2026-03-23T17:10:00.000Z",
+      latestFailureEventType: "subscription_preapproval.updated",
     });
   });
 

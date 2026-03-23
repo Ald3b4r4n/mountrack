@@ -28,7 +28,7 @@
 ### Recommended pricing
 
 - Standard monthly price: `R$ 14,90`
-- Free trial: `3 days`
+- Free trial: `7 days`
 - Annual plan: phase 2, not required for v1
 
 ### Launch option
@@ -38,7 +38,7 @@
 
 ### Why this structure
 
-- `3 days` is short enough to create urgency and reduce abuse.
+- `7 days` gives enough time to understand the app in real use before the paywall.
 - `R$ 14,99` is still low-friction while giving better room for payment fees, support, and churn.
 - Using one permanent price keeps communication and admin reporting simpler in v1.
 
@@ -46,9 +46,9 @@
 
 ### 1. Trial instead of freemium
 
-- Decided: use `3-day trial`.
+- Decided: use `7-day trial`.
 - Alternatives: permanent free plan, feature-limited free plan.
-- Reason: trial is simpler, reduces abuse, and creates a clean paywall after activation.
+- Reason: one week is long enough for a real product evaluation while keeping the conversion moment clear.
 
 ### 2. One paid tier in v1
 

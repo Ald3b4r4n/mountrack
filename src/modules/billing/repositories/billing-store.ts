@@ -290,6 +290,15 @@ interface BillingSubscriptionRow {
   updated_at: string;
 }
 
+interface BillingWebhookHealthRow {
+  recent_processed_count: number | string;
+  recent_failure_count: number | string;
+  stale_received_count: number | string;
+  latest_processed_at: string | null;
+  latest_failure_at: string | null;
+  latest_failure_event_type: string | null;
+}
+
 interface BillingCheckoutSessionRow {
   id: string;
   user_id: string;
@@ -380,6 +389,16 @@ export interface UpsertBillingSubscriptionInput {
   cancelAtPeriodEnd?: boolean;
   canceledAt?: string | null;
   gracePeriodEndsAt?: string | null;
+}
+
+export interface BillingWebhookHealthSummary {
+  provider: string;
+  recentProcessedCount: number;
+  recentFailureCount: number;
+  staleReceivedCount: number;
+  latestProcessedAt: string | null;
+  latestFailureAt: string | null;
+  latestFailureEventType: string | null;
 }
 
 function getDatabaseUrl(): string {
@@ -974,6 +993,73 @@ export async function updateBillingEventProcessingStatus(
   );
 
   return result.rows[0] ? mapBillingEventRow(result.rows[0]) : null;
+}
+
+export async function getBillingWebhookHealthSummary(
+  provider = "mercado_pago",
+  now = new Date(),
+  recentWindowHours = 24,
+  staleAfterMinutes = 10,
+): Promise<BillingWebhookHealthSummary> {
+  requireDatabaseUrl();
+  await ensureSchema();
+
+  const result = await getPool().query<BillingWebhookHealthRow>(
+    `
+    with latest_processed as (
+      select created_at
+      from billing_events
+      where provider = $1 and processing_status = 'processed'
+      order by created_at desc
+      limit 1
+    ),
+    latest_failure as (
+      select created_at, event_type
+      from billing_events
+      where provider = $1 and processing_status = 'reconciliation_failed'
+      order by created_at desc
+      limit 1
+    )
+    select
+      (
+        select count(*)
+        from billing_events
+        where provider = $1
+          and processing_status = 'processed'
+          and created_at >= $2::timestamptz - make_interval(hours => $3::int)
+      ) as recent_processed_count,
+      (
+        select count(*)
+        from billing_events
+        where provider = $1
+          and processing_status = 'reconciliation_failed'
+          and created_at >= $2::timestamptz - make_interval(hours => $3::int)
+      ) as recent_failure_count,
+      (
+        select count(*)
+        from billing_events
+        where provider = $1
+          and processing_status = 'received'
+          and created_at <= $2::timestamptz - make_interval(mins => $4::int)
+      ) as stale_received_count,
+      (select created_at::text from latest_processed) as latest_processed_at,
+      (select created_at::text from latest_failure) as latest_failure_at,
+      (select event_type from latest_failure) as latest_failure_event_type
+    `,
+    [provider, now.toISOString(), recentWindowHours, staleAfterMinutes],
+  );
+
+  const row = result.rows[0];
+
+  return {
+    provider,
+    recentProcessedCount: Number(row?.recent_processed_count ?? 0),
+    recentFailureCount: Number(row?.recent_failure_count ?? 0),
+    staleReceivedCount: Number(row?.stale_received_count ?? 0),
+    latestProcessedAt: row?.latest_processed_at ?? null,
+    latestFailureAt: row?.latest_failure_at ?? null,
+    latestFailureEventType: row?.latest_failure_event_type ?? null,
+  };
 }
 
 export async function createBillingCheckoutSession(

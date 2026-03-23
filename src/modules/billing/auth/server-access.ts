@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import type { AppRole } from "@/modules/billing/domain/types";
 import {
   hasPrivilegedAccessBypassRole,
   resolveAccessDecision,
@@ -21,7 +22,7 @@ export interface ServerSessionUser {
 
 export interface ServerAppAccessContext {
   user: ServerSessionUser;
-  roles: string[];
+  roles: AppRole[];
   accessAllowed: boolean;
   effectiveStatus: string;
   entitlementStartsAt: string | null;
@@ -72,7 +73,9 @@ export async function resolveServerAppAccessFromToken(
     manualGrant: snapshot.manualGrant,
     now,
   });
-  const roles = Array.from(new Set([...snapshot.roles, ...bootstrapRoles]));
+  const roles = Array.from(
+    new Set<AppRole>([...snapshot.roles, ...bootstrapRoles]),
+  );
   const operatorOverride =
     hasPrivilegedAccessBypassRole(roles) && !decision.accessAllowed;
 
