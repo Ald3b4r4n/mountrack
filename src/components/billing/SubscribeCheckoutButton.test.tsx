@@ -105,7 +105,9 @@ describe("SubscribeCheckoutButton", () => {
     );
 
     expect(
-      await screen.findByText("O pagamento por cartao ainda nao esta disponivel no momento."),
+      screen.getByText(
+        "Voce sera redirecionado para o ambiente do Mercado Pago para concluir o pagamento.",
+      ),
     ).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Pagar no Mercado Pago" }));
@@ -157,14 +159,17 @@ describe("SubscribeCheckoutButton", () => {
     expect(
       screen.getByRole("button", { name: "Digitar cartao aqui" }),
     ).toBeInTheDocument();
+    expect(loadMercadoPagoMock).not.toHaveBeenCalled();
+    expect(mercadoPagoConstructorMock).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Digitar cartao aqui" }));
+
     await waitFor(() => {
       expect(loadMercadoPagoMock).toHaveBeenCalled();
       expect(mercadoPagoConstructorMock).toHaveBeenCalledWith("TEST-public-key", {
         locale: "pt-BR",
       });
     });
-
-    await userEvent.click(screen.getByRole("button", { name: "Digitar cartao aqui" }));
 
     expect(await screen.findByRole("button", { name: "Autorizar assinatura" })).toBeInTheDocument();
 

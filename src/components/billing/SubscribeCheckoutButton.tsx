@@ -236,6 +236,15 @@ export function SubscribeCheckoutButton({
   useEffect(() => {
     if (!user || !sessionReady) {
       cardFormRef.current = null;
+      setIsFormLoading(false);
+      setIsDirectFormReady(false);
+      setSdkError(null);
+      return;
+    }
+
+    if (!showDirectForm) {
+      cardFormRef.current = null;
+      setIsFormLoading(false);
       setIsDirectFormReady(false);
       setSdkError(null);
       return;
@@ -243,6 +252,7 @@ export function SubscribeCheckoutButton({
 
     if (!mercadoPagoPublicKey.trim()) {
       cardFormRef.current = null;
+      setIsFormLoading(false);
       setIsDirectFormReady(false);
       setSdkError("O pagamento por cartao ainda nao esta disponivel no momento.");
       return;
@@ -250,6 +260,7 @@ export function SubscribeCheckoutButton({
 
     if (!payerEmail) {
       cardFormRef.current = null;
+      setIsFormLoading(false);
       setIsDirectFormReady(false);
       setSdkError("Nao foi possivel preparar o pagamento agora.");
       return;
@@ -381,6 +392,7 @@ export function SubscribeCheckoutButton({
     mercadoPagoPublicKey,
     payerEmail,
     sessionReady,
+    showDirectForm,
     user,
   ]);
 
