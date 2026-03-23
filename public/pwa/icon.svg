@@ -1,0 +1,23 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="1024" rx="256" fill="#080E1A"/>
+  <rect x="40" y="40" width="944" height="944" rx="216" stroke="url(#ring)" stroke-width="12"/>
+  <circle cx="512" cy="512" r="300" fill="url(#halo)"/>
+  <path d="M194 512H334L398 376L466 650L530 300L598 674L662 466L726 512H830" stroke="url(#pulse)" stroke-width="56" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="530" cy="300" r="32" fill="#34D399"/>
+  <defs>
+    <linearGradient id="pulse" x1="194" y1="300" x2="830" y2="674" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#34D399"/>
+      <stop offset="0.5" stop-color="#06B6D4"/>
+      <stop offset="1" stop-color="#34D399"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#34D399"/>
+      <stop offset="0.5" stop-color="#06B6D4"/>
+      <stop offset="1" stop-color="#34D399"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(512 512) rotate(90) scale(300)">
+      <stop stop-color="#123F4C"/>
+      <stop offset="1" stop-color="#0F1729"/>
+    </radialGradient>
+  </defs>
+</svg>
