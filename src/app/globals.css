@@ -99,6 +99,98 @@ body > * {
   z-index: 1;
 }
 
+/* ===== INTRO.JS ===== */
+.introjs-overlay {
+  background: rgba(8, 14, 26, 0.78) !important;
+}
+
+.introjs-helperLayer {
+  border-radius: 20px !important;
+  box-shadow:
+    0 0 0 1px rgba(52, 211, 153, 0.24),
+    0 24px 60px rgba(0, 0, 0, 0.55) !important;
+}
+
+.introjs-tooltip {
+  min-width: min(320px, calc(100vw - 2rem)) !important;
+  border-radius: 20px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background:
+    linear-gradient(180deg, rgba(15, 23, 41, 0.98), rgba(8, 14, 26, 0.98)) !important;
+  color: var(--text-primary) !important;
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(52, 211, 153, 0.08) inset !important;
+}
+
+.introjs-tooltipReferenceLayer * {
+  scroll-margin-top: 96px;
+}
+
+.introjs-tooltip-title {
+  font-family: "Outfit", sans-serif !important;
+  font-size: 1.12rem !important;
+  font-weight: 700 !important;
+  color: var(--text-primary) !important;
+}
+
+.introjs-tooltiptext {
+  font-family: "DM Sans", system-ui, sans-serif !important;
+  font-size: 0.95rem !important;
+  line-height: 1.65 !important;
+  color: #d7e1f3 !important;
+}
+
+.introjs-progress {
+  margin: 0.8rem 0 0.4rem !important;
+  background: rgba(124, 141, 181, 0.18) !important;
+}
+
+.introjs-progressbar {
+  background: linear-gradient(135deg, var(--accent-primary), #059669) !important;
+}
+
+.introjs-button {
+  border-radius: 999px !important;
+  border: 1px solid rgba(52, 211, 153, 0.24) !important;
+  background: rgba(52, 211, 153, 0.12) !important;
+  color: var(--text-primary) !important;
+  font-family: "DM Sans", system-ui, sans-serif !important;
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+  transition:
+    background-color var(--duration-fast) ease,
+    border-color var(--duration-fast) ease,
+    transform var(--duration-fast) ease !important;
+}
+
+.introjs-button:hover,
+.introjs-button:focus {
+  background: rgba(52, 211, 153, 0.18) !important;
+  border-color: rgba(52, 211, 153, 0.44) !important;
+  color: var(--text-primary) !important;
+}
+
+.introjs-skipbutton {
+  color: var(--text-secondary) !important;
+}
+
+.introjs-disabled,
+.introjs-disabled:hover,
+.introjs-disabled:focus {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+@media (max-width: 720px) {
+  .introjs-tooltip {
+    min-width: calc(100vw - 1.25rem) !important;
+    max-width: calc(100vw - 1.25rem) !important;
+  }
+}
+
 /* ===== TIPOGRAFIA ===== */
 h1, h2, h3, h4 {
   font-family: 'Outfit', sans-serif;

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "intro.js/minified/introjs.min.css";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import PageTransition from "@/components/PageTransition";
