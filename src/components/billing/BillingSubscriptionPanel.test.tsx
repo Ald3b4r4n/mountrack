@@ -9,6 +9,8 @@ describe("BillingSubscriptionPanel", () => {
     authenticated: true,
     accessAllowed: true,
     effectiveStatus: "active",
+    entitlementStartsAt: "2026-03-23T15:00:00.000Z",
+    entitlementEndsAt: "2026-04-23T15:00:00.000Z",
     subscription: {
       id: "billing-subscription:preapproval-123",
       userId: "user-123",
@@ -39,34 +41,44 @@ describe("BillingSubscriptionPanel", () => {
     window.confirm = originalConfirm;
   });
 
-  it("renders the active subscription summary and cancels renewal without removing current access", async () => {
+  it("renders the subscription cycle and keeps the access window after cancellation", async () => {
     jest.mocked(global.fetch).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          subscription: {
-            ...activePayload.subscription,
-            cancelAtPeriodEnd: true,
-            canceledAt: "2026-03-24T09:00:00.000Z",
-            updatedAt: "2026-03-24T09:00:00.000Z",
-          },
-        }),
-      } as Response);
+      ok: true,
+      json: async () => ({
+        subscription: {
+          ...activePayload.subscription,
+          cancelAtPeriodEnd: true,
+          canceledAt: "2026-03-24T09:00:00.000Z",
+          updatedAt: "2026-03-24T09:00:00.000Z",
+        },
+      }),
+    } as Response);
 
     render(<BillingSubscriptionPanel initialPayload={activePayload} />);
 
     expect(screen.getByText("Assinatura ativa")).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "Proxima renovacao em 23/04/2026." }),
+      screen.getByRole("heading", { name: "Acesso liberado ate 23/04/2026." }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Mercado Pago · mensal")).toBeInTheDocument();
+    expect(screen.getByText("23/03/2026 ate 23/04/2026")).toBeInTheDocument();
+    expect(
+      screen.getByText("Cobranca processada pelo Mercado Pago"),
     ).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Cancelar renovacao" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Cancelar renovacao" }),
+    );
 
     expect(window.confirm).toHaveBeenCalledWith(
       "Cancelar a renovacao automatica? O acesso continua ativo ate o fim do periodo ja pago.",
     );
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith("/api/billing/subscription/cancel", { method: "POST" });
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/billing/subscription/cancel",
+        { method: "POST" },
+      );
     });
 
     expect(
@@ -78,15 +90,18 @@ describe("BillingSubscriptionPanel", () => {
     expect(
       screen.getByRole("heading", { name: "Seu acesso segue ate 23/04/2026." }),
     ).toBeInTheDocument();
+    expect(screen.getByText("Cancelada em 24/03/2026")).toBeInTheDocument();
   });
 
-  it("stays hidden while the user is still in the trial window", async () => {
+  it("stays hidden while the user is still in the trial window", () => {
     const { container } = render(
       <BillingSubscriptionPanel
         initialPayload={{
           authenticated: true,
           accessAllowed: true,
           effectiveStatus: "trialing",
+          entitlementStartsAt: "2026-03-23T15:00:00.000Z",
+          entitlementEndsAt: "2026-03-30T15:00:00.000Z",
           subscription: {
             ...activePayload.subscription,
             id: "billing-subscription:trial-123",

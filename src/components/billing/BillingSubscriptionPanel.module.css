@@ -3,7 +3,7 @@
   padding: 1.4rem;
   display: grid;
   gap: 1rem;
-  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.95fr);
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.95fr);
   border: 1px solid rgba(90, 214, 180, 0.14);
   background:
     radial-gradient(circle at top right, rgba(45, 212, 191, 0.12), transparent 34%),
@@ -44,16 +44,25 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.metaCard {
+.metaCard,
+.timelineCard,
+.providerCard,
+.helpCard {
   padding: 0.95rem 1rem;
   border-radius: 1rem;
   border: 1px solid rgba(148, 163, 184, 0.12);
   background: rgba(9, 18, 31, 0.66);
+}
+
+.metaCard {
   display: grid;
   gap: 0.32rem;
 }
 
-.metaLabel {
+.metaLabel,
+.timelineLabel,
+.providerLabel,
+.helpTitle {
   color: var(--text-muted);
   font-size: 0.72rem;
   font-weight: 700;
@@ -61,10 +70,38 @@
   text-transform: uppercase;
 }
 
-.metaValue {
+.metaValue,
+.timelineValue {
   color: var(--text-primary);
   font-size: 0.98rem;
   line-height: 1.45;
+}
+
+.timelineGrid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.timelineCard {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.timelineHint,
+.providerText {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.65;
+}
+
+.providerCard {
+  display: grid;
+  gap: 0.5rem;
+  background:
+    linear-gradient(180deg, rgba(13, 28, 47, 0.92), rgba(9, 18, 31, 0.8)),
+    radial-gradient(circle at top right, rgba(45, 212, 191, 0.1), transparent 45%);
 }
 
 .actions {
@@ -112,6 +149,21 @@
   border-color: rgba(52, 211, 153, 0.22);
 }
 
+.helpCard {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.helpList {
+  margin: 0;
+  padding-left: 1rem;
+  color: var(--text-secondary);
+  display: grid;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
 .feedback {
   margin: 0;
   padding: 0.8rem 0.9rem;
@@ -143,7 +195,8 @@
     padding: 1rem;
   }
 
-  .metaRow {
+  .metaRow,
+  .timelineGrid {
     grid-template-columns: 1fr;
   }
 
