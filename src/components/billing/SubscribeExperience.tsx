@@ -326,8 +326,8 @@ export function SubscribeExperience({
                   Assine sem sair da sua rotina.
                 </h2>
                 <p className={styles.slideText}>
-                  Quando decidir continuar, conclua a assinatura aqui e siga do
-                  mesmo ponto em que parou.
+                  Quando decidir continuar, abra o checkout do Mercado Pago e
+                  siga do mesmo ponto em que parou.
                 </p>
               </div>
 
@@ -338,7 +338,7 @@ export function SubscribeExperience({
                 <ul className={styles.checkoutSummary}>
                   <li>Seu historico continua salvo na mesma conta.</li>
                   <li>O acesso volta assim que o pagamento e confirmado.</li>
-                  <li>Se voce ja pagou, basta atualizar o acesso.</li>
+                  <li>Se preferir, voce pode abrir o ambiente do Mercado Pago.</li>
                 </ul>
               </div>
 

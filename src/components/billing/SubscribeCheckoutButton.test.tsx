@@ -108,7 +108,7 @@ describe("SubscribeCheckoutButton", () => {
       await screen.findByText("O pagamento por cartao ainda nao esta disponivel no momento."),
     ).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Continuar para pagamento" }));
+    await userEvent.click(screen.getByRole("button", { name: "Pagar no Mercado Pago" }));
 
     expect(global.fetch).toHaveBeenCalledWith(
       "/api/billing/checkout",
@@ -151,9 +151,22 @@ describe("SubscribeCheckoutButton", () => {
       />,
     );
 
+    expect(
+      screen.getByRole("button", { name: "Pagar no Mercado Pago" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Digitar cartao aqui" }),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(loadMercadoPagoMock).toHaveBeenCalled();
+      expect(mercadoPagoConstructorMock).toHaveBeenCalledWith("TEST-public-key", {
+        locale: "pt-BR",
+      });
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Digitar cartao aqui" }));
+
     expect(await screen.findByRole("button", { name: "Autorizar assinatura" })).toBeInTheDocument();
-    expect(loadMercadoPagoMock).toHaveBeenCalled();
-    expect(mercadoPagoConstructorMock).toHaveBeenCalledWith("TEST-public-key", { locale: "pt-BR" });
 
     await userEvent.type(screen.getByLabelText("Nome do titular"), "APRO");
     await userEvent.type(screen.getByLabelText("Numero do documento"), "12345678909");

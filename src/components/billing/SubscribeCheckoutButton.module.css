@@ -3,6 +3,11 @@
   gap: 1rem;
 }
 
+.primaryActions {
+  display: grid;
+  gap: 0.7rem;
+}
+
 .guestState {
   display: grid;
   gap: 0.65rem;
@@ -12,10 +17,33 @@
 .submitButton,
 .fallbackButton {
   width: 100%;
-  min-height: 3.5rem;
+  min-height: 3.2rem;
   justify-content: center;
   display: inline-flex;
   align-items: center;
+}
+
+.altButton {
+  width: 100%;
+  min-height: 2.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(140, 160, 198, 0.22);
+  background: rgba(8, 17, 32, 0.46);
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  font-weight: 700;
+  transition:
+    border-color var(--duration-fast) ease,
+    color var(--duration-fast) ease,
+    background-color var(--duration-fast) ease;
+}
+
+.altButton:hover,
+.altButton:focus-visible {
+  outline: none;
+  color: var(--text-primary);
+  border-color: rgba(52, 211, 153, 0.24);
+  background: rgba(8, 17, 32, 0.62);
 }
 
 .guestCopy,
@@ -28,6 +56,28 @@
 .form {
   display: grid;
   gap: 1rem;
+  padding: 1rem;
+  border-radius: 1.3rem;
+  border: 1px solid rgba(140, 160, 198, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(5, 10, 20, 0.24)),
+    rgba(6, 13, 24, 0.48);
+}
+
+.directIntro {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.directIntro strong {
+  color: var(--text-primary);
+  font-size: 0.92rem;
+}
+
+.directIntro p {
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.55;
 }
 
 .fieldGroup {
@@ -58,12 +108,12 @@
 .secureMount,
 .input,
 .select {
-  min-height: 3.75rem;
-  border-radius: 1.1rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  min-height: 3.1rem;
+  border-radius: 0.95rem;
+  border: 1px solid rgba(160, 179, 214, 0.16);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(8, 14, 26, 0.08)),
-    rgba(255, 255, 255, 0.015);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(8, 14, 26, 0.12)),
+    rgba(255, 255, 255, 0.02);
   color: var(--text-primary);
   transition:
     border-color var(--duration-fast) ease,
@@ -72,7 +122,7 @@
 }
 
 .secureMount {
-  padding: 0.95rem 1rem;
+  padding: 0.78rem 0.9rem;
   display: flex;
   align-items: center;
   overflow: hidden;
@@ -95,12 +145,12 @@
 .secureMount :global(input) {
   color: var(--text-primary) !important;
   font-family: "DM Sans", sans-serif !important;
-  font-size: 1rem !important;
+  font-size: 0.96rem !important;
   background: transparent !important;
 }
 
 .secureMount :global(input::placeholder) {
-  color: var(--text-muted) !important;
+  color: rgba(228, 235, 247, 0.52) !important;
   opacity: 1 !important;
 }
 
@@ -111,9 +161,9 @@
 .input,
 .select {
   width: 100%;
-  padding: 0.95rem 1rem;
+  padding: 0.78rem 0.9rem;
   font-family: "DM Sans", sans-serif;
-  font-size: 0.98rem;
+  font-size: 0.95rem;
 }
 
 .input::placeholder {
@@ -152,5 +202,15 @@
   .fieldRowTwo,
   .fieldRowDoc {
     grid-template-columns: 1fr;
+  }
+
+  .form {
+    padding: 0.85rem;
+  }
+
+  .secureMount,
+  .input,
+  .select {
+    min-height: 2.9rem;
   }
 }

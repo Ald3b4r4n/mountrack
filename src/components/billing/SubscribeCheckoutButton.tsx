@@ -119,6 +119,7 @@ export function SubscribeCheckoutButton({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFormLoading, setIsFormLoading] = useState(false);
   const [isDirectFormReady, setIsDirectFormReady] = useState(false);
+  const [showDirectForm, setShowDirectForm] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sdkError, setSdkError] = useState<string | null>(null);
@@ -405,6 +406,7 @@ export function SubscribeCheckoutButton({
   const canUseDirectCheckout = Boolean(
     mercadoPagoPublicKey.trim() && payerEmail && !sdkError,
   );
+  const shouldRenderDirectForm = canUseDirectCheckout && showDirectForm;
   const directButtonLabel = isSubmitting
     ? "Autorizando assinatura..."
     : isFormLoading
@@ -413,12 +415,51 @@ export function SubscribeCheckoutButton({
 
   return (
     <div className={styles.root}>
-      {canUseDirectCheckout ? (
+      <div className={styles.primaryActions}>
+        <button
+          type="button"
+          className={`btn-primary ${styles.fallbackButton}`}
+          onClick={handleHostedCheckout}
+          disabled={loading || isSubmitting}
+        >
+          {isSubmitting && !showDirectForm
+            ? "Preparando checkout..."
+            : "Pagar no Mercado Pago"}
+        </button>
+
+        {canUseDirectCheckout ? (
+          <button
+            type="button"
+            className={styles.altButton}
+            onClick={() => {
+              setShowDirectForm((current) => !current);
+              setError(null);
+              setMessage(null);
+            }}
+            disabled={isSubmitting}
+            aria-expanded={showDirectForm}
+          >
+            {showDirectForm
+              ? "Fechar formulario de cartao"
+              : "Digitar cartao aqui"}
+          </button>
+        ) : null}
+      </div>
+
+      {shouldRenderDirectForm ? (
         <form
           id={`${formPrefix}__form`}
           onSubmit={handleDirectCheckout}
           className={styles.form}
         >
+          <div className={styles.directIntro}>
+            <strong>Formulario seguro do Mercado Pago</strong>
+            <p>
+              Os dados do cartao sao tokenizados pelo Mercado Pago e nao ficam
+              armazenados no MounTrack.
+            </p>
+          </div>
+
           <div className={styles.fieldGroup}>
             <label
               htmlFor={`${formPrefix}__card-number`}
@@ -542,16 +583,7 @@ export function SubscribeCheckoutButton({
             {directButtonLabel}
           </button>
         </form>
-      ) : (
-        <button
-          type="button"
-          className={`btn-primary ${styles.fallbackButton}`}
-          onClick={handleHostedCheckout}
-          disabled={loading || isSubmitting}
-        >
-          {isSubmitting ? "Preparando checkout..." : "Continuar para pagamento"}
-        </button>
-      )}
+      ) : null}
 
       {sdkError ? (
         <p className={`${styles.message} ${styles.messageError}`}>{sdkError}</p>
@@ -563,11 +595,12 @@ export function SubscribeCheckoutButton({
         <p className={`${styles.message} ${styles.messageSuccess}`}>{message}</p>
       ) : null}
 
-      {canUseDirectCheckout ? (
+      {shouldRenderDirectForm ? (
         <p className={styles.footerNote}>Pagamento seguro via Mercado Pago.</p>
       ) : (
         <p className={styles.footerNote}>
-          Se preferir, voce tambem pode continuar no checkout do Mercado Pago.
+          Voce sera redirecionado para o ambiente do Mercado Pago para concluir
+          o pagamento.
         </p>
       )}
     </div>
