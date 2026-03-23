@@ -1,21 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import styles from "./BillingSubscriptionPanel.module.css";
 
-interface BillingAccessPayload {
+export interface BillingAccessPayload {
   authenticated?: boolean;
+  accessAllowed?: boolean;
   effectiveStatus?: string;
   subscription?: {
     id: string;
+    userId: string;
+    planId: string | null;
     planName: string | null;
     planCode: string | null;
     status: string;
+    trialEndsAt: string | null;
+    currentPeriodStart: string | null;
     currentPeriodEnd: string | null;
     cancelAtPeriodEnd: boolean;
     canceledAt: string | null;
     providerSubscriptionId: string | null;
+    gracePeriodEndsAt: string | null;
+    createdAt: string;
+    updatedAt: string;
   } | null;
 }
 
@@ -47,7 +55,7 @@ function resolvePanelCopy(payload: BillingAccessPayload) {
       description:
         "Nao haverá nova cobrança depois do ciclo atual. Seu histórico e o acesso pago continuam ativos até o fim do período já confirmado.",
       primaryAction: null,
-      secondaryLabel: "Ver assinatura",
+      secondaryLabel: "Abrir plano",
     };
   }
 
@@ -59,39 +67,34 @@ function resolvePanelCopy(payload: BillingAccessPayload) {
     description:
       "A renovação é mensal pelo Mercado Pago. Se quiser encerrar, você pode cancelar a renovação automática e continuar usando o app até o fim do período já pago.",
     primaryAction: "Cancelar renovacao",
-    secondaryLabel: "Ver assinatura",
+    secondaryLabel: "Abrir plano",
   };
 }
 
-export function BillingSubscriptionPanel() {
-  const [payload, setPayload] = useState<BillingAccessPayload | null>(null);
+interface BillingSubscriptionPanelProps {
+  initialPayload: BillingAccessPayload | null;
+}
+
+export function BillingSubscriptionPanel({
+  initialPayload,
+}: BillingSubscriptionPanelProps) {
+  const [subscriptionOverride, setSubscriptionOverride] = useState<
+    BillingAccessPayload["subscription"]
+  >(null);
+  const payload = useMemo(
+    () =>
+      initialPayload
+        ? {
+            ...initialPayload,
+            subscription:
+              subscriptionOverride ?? initialPayload.subscription ?? null,
+          }
+        : null,
+    [initialPayload, subscriptionOverride],
+  );
   const [isCancelling, setIsCancelling] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    void (async () => {
-      try {
-        const response = await fetch("/api/billing/access", {
-          method: "GET",
-          cache: "no-store",
-        });
-        const data = (await response.json().catch(() => null)) as BillingAccessPayload | null;
-
-        if (!cancelled) {
-          setPayload(response.ok ? data : null);
-        }
-      } catch (requestError) {
-        console.error("Failed to load billing subscription panel", requestError);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const panelCopy = useMemo(() => {
     if (!payload?.authenticated || !payload.subscription?.providerSubscriptionId) {
@@ -136,14 +139,7 @@ export function BillingSubscriptionPanel() {
       }
 
       if (data && "subscription" in data) {
-        setPayload((current) =>
-          current
-            ? {
-                ...current,
-                subscription: data.subscription ?? current.subscription,
-              }
-            : current,
-        );
+        setSubscriptionOverride(data.subscription ?? null);
       }
 
       setMessage("Renovacao automatica cancelada. O acesso segue ativo ate o fim do periodo atual.");

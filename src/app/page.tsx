@@ -21,7 +21,6 @@ import {
   TrendingUp,
 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { BillingSubscriptionPanel } from "@/components/billing/BillingSubscriptionPanel";
 import { BillingTrialBanner } from "@/components/billing/BillingTrialBanner";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
@@ -525,6 +524,9 @@ export default function Home() {
           <Link href="/history" className="nav-pill">
             Histórico
           </Link>
+          <Link href="/subscription" className="nav-pill">
+            Assinatura
+          </Link>
           <Link href="/journal" className="nav-pill">
             Diário
           </Link>
@@ -540,7 +542,6 @@ export default function Home() {
         </nav>
 
         <BillingTrialBanner />
-        <BillingSubscriptionPanel />
 
         {loading ? (
           <section

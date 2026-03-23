@@ -22,6 +22,7 @@ Implement paid access for MounTrack with:
 
 - New users receive `7 days` of trial on the first eligible login.
 - The home now carries the trial countdown and pre-blocking CTA before redirecting to `/subscribe`.
+- Subscription self-service now lives in a dedicated `Minha assinatura` screen instead of the home.
 - Paid users can see their current subscription summary inside the app and request `cancel at period end` without losing the already paid period.
 - The cancellation flow must remain idempotent and preserve `current_period_end`; canceling renewal must not revoke access immediately.
 
