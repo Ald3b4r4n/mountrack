@@ -271,6 +271,17 @@ Implement paid access for MounTrack with:
 - Payment webhook reconciliation now fetches the provider payment, validates `amount + currency + external_reference`, stores `billing_payments`, updates `billing_subscriptions` and `billing_checkout_sessions`, and grants or blocks entitlements accordingly.
 - Subscription lifecycle notifications beyond payment events remain the next increment for this workstream.
 
+### Manual sandbox validation note (2026-03-23)
+
+- A recurring sandbox checkout was created successfully against Mercado Pago and approved with a test buyer using the hosted subscription screen.
+- The provider payment resource returned the expected `external_reference`, matching the internal `billing_checkout_session.id`.
+- A signed webhook delivery to `/api/billing/webhooks/mercado-pago` was accepted and reconciled correctly, moving the records to:
+  - `billing_checkout_sessions.status = completed`
+  - `billing_payments.internal_status = paid`
+  - `billing_subscriptions.status = active`
+  - `billing_entitlements.status = active`
+- Automatic webhook delivery was **not observed during the initial polling window** after approval, so the remaining operational follow-up is to inspect Mercado Pago webhook delivery logs/configuration for the seller test application.
+
 ### Tasks
 
 1. Create `POST /api/billing/checkout`.
@@ -414,3 +425,23 @@ Implement paid access for MounTrack with:
 
 - Regular users follow the billing decision again.
 - Owner and admin keep the controlled bypass in [server-access.ts](G:/Apps/MounTrack/src/modules/billing/auth/server-access.ts) so internal operation is not blocked by billing incidents.
+
+## Manual sandbox validation note (2026-03-23)
+
+- A recurring sandbox checkout was created and approved successfully with the seller test app and buyer test account.
+- Provider resource validation confirmed the real payment `150869308887` carried the expected internal `external_reference`, matching the checkout session created by the app.
+- A signed delivery to [route.ts](G:/Apps/MounTrack/src/app/api/billing/webhooks/mercado-pago/route.ts) reconciled the payment correctly and produced:
+  - `billing_checkout_sessions.status = completed`
+  - `billing_payments.internal_status = paid`
+  - `billing_subscriptions.status = active`
+  - `billing_entitlements.status = active`
+- Automatic delivery did not appear at first because the seller test application's webhook secret diverged from the value configured in Vercel.
+- The fastest proof was the Mercado Pago webhook simulator:
+  - first it returned `401 Unauthorized` against `https://mountrack.vercel.app/api/billing/webhooks/mercado-pago`
+  - after aligning `MERCADO_PAGO_WEBHOOK_SECRET` in Vercel with the seller test application's current secret and redeploying, the simulator advanced to business-logic execution
+- Once automatic delivery started, the seller test app sent a mix of `payment`, `subscription_preapproval`, and `subscription_authorized_payment` events. The webhook handler now branches by resource type, resolves authorized payments through `GET /authorized_payments/{id}` when needed, and no longer assumes `billing_payments.subscription_id` can be derived from a synthetic subscription id string.
+  - with a fake `data.id`, the simulator returned `500`, which confirmed signature acceptance and a downstream reconciliation failure on a nonexistent payment id
+  - with the real payment id `150869308887`, the simulator returned `200 OK`
+- Operational nuance for this seller test application:
+  - `Modo de teste` is the relevant webhook target for sandbox notifications
+  - `Modo de produção` was empty in the app configuration

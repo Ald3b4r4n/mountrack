@@ -9,6 +9,7 @@ import { reconcileMercadoPagoBillingEvent } from "@/modules/billing/services/mer
 import {
   getBillingStorageResponse,
   recordBillingEventIfNew,
+  updateBillingEventProcessingStatus,
 } from "@/modules/billing/repositories/billing-store";
 
 export const runtime = "nodejs";
@@ -19,6 +20,8 @@ const mercadoPagoWebhookAckSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  let recordedEventId: string | null = null;
+
   if (getBillingStorageResponse() === "unavailable") {
     return NextResponse.json({ error: "Billing storage unavailable" }, { status: 503 });
   }
@@ -42,6 +45,7 @@ export async function POST(request: Request) {
       idempotencyKey: envelope.requestId ?? `mercado_pago:${envelope.providerEventId}`,
       payload: envelope.payload as Record<string, unknown>,
     });
+    recordedEventId = result.record.id;
 
     const reconciliation = await reconcileMercadoPagoBillingEvent(result.record, envelope);
     const body = mercadoPagoWebhookAckSchema.parse({
@@ -53,6 +57,10 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Invalid Mercado Pago webhook payload" }, { status: 400 });
+    }
+
+    if (recordedEventId) {
+      await updateBillingEventProcessingStatus(recordedEventId, "reconciliation_failed").catch(() => undefined);
     }
 
     return NextResponse.json({ error: "Failed to ingest Mercado Pago webhook" }, { status: 500 });

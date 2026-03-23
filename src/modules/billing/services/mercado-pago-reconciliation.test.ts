@@ -1,7 +1,9 @@
 /** @jest-environment node */
 
 jest.mock("@/modules/billing/providers/mercado-pago", () => ({
+  fetchMercadoPagoAuthorizedPayment: jest.fn(),
   fetchMercadoPagoPayment: jest.fn(),
+  fetchMercadoPagoPreapproval: jest.fn(),
 }));
 
 jest.mock("@/modules/billing/repositories/billing-store", () => ({
@@ -15,7 +17,11 @@ jest.mock("@/modules/billing/repositories/billing-store", () => ({
 }));
 
 import type { BillingEventRecord } from "@/modules/billing/domain/types";
-import { fetchMercadoPagoPayment } from "@/modules/billing/providers/mercado-pago";
+import {
+  fetchMercadoPagoAuthorizedPayment,
+  fetchMercadoPagoPayment,
+  fetchMercadoPagoPreapproval,
+} from "@/modules/billing/providers/mercado-pago";
 import { parseMercadoPagoWebhookPayload } from "@/modules/billing/providers/mercado-pago-webhooks";
 import {
   getBillingCheckoutSessionById,
@@ -28,7 +34,9 @@ import {
 } from "@/modules/billing/repositories/billing-store";
 import { reconcileMercadoPagoBillingEvent } from "@/modules/billing/services/mercado-pago-reconciliation";
 
+const fetchMercadoPagoAuthorizedPaymentMock = jest.mocked(fetchMercadoPagoAuthorizedPayment);
 const fetchMercadoPagoPaymentMock = jest.mocked(fetchMercadoPagoPayment);
+const fetchMercadoPagoPreapprovalMock = jest.mocked(fetchMercadoPagoPreapproval);
 const getBillingCheckoutSessionByIdMock = jest.mocked(getBillingCheckoutSessionById);
 const getBillingPlanByIdMock = jest.mocked(getBillingPlanById);
 const updateBillingCheckoutSessionMock = jest.mocked(updateBillingCheckoutSession);
@@ -51,6 +59,18 @@ describe("mercado-pago reconciliation", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    fetchMercadoPagoAuthorizedPaymentMock.mockResolvedValue({
+      authorizedPaymentId: "7026602912",
+      providerSubscriptionId: "preapproval-123",
+      providerPaymentId: "999999999",
+      paymentStatus: "approved",
+      paymentStatusDetail: "accredited",
+      amountCents: 1499,
+      currency: "BRL",
+      externalReference: "checkout-1",
+      approvedAt: "2026-03-19T15:00:00.000Z",
+      rawPayload: { id: 7026602912 },
+    });
     fetchMercadoPagoPaymentMock.mockResolvedValue({
       providerPaymentId: "999999999",
       status: "approved",
@@ -110,7 +130,7 @@ describe("mercado-pago reconciliation", () => {
       endsAt: "2026-04-19T15:00:00.000Z",
     });
     upsertBillingSubscriptionMock.mockResolvedValue({
-      id: "billing-subscription:preapproval-123",
+      id: "sub-db-1",
       userId: "user-123",
       planId: "billing-plan-pro-monthly",
       providerSubscriptionId: "preapproval-123",
@@ -123,6 +143,14 @@ describe("mercado-pago reconciliation", () => {
       gracePeriodEndsAt: null,
       createdAt: "2026-03-19T15:00:00.000Z",
       updatedAt: "2026-03-19T15:00:00.000Z",
+    });
+    fetchMercadoPagoPreapprovalMock.mockResolvedValue({
+      providerSubscriptionId: "preapproval-123",
+      status: "authorized",
+      externalReference: "checkout-1",
+      nextPaymentDate: "2026-04-19T15:00:00.000Z",
+      lastChargedAt: "2026-03-19T15:00:00.000Z",
+      rawPayload: { id: "preapproval-123", status: "authorized" },
     });
   });
 
@@ -142,7 +170,7 @@ describe("mercado-pago reconciliation", () => {
     expect(upsertBillingPaymentMock).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: "user-123",
-        subscriptionId: "billing-subscription:preapproval-123",
+        subscriptionId: "sub-db-1",
         providerPaymentId: "999999999",
         providerStatus: "approved",
         internalStatus: "paid",
@@ -206,6 +234,61 @@ describe("mercado-pago reconciliation", () => {
     );
     expect(updateBillingEventProcessingStatusMock).toHaveBeenCalledWith("evt-1", "mismatch");
     expect(upsertBillingSubscriptionMock).not.toHaveBeenCalled();
+  });
+
+  it("reconciles subscription_authorized_payment by resolving the nested payment id", async () => {
+    const envelope = parseMercadoPagoWebhookPayload({
+      id: 130077436157,
+      type: "subscription_authorized_payment",
+      action: "created",
+      entity: "authorized_payment",
+      data: { id: "7026602912" },
+    });
+
+    const result = await reconcileMercadoPagoBillingEvent(eventRecord, envelope);
+
+    expect(result).toEqual({
+      processingStatus: "processed",
+      duplicate: false,
+    });
+    expect(fetchMercadoPagoAuthorizedPaymentMock).toHaveBeenCalledWith("7026602912");
+    expect(upsertBillingPaymentMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerPaymentId: "999999999",
+      }),
+    );
+    expect(updateBillingEventProcessingStatusMock).toHaveBeenCalledWith("evt-1", "processed");
+  });
+
+  it("reconciles subscription_preapproval without trying to create a payment row", async () => {
+    const envelope = parseMercadoPagoWebhookPayload({
+      id: 130077169701,
+      type: "subscription_preapproval",
+      action: "created",
+      entity: "preapproval",
+      data: { id: "preapproval-123" },
+    });
+
+    const result = await reconcileMercadoPagoBillingEvent(eventRecord, envelope);
+
+    expect(result).toEqual({
+      processingStatus: "processed",
+      duplicate: false,
+    });
+    expect(fetchMercadoPagoPreapprovalMock).toHaveBeenCalledWith("preapproval-123");
+    expect(upsertBillingSubscriptionMock).toHaveBeenCalledWith({
+      id: "billing-subscription:preapproval-123",
+      userId: "user-123",
+      planId: "billing-plan-pro-monthly",
+      providerSubscriptionId: "preapproval-123",
+      status: "active",
+      currentPeriodStart: "2026-03-19T15:00:00.000Z",
+      currentPeriodEnd: "2026-04-19T15:00:00.000Z",
+      cancelAtPeriodEnd: false,
+      canceledAt: null,
+    });
+    expect(upsertBillingPaymentMock).not.toHaveBeenCalled();
+    expect(updateBillingEventProcessingStatusMock).toHaveBeenCalledWith("evt-1", "processed");
   });
 
   it("skips reprocessing already processed events", async () => {

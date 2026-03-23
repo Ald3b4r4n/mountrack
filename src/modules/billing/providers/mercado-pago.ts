@@ -31,6 +31,28 @@ export interface MercadoPagoPaymentResource {
   rawPayload: Record<string, unknown>;
 }
 
+export interface MercadoPagoPreapprovalResource {
+  providerSubscriptionId: string;
+  status: string;
+  externalReference?: string | null;
+  nextPaymentDate?: string | null;
+  lastChargedAt?: string | null;
+  rawPayload: Record<string, unknown>;
+}
+
+export interface MercadoPagoAuthorizedPaymentResource {
+  authorizedPaymentId: string;
+  providerSubscriptionId: string;
+  providerPaymentId: string | null;
+  paymentStatus: string | null;
+  paymentStatusDetail?: string | null;
+  amountCents: number;
+  currency: string;
+  externalReference?: string | null;
+  approvedAt?: string | null;
+  rawPayload: Record<string, unknown>;
+}
+
 export interface MercadoPagoCollectorProfile {
   email: string | null;
   nickname: string | null;
@@ -60,6 +82,42 @@ const mercadoPagoCollectorProfileResponseSchema = z
   .object({
     email: z.string().trim().min(1).nullable().optional(),
     nickname: z.string().trim().min(1).nullable().optional(),
+  })
+  .passthrough();
+
+const mercadoPagoPreapprovalResourceSchema = z
+  .object({
+    id: z.string().trim().min(1),
+    status: z.string().trim().min(1),
+    external_reference: z.string().trim().min(1).nullable().optional(),
+    next_payment_date: z.string().trim().min(1).nullable().optional(),
+    summarized: z
+      .object({
+        last_charged_date: z.string().trim().min(1).nullable().optional(),
+      })
+      .partial()
+      .nullable()
+      .optional(),
+  })
+  .passthrough();
+
+const mercadoPagoAuthorizedPaymentSchema = z
+  .object({
+    id: z.union([z.string(), z.number()]),
+    preapproval_id: z.string().trim().min(1),
+    transaction_amount: z.number(),
+    currency_id: z.string().trim().min(1),
+    external_reference: z.string().trim().min(1).nullable().optional(),
+    debit_date: z.string().trim().min(1).nullable().optional(),
+    payment: z
+      .object({
+        id: z.union([z.string(), z.number()]).nullable().optional(),
+        status: z.string().trim().min(1).nullable().optional(),
+        status_detail: z.string().trim().min(1).nullable().optional(),
+      })
+      .partial()
+      .nullable()
+      .optional(),
   })
   .passthrough();
 
@@ -204,6 +262,83 @@ export async function fetchMercadoPagoPayment(paymentId: string): Promise<Mercad
     currency: parsed.currency_id,
     externalReference: parsed.external_reference ?? null,
     approvedAt: parsed.date_approved ?? null,
+    rawPayload: parsed as Record<string, unknown>,
+  };
+}
+
+export async function fetchMercadoPagoPreapproval(
+  preapprovalId: string,
+): Promise<MercadoPagoPreapprovalResource> {
+  const accessToken = getMercadoPagoAccessToken();
+  if (!accessToken) {
+    throw new Error("MERCADO_PAGO_NOT_CONFIGURED");
+  }
+
+  const response = await fetch(`${getMercadoPagoApiBaseUrl()}/preapproval/${encodeURIComponent(preapprovalId)}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const payload = await response.text().catch(() => "");
+    throw new Error(`MERCADO_PAGO_PREAPPROVAL_FETCH_FAILED:${response.status}:${payload.slice(0, 240)}`);
+  }
+
+  const parsed = mercadoPagoPreapprovalResourceSchema.parse(await response.json());
+
+  return {
+    providerSubscriptionId: parsed.id,
+    status: parsed.status,
+    externalReference: parsed.external_reference ?? null,
+    nextPaymentDate: parsed.next_payment_date ?? null,
+    lastChargedAt: parsed.summarized?.last_charged_date ?? null,
+    rawPayload: parsed as Record<string, unknown>,
+  };
+}
+
+export async function fetchMercadoPagoAuthorizedPayment(
+  authorizedPaymentId: string,
+): Promise<MercadoPagoAuthorizedPaymentResource> {
+  const accessToken = getMercadoPagoAccessToken();
+  if (!accessToken) {
+    throw new Error("MERCADO_PAGO_NOT_CONFIGURED");
+  }
+
+  const response = await fetch(
+    `${getMercadoPagoApiBaseUrl()}/authorized_payments/${encodeURIComponent(authorizedPaymentId)}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    const payload = await response.text().catch(() => "");
+    throw new Error(
+      `MERCADO_PAGO_AUTHORIZED_PAYMENT_FETCH_FAILED:${response.status}:${payload.slice(0, 240)}`,
+    );
+  }
+
+  const parsed = mercadoPagoAuthorizedPaymentSchema.parse(await response.json());
+
+  return {
+    authorizedPaymentId: String(parsed.id),
+    providerSubscriptionId: parsed.preapproval_id,
+    providerPaymentId: parsed.payment?.id ? String(parsed.payment.id) : null,
+    paymentStatus: parsed.payment?.status ?? null,
+    paymentStatusDetail: parsed.payment?.status_detail ?? null,
+    amountCents: Math.round(parsed.transaction_amount * 100),
+    currency: parsed.currency_id,
+    externalReference: parsed.external_reference ?? null,
+    approvedAt: parsed.debit_date ?? null,
     rawPayload: parsed as Record<string, unknown>,
   };
 }

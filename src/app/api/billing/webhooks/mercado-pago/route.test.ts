@@ -3,6 +3,7 @@
 jest.mock("@/modules/billing/repositories/billing-store", () => ({
   getBillingStorageResponse: jest.fn(),
   recordBillingEventIfNew: jest.fn(),
+  updateBillingEventProcessingStatus: jest.fn(),
 }));
 
 jest.mock("@/modules/billing/services/mercado-pago-reconciliation", () => ({
@@ -14,11 +15,13 @@ import { POST } from "@/app/api/billing/webhooks/mercado-pago/route";
 import {
   getBillingStorageResponse,
   recordBillingEventIfNew,
+  updateBillingEventProcessingStatus,
 } from "@/modules/billing/repositories/billing-store";
 import { reconcileMercadoPagoBillingEvent } from "@/modules/billing/services/mercado-pago-reconciliation";
 
 const getBillingStorageResponseMock = jest.mocked(getBillingStorageResponse);
 const recordBillingEventIfNewMock = jest.mocked(recordBillingEventIfNew);
+const updateBillingEventProcessingStatusMock = jest.mocked(updateBillingEventProcessingStatus);
 const reconcileMercadoPagoBillingEventMock = jest.mocked(reconcileMercadoPagoBillingEvent);
 
 describe("POST /api/billing/webhooks/mercado-pago", () => {
@@ -44,6 +47,16 @@ describe("POST /api/billing/webhooks/mercado-pago", () => {
     reconcileMercadoPagoBillingEventMock.mockResolvedValue({
       processingStatus: "processed",
       duplicate: false,
+    });
+    updateBillingEventProcessingStatusMock.mockResolvedValue({
+      id: "evt-1",
+      provider: "mercado_pago",
+      providerEventId: "12345",
+      eventType: "payment.updated",
+      signatureVerified: false,
+      processingStatus: "reconciliation_failed",
+      idempotencyKey: "mercado_pago:12345",
+      processedAt: null,
     });
   });
 
@@ -184,5 +197,31 @@ describe("POST /api/billing/webhooks/mercado-pago", () => {
       received: true,
       duplicate: true,
     });
+  });
+
+  it("marks persisted events as reconciliation_failed when processing throws", async () => {
+    reconcileMercadoPagoBillingEventMock.mockRejectedValue(new Error("boom"));
+
+    const response = await POST(
+      new Request("http://localhost/api/billing/webhooks/mercado-pago", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: 12345,
+          action: "payment.updated",
+          data: {
+            id: "999999999",
+          },
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(500);
+    expect(updateBillingEventProcessingStatusMock).toHaveBeenCalledWith(
+      "evt-1",
+      "reconciliation_failed",
+    );
   });
 });

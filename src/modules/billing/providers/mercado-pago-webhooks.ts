@@ -8,6 +8,7 @@ const mercadoPagoWebhookPayloadSchema = z
     live_mode: z.boolean().optional(),
     type: z.string().trim().min(1).optional(),
     action: z.string().trim().min(1).optional(),
+    entity: z.string().trim().min(1).optional(),
     api_version: z.string().trim().min(1).optional(),
     date_created: z.string().trim().min(1).optional(),
     user_id: z.union([z.string(), z.number()]).optional(),
