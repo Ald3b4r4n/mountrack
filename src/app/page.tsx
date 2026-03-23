@@ -15,14 +15,12 @@ import {
   Flame,
   Gem,
   Lightbulb,
-  Sparkles,
   Trophy,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { BillingTrialBanner } from "@/components/billing/BillingTrialBanner";
-import { IntroTourButton } from "@/components/tours/IntroTourButton";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/lib/firebase";
@@ -38,7 +36,6 @@ import {
   getChartDateLabelIndices,
 } from "@/modules/dashboard/utils";
 import { loadAmpouleSettings } from "@/modules/dashboard/ampoule-settings";
-import { homeDashboardTourSteps } from "@/modules/tours/home-dashboard-tour";
 import type { DashboardLogSummary } from "@/modules/dashboard/utils";
 
 interface ChartPoint {
@@ -475,7 +472,6 @@ export default function Home() {
 
         <header
           className="anim-enter"
-          data-tour-id="dashboard-header"
           style={{
             marginBottom: "1.5rem",
             display: "flex",
@@ -496,16 +492,9 @@ export default function Home() {
           <div
             style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}
           >
-            <IntroTourButton
-              tourId="dashboard-home"
-              label="Conhecer o app"
-              steps={homeDashboardTourSteps}
-              autoStart={!loading}
-            />
             <Link
               href="/log"
               className="btn-primary"
-              data-tour-id="dashboard-new-log"
               style={{ textDecoration: "none" }}
             >
               + Novo Registro
@@ -518,7 +507,6 @@ export default function Home() {
 
         <nav
           className="anim-enter anim-delay-1"
-          data-tour-id="dashboard-navigation"
           style={{
             marginBottom: "2.5rem",
             display: "flex",
@@ -529,56 +517,48 @@ export default function Home() {
           <Link
             href="/analytics"
             className="nav-pill"
-            data-tour-id="dashboard-nav-analytics"
           >
             Relatórios
           </Link>
           <Link
             href="/goals"
             className="nav-pill"
-            data-tour-id="dashboard-nav-goals"
           >
             Metas
           </Link>
           <Link
             href="/history"
             className="nav-pill"
-            data-tour-id="dashboard-nav-history"
           >
             Histórico
           </Link>
           <Link
             href="/subscription"
             className="nav-pill"
-            data-tour-id="dashboard-nav-subscription"
           >
             Assinatura
           </Link>
           <Link
             href="/journal"
             className="nav-pill"
-            data-tour-id="dashboard-nav-journal"
           >
             Diário
           </Link>
           <Link
             href="/expenses"
             className="nav-pill"
-            data-tour-id="dashboard-nav-expenses"
           >
             Gastos
           </Link>
           <Link
             href="/nutrition"
             className="nav-pill"
-            data-tour-id="dashboard-nav-nutrition"
           >
             Nutrição
           </Link>
           <Link
             href="/ampoules"
             className="nav-pill"
-            data-tour-id="dashboard-nav-ampoules"
           >
             Ampolas
           </Link>
@@ -742,7 +722,6 @@ export default function Home() {
             {chartPoints.length >= 2 && (
               <div
                 className="glass-panel anim-enter anim-delay-1"
-                data-tour-id="dashboard-progress"
                 style={{
                   padding: "1.5rem 1.5rem 1rem",
                   marginBottom: "1.5rem",
@@ -919,7 +898,6 @@ export default function Home() {
             >
               <article
                 className="glass-panel anim-enter anim-delay-2"
-                data-tour-id="dashboard-next-dose"
                 style={{ padding: "1.75rem" }}
               >
                 <p className="stat-label">Próxima Dose</p>
@@ -1045,7 +1023,6 @@ export default function Home() {
 
               <article
                 className="glass-panel anim-enter anim-delay-2"
-                data-tour-id="dashboard-current-dose"
                 style={{ padding: "1.75rem" }}
               >
                 <p className="stat-label">Dose em Uso</p>
@@ -1149,7 +1126,6 @@ export default function Home() {
 
               <article
                 className="glass-panel anim-enter anim-delay-4"
-                data-tour-id="dashboard-current-ampoule"
                 style={{ padding: "1.75rem" }}
               >
                 <p className="stat-label">Ampola Atual</p>
@@ -1231,7 +1207,6 @@ export default function Home() {
 
               <article
                 className="glass-panel anim-enter anim-delay-4"
-                data-tour-id="dashboard-goal"
                 style={{
                   padding: "1.75rem",
                   position: "relative",
@@ -1306,7 +1281,7 @@ export default function Home() {
                         }}
                       >
                         <span style={{ display: "inline-flex" }}>
-                          <Sparkles size={16} />
+                          <Lightbulb size={16} />
                         </span>
                         <div
                           style={{
