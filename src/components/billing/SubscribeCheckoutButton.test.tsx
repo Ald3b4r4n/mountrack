@@ -196,4 +196,48 @@ describe("SubscribeCheckoutButton", () => {
     ).toBeInTheDocument();
     expect(assignMock).not.toHaveBeenCalled();
   });
+
+  it("waits for the checkout targets before mounting the Mercado Pago form", async () => {
+    useAuthMock.mockReturnValue({
+      user: { uid: "user-123", email: "user@example.com" },
+      loading: false,
+      sessionReady: true,
+      signInWithGoogle: jest.fn(),
+      signOut: jest.fn(),
+    } as never);
+
+    const originalGetElementById = document.getElementById.bind(document);
+    let misses = 0;
+
+    jest.spyOn(document, "getElementById").mockImplementation((id) => {
+      if (
+        typeof id === "string" &&
+        id.startsWith("subscribe-checkout__") &&
+        misses < 3
+      ) {
+        misses += 1;
+        return null;
+      }
+
+      return originalGetElementById(id);
+    });
+
+    render(
+      <SubscribeCheckoutButton
+        planCode="pro_monthly"
+        amountCents={1499}
+        mercadoPagoPublicKey="TEST-public-key"
+        sandboxPayerEmail="buyer@testuser.com"
+        navigate={assignMock}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Digitar cartao aqui" }));
+
+    await waitFor(() => {
+      expect(cardFormMock).toHaveBeenCalled();
+    });
+
+    expect(misses).toBeGreaterThan(0);
+  });
 });

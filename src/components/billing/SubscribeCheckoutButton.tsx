@@ -58,6 +58,44 @@ type MercadoPagoWindow = Window & {
   ) => MercadoPagoInstance;
 };
 
+const CARD_FORM_TARGET_IDS = [
+  "form",
+  "card-number",
+  "expiration-date",
+  "security-code",
+  "cardholder-name",
+  "issuer",
+  "installments",
+  "identification-type",
+  "identification-number",
+  "cardholder-email",
+] as const;
+
+async function waitForCardFormTargets(
+  prefix: string,
+  retries = 8,
+): Promise<boolean> {
+  if (typeof document === "undefined") {
+    return false;
+  }
+
+  for (let attempt = 0; attempt < retries; attempt += 1) {
+    const isReady = CARD_FORM_TARGET_IDS.every((suffix) =>
+      document.getElementById(`${prefix}__${suffix}`),
+    );
+
+    if (isReady) {
+      return true;
+    }
+
+    await new Promise<void>((resolve) => {
+      window.requestAnimationFrame(() => resolve());
+    });
+  }
+
+  return false;
+}
+
 function resolveSuccessMessage(status?: string): string {
   if (status === "authorized") {
     return "Assinatura autorizada. Aguarde a confirmacao do primeiro pagamento.";
@@ -275,6 +313,11 @@ export function SubscribeCheckoutButton({
 
     void (async () => {
       try {
+        const targetsReady = await waitForCardFormTargets(formPrefix);
+        if (!targetsReady) {
+          throw new Error("MERCADO_PAGO_FORM_TARGETS_UNAVAILABLE");
+        }
+
         await loadMercadoPago();
         if (!isMounted) {
           return;
