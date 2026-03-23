@@ -1177,14 +1177,14 @@ export async function upsertBillingSubscription(
     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     on conflict (provider_subscription_id) do update set
       user_id = excluded.user_id,
-      plan_id = excluded.plan_id,
+      plan_id = coalesce(excluded.plan_id, billing_subscriptions.plan_id),
       status = excluded.status,
-      trial_ends_at = excluded.trial_ends_at,
-      current_period_start = excluded.current_period_start,
-      current_period_end = excluded.current_period_end,
+      trial_ends_at = coalesce(excluded.trial_ends_at, billing_subscriptions.trial_ends_at),
+      current_period_start = coalesce(excluded.current_period_start, billing_subscriptions.current_period_start),
+      current_period_end = coalesce(excluded.current_period_end, billing_subscriptions.current_period_end),
       cancel_at_period_end = excluded.cancel_at_period_end,
-      canceled_at = excluded.canceled_at,
-      grace_period_ends_at = excluded.grace_period_ends_at,
+      canceled_at = coalesce(excluded.canceled_at, billing_subscriptions.canceled_at),
+      grace_period_ends_at = coalesce(excluded.grace_period_ends_at, billing_subscriptions.grace_period_ends_at),
       updated_at = now()
     returning
       id,

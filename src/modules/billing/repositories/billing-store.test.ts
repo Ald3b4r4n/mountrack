@@ -429,8 +429,10 @@ describe("billing-store", () => {
   });
 
   it("upserts billing subscriptions for Mercado Pago recurring checkouts", async () => {
+    let subscriptionUpsertSql = "";
     const query = makeQueryMock((sql) => {
       if (sql.includes("insert into billing_subscriptions")) {
+        subscriptionUpsertSql = sql;
         return {
           rows: [
             {
@@ -481,6 +483,12 @@ describe("billing-store", () => {
       createdAt: "2026-03-19T14:00:00.000Z",
       updatedAt: "2026-03-19T14:00:00.000Z",
     });
+    expect(subscriptionUpsertSql).toContain(
+      "current_period_start = coalesce(excluded.current_period_start, billing_subscriptions.current_period_start)",
+    );
+    expect(subscriptionUpsertSql).toContain(
+      "current_period_end = coalesce(excluded.current_period_end, billing_subscriptions.current_period_end)",
+    );
   });
 
   it("keeps billing schema hardening in runtime bootstrap and Supabase migration", () => {
