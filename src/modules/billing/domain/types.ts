@@ -1,7 +1,7 @@
 export const BILLING_MONTHLY_PLAN_CODE = "pro_monthly";
 export const BILLING_MONTHLY_PRICE_CENTS = 1499;
 export const BILLING_CURRENCY = "BRL";
-export const BILLING_TRIAL_DAYS = 3;
+export const BILLING_TRIAL_DAYS = 7;
 
 export const BILLING_ACCESS_STATUSES = [
   "trialing",

@@ -82,7 +82,7 @@ describe("mercado-pago reconciliation", () => {
       billingInterval: "monthly",
       amountCents: 1499,
       currency: "BRL",
-      trialDays: 3,
+      trialDays: 7,
       isActive: true,
     });
     updateBillingCheckoutSessionMock.mockResolvedValue(null);

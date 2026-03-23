@@ -96,7 +96,7 @@ describe("billing-store", () => {
         billingInterval: "monthly",
         amountCents: 1499,
         currency: "BRL",
-        trialDays: 3,
+        trialDays: 7,
         isActive: true,
       },
     ]);
@@ -606,6 +606,8 @@ describe("billing-store", () => {
 
     expect(snapshot).toEqual({
       entitlementStatus: "trialing",
+      entitlementStartsAt: "2026-03-15T00:00:00.000Z",
+      entitlementEndsAt: "2026-03-18T00:00:00.000Z",
       manualGrant: {
         grantType: "doctor",
         startsAt: "2026-03-14T00:00:00.000Z",
@@ -628,7 +630,7 @@ describe("billing-store", () => {
               billing_interval: "monthly",
               amount_cents: 1499,
               currency: "BRL",
-              trial_days: 3,
+              trial_days: 7,
               is_active: true,
             },
           ],
@@ -649,12 +651,12 @@ describe("billing-store", () => {
       billingInterval: "monthly",
       amountCents: 1499,
       currency: "BRL",
-      trialDays: 3,
+      trialDays: 7,
       isActive: true,
     });
   });
 
-  it("creates the initial 3-day trial only when the user has no prior entitlement", async () => {
+  it("creates the initial 7-day trial only when the user has no prior entitlement", async () => {
     const query = makeQueryMock((sql) => {
       if (sql.includes("select exists")) {
         return {
@@ -672,7 +674,7 @@ describe("billing-store", () => {
               source_id: "trial:user-trial",
               status: "trialing",
               starts_at: "2026-03-15T12:00:00.000Z",
-              ends_at: "2026-03-18T12:00:00.000Z",
+              ends_at: "2026-03-22T12:00:00.000Z",
             },
           ],
         };
@@ -695,7 +697,7 @@ describe("billing-store", () => {
       sourceId: "trial:user-trial",
       status: "trialing",
       startsAt: "2026-03-15T12:00:00.000Z",
-      endsAt: "2026-03-18T12:00:00.000Z",
+      endsAt: "2026-03-22T12:00:00.000Z",
     });
   });
 });

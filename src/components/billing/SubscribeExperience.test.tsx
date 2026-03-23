@@ -41,7 +41,7 @@ describe("SubscribeExperience", () => {
         planCode="pro_monthly"
         amountCents={1499}
         monthlyPrice="R$ 14,99"
-        trialDays={3}
+        trialDays={7}
         mercadoPagoPublicKey=""
       />,
     );
@@ -53,7 +53,7 @@ describe("SubscribeExperience", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: /Os 3 dias gratis comecam no primeiro acesso./,
+        name: /Os 7 dias gratis comecam no primeiro acesso./,
       }),
     ).toBeInTheDocument();
     expect(screen.getByText("Etapa 2 de 3")).toBeInTheDocument();

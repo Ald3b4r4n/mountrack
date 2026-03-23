@@ -17,7 +17,7 @@ describe("billing access policy", () => {
     expect(BILLING_MONTHLY_PLAN_CODE).toBe("pro_monthly");
     expect(BILLING_MONTHLY_PRICE_CENTS).toBe(1499);
     expect(BILLING_CURRENCY).toBe("BRL");
-    expect(BILLING_TRIAL_DAYS).toBe(3);
+    expect(BILLING_TRIAL_DAYS).toBe(7);
   });
 
   it("allows active entitlement states", () => {

@@ -74,7 +74,7 @@ describe("POST /api/billing/checkout", () => {
       billingInterval: "monthly",
       amountCents: 1499,
       currency: "BRL",
-      trialDays: 3,
+      trialDays: 7,
       isActive: true,
     });
     createBillingCheckoutSessionMock.mockResolvedValue({
