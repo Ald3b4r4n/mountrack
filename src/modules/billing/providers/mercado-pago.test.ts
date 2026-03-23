@@ -1,6 +1,7 @@
 /** @jest-environment node */
 
 import {
+  cancelMercadoPagoPreapproval,
   createMercadoPagoPreapproval,
   fetchMercadoPagoCollectorProfile,
   fetchMercadoPagoPayment,
@@ -106,6 +107,46 @@ describe("mercado-pago provider", () => {
         payer_email: "buyer@testuser.com",
         card_token_id: "card-token-123",
         status: "authorized",
+      }),
+    );
+  });
+
+  it("cancels a recurring preapproval subscription", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        id: "preapproval-123",
+        status: "cancelled",
+        next_payment_date: null,
+        summarized: {
+          last_charged_date: "2026-03-23T14:00:00.000Z",
+        },
+      }),
+    } as Response);
+
+    const subscription = await cancelMercadoPagoPreapproval("preapproval-123");
+
+    expect(subscription).toEqual({
+      providerSubscriptionId: "preapproval-123",
+      status: "cancelled",
+      externalReference: null,
+      nextPaymentDate: null,
+      lastChargedAt: "2026-03-23T14:00:00.000Z",
+      rawPayload: expect.objectContaining({
+        id: "preapproval-123",
+        status: "cancelled",
+      }),
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.mercadopago.com/preapproval/preapproval-123",
+      expect.objectContaining({
+        method: "PUT",
+        headers: expect.objectContaining({
+          Authorization: "Bearer TEST-123",
+        }),
+        body: JSON.stringify({
+          status: "cancelled",
+        }),
       }),
     );
   });

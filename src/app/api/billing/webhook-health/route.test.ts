@@ -45,6 +45,7 @@ describe("GET /api/billing/webhook-health", () => {
       effectiveStatus: "active",
       entitlementStartsAt: null,
       entitlementEndsAt: null,
+      subscription: null,
     });
 
     const response = await GET();
@@ -63,6 +64,7 @@ describe("GET /api/billing/webhook-health", () => {
       effectiveStatus: "operator_override",
       entitlementStartsAt: null,
       entitlementEndsAt: null,
+      subscription: null,
     });
     getBillingStorageResponseMock.mockReturnValue("unavailable");
 
@@ -82,6 +84,7 @@ describe("GET /api/billing/webhook-health", () => {
       effectiveStatus: "active",
       entitlementStartsAt: null,
       entitlementEndsAt: null,
+      subscription: null,
     });
     getBillingWebhookHealthSummaryMock.mockResolvedValue({
       provider: "mercado_pago",
@@ -124,6 +127,7 @@ describe("GET /api/billing/webhook-health", () => {
       effectiveStatus: "operator_override",
       entitlementStartsAt: null,
       entitlementEndsAt: null,
+      subscription: null,
     });
     getBillingWebhookHealthSummaryMock.mockResolvedValue({
       provider: "mercado_pago",

@@ -181,6 +181,46 @@ export async function createMercadoPagoPreapproval(
   };
 }
 
+export async function cancelMercadoPagoPreapproval(
+  providerSubscriptionId: string,
+): Promise<MercadoPagoPreapprovalResource> {
+  const accessToken = getMercadoPagoAccessToken();
+  if (!accessToken) {
+    throw new Error("MERCADO_PAGO_NOT_CONFIGURED");
+  }
+
+  const response = await fetch(
+    `${getMercadoPagoApiBaseUrl()}/preapproval/${encodeURIComponent(providerSubscriptionId)}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        status: "cancelled",
+      }),
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    const payload = await response.text().catch(() => "");
+    throw new Error(`MERCADO_PAGO_PREAPPROVAL_CANCEL_FAILED:${response.status}:${payload.slice(0, 240)}`);
+  }
+
+  const parsed = mercadoPagoPreapprovalResourceSchema.parse(await response.json());
+
+  return {
+    providerSubscriptionId: parsed.id,
+    status: parsed.status,
+    externalReference: parsed.external_reference ?? null,
+    nextPaymentDate: parsed.next_payment_date ?? null,
+    lastChargedAt: parsed.summarized?.last_charged_date ?? null,
+    rawPayload: parsed as Record<string, unknown>,
+  };
+}
+
 export async function fetchMercadoPagoCollectorProfile(): Promise<MercadoPagoCollectorProfile> {
   const accessToken = getMercadoPagoAccessToken();
   if (!accessToken) {

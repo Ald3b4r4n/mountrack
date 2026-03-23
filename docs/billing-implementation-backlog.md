@@ -18,6 +18,13 @@ Implement paid access for MounTrack with:
 - The correct default posture is `RLS enabled + no public browser policies` until a concrete Supabase client use case exists.
 - The `pg_trgm` warning for extension placement is lower priority than the RLS errors and should be handled in a separate maintenance step.
 
+## Current product status (2026-03-23)
+
+- New users receive `7 days` of trial on the first eligible login.
+- The home now carries the trial countdown and pre-blocking CTA before redirecting to `/subscribe`.
+- Paid users can see their current subscription summary inside the app and request `cancel at period end` without losing the already paid period.
+- The cancellation flow must remain idempotent and preserve `current_period_end`; canceling renewal must not revoke access immediately.
+
 ## Final Architecture
 
 ## Chosen stack

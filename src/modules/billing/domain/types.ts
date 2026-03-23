@@ -153,6 +153,22 @@ export interface BillingAccessSnapshot {
   roles: AppRole[];
 }
 
+export interface BillingSubscriptionSnapshot {
+  id: string;
+  userId: string;
+  planId: string | null;
+  providerSubscriptionId: string | null;
+  status: string;
+  trialEndsAt: string | null;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  canceledAt: string | null;
+  gracePeriodEndsAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type AccessDecisionReason =
   | "active_entitlement"
   | "manual_grant"

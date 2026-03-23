@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import type { AppRole } from "@/modules/billing/domain/types";
+import type { AppRole, BillingSubscriptionSnapshot } from "@/modules/billing/domain/types";
 import {
   hasPrivilegedAccessBypassRole,
   resolveAccessDecision,
@@ -11,7 +11,9 @@ import {
   bootstrapBillingOwner,
   ensureBillingTrialEntitlement,
   getBillingAccessSnapshot,
+  getBillingPlanById,
   getBillingStorageResponse,
+  getLatestBillingSubscriptionForUser,
 } from "@/modules/billing/repositories/billing-store";
 import { verifyFirebaseIdToken } from "@/lib/firebase-admin";
 
@@ -27,6 +29,10 @@ export interface ServerAppAccessContext {
   effectiveStatus: string;
   entitlementStartsAt: string | null;
   entitlementEndsAt: string | null;
+  subscription: (BillingSubscriptionSnapshot & {
+    planName: string | null;
+    planCode: string | null;
+  }) | null;
 }
 
 function coerceEmail(value: unknown): string | undefined {
@@ -58,6 +64,7 @@ export async function resolveServerAppAccessFromToken(
       effectiveStatus: operatorOverride ? "operator_override" : "missing",
       entitlementStartsAt: null,
       entitlementEndsAt: null,
+      subscription: null,
     };
   }
 
@@ -67,7 +74,10 @@ export async function resolveServerAppAccessFromToken(
 
   await ensureBillingTrialEntitlement(user.uid, now);
 
-  const snapshot = await getBillingAccessSnapshot(user.uid, now);
+  const [snapshot, subscription] = await Promise.all([
+    getBillingAccessSnapshot(user.uid, now),
+    getLatestBillingSubscriptionForUser(user.uid, now),
+  ]);
   const decision = resolveAccessDecision({
     entitlementStatus: snapshot.entitlementStatus,
     manualGrant: snapshot.manualGrant,
@@ -78,6 +88,9 @@ export async function resolveServerAppAccessFromToken(
   );
   const operatorOverride =
     hasPrivilegedAccessBypassRole(roles) && !decision.accessAllowed;
+  const plan = subscription?.planId
+    ? await getBillingPlanById(subscription.planId)
+    : null;
 
   return {
     user,
@@ -86,6 +99,13 @@ export async function resolveServerAppAccessFromToken(
     effectiveStatus: operatorOverride ? "operator_override" : decision.effectiveStatus,
     entitlementStartsAt: snapshot.entitlementStartsAt,
     entitlementEndsAt: snapshot.entitlementEndsAt,
+    subscription: subscription
+      ? {
+          ...subscription,
+          planName: plan?.name ?? null,
+          planCode: plan?.code ?? null,
+        }
+      : null,
   };
 }
 

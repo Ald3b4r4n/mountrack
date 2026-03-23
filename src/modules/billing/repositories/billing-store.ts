@@ -10,6 +10,7 @@ import type {
   BillingEventRecord,
   BillingPaymentRecord,
   BillingPlan,
+  BillingSubscriptionSnapshot,
   BillingEntitlementSourceType,
   BillingAccessStatus,
   ManualAccessGrantRecord,
@@ -505,21 +506,7 @@ function mapBillingPaymentRow(row: BillingPaymentRow): BillingPaymentRecord {
 
 function mapBillingSubscriptionRow(
   row: BillingSubscriptionRow,
-): {
-  id: string;
-  userId: string;
-  planId: string | null;
-  providerSubscriptionId: string | null;
-  status: string;
-  trialEndsAt: string | null;
-  currentPeriodStart: string | null;
-  currentPeriodEnd: string | null;
-  cancelAtPeriodEnd: boolean;
-  canceledAt: string | null;
-  gracePeriodEndsAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-} {
+): BillingSubscriptionSnapshot {
   return {
     id: row.id,
     userId: row.user_id,
@@ -1241,7 +1228,7 @@ export async function upsertBillingPayment(
 
 export async function upsertBillingSubscription(
   input: UpsertBillingSubscriptionInput,
-): Promise<ReturnType<typeof mapBillingSubscriptionRow>> {
+): Promise<BillingSubscriptionSnapshot> {
   requireDatabaseUrl();
   await ensureSchema();
 
@@ -1304,6 +1291,48 @@ export async function upsertBillingSubscription(
   );
 
   return mapBillingSubscriptionRow(result.rows[0]);
+}
+
+export async function getLatestBillingSubscriptionForUser(
+  userId: string,
+  now = new Date(),
+): Promise<BillingSubscriptionSnapshot | null> {
+  requireDatabaseUrl();
+  await ensureSchema();
+
+  const result = await getPool().query<BillingSubscriptionRow>(
+    `
+    select
+      id,
+      user_id,
+      billing_customer_id,
+      plan_id,
+      provider_subscription_id,
+      status,
+      trial_ends_at,
+      current_period_start,
+      current_period_end,
+      cancel_at_period_end,
+      canceled_at,
+      grace_period_ends_at,
+      created_at::text,
+      updated_at::text
+    from billing_subscriptions
+    where user_id = $1
+    order by
+      case
+        when current_period_end is not null and current_period_end > $2 then 0
+        when status in ('active', 'pending', 'suspended') then 1
+        else 2
+      end,
+      current_period_end desc nulls last,
+      updated_at desc
+    limit 1
+    `,
+    [userId, now.toISOString()],
+  );
+
+  return result.rows[0] ? mapBillingSubscriptionRow(result.rows[0]) : null;
 }
 
 export async function getBillingAccessSnapshot(

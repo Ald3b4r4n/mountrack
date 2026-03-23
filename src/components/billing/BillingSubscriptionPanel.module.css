@@ -1,0 +1,153 @@
+.panel {
+  margin-bottom: 1.5rem;
+  padding: 1.4rem;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.95fr);
+  border: 1px solid rgba(90, 214, 180, 0.14);
+  background:
+    radial-gradient(circle at top right, rgba(45, 212, 191, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(11, 22, 37, 0.96), rgba(8, 16, 28, 0.98));
+}
+
+.copy {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.eyebrow {
+  color: var(--accent-primary);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(1.35rem, 2vw, 2rem);
+  line-height: 1.05;
+}
+
+.description {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.96rem;
+  line-height: 1.7;
+  max-width: 58ch;
+}
+
+.metaRow {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.metaCard {
+  padding: 0.95rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(9, 18, 31, 0.66);
+  display: grid;
+  gap: 0.32rem;
+}
+
+.metaLabel {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.metaValue {
+  color: var(--text-primary);
+  font-size: 0.98rem;
+  line-height: 1.45;
+}
+
+.actions {
+  padding: 1rem;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(7, 14, 24, 0.72);
+  display: grid;
+  align-content: start;
+  gap: 0.8rem;
+}
+
+.cancelButton,
+.linkButton {
+  min-height: 3rem;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.cancelButton {
+  border-color: rgba(248, 113, 113, 0.32);
+  color: #fecaca;
+}
+
+.cancelButton:hover,
+.cancelButton:focus-visible {
+  border-color: rgba(248, 113, 113, 0.5);
+  background: rgba(127, 29, 29, 0.16);
+}
+
+.linkButton {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  color: var(--text-secondary);
+  background: rgba(13, 24, 40, 0.8);
+}
+
+.linkButton:hover,
+.linkButton:focus-visible {
+  color: var(--text-primary);
+  border-color: rgba(52, 211, 153, 0.22);
+}
+
+.feedback {
+  margin: 0;
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.95rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.feedbackSuccess {
+  color: #bbf7d0;
+  background: rgba(22, 101, 52, 0.18);
+  border: 1px solid rgba(52, 211, 153, 0.16);
+}
+
+.feedbackError {
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.18);
+  border: 1px solid rgba(248, 113, 113, 0.16);
+}
+
+@media (max-width: 900px) {
+  .panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .panel {
+    padding: 1rem;
+  }
+
+  .metaRow {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    padding: 0.9rem;
+  }
+}

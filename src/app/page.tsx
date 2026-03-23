@@ -21,6 +21,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { BillingSubscriptionPanel } from "@/components/billing/BillingSubscriptionPanel";
 import { BillingTrialBanner } from "@/components/billing/BillingTrialBanner";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
@@ -539,6 +540,7 @@ export default function Home() {
         </nav>
 
         <BillingTrialBanner />
+        <BillingSubscriptionPanel />
 
         {loading ? (
           <section

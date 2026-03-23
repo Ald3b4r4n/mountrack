@@ -15,6 +15,7 @@ export async function GET() {
       entitlementStartsAt: null,
       entitlementEndsAt: null,
       roles: [],
+      subscription: null,
     },
       { status: 401 },
     );
@@ -27,6 +28,7 @@ export async function GET() {
     entitlementStartsAt: access.entitlementStartsAt,
     entitlementEndsAt: access.entitlementEndsAt,
     roles: access.roles,
+    subscription: access.subscription,
   };
 
   if (!access.accessAllowed) {

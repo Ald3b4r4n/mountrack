@@ -27,6 +27,7 @@ describe("GET /api/billing/access", () => {
       entitlementStartsAt: null,
       entitlementEndsAt: null,
       roles: [],
+      subscription: null,
     });
   });
 
@@ -41,6 +42,7 @@ describe("GET /api/billing/access", () => {
       effectiveStatus: "past_due",
       entitlementStartsAt: null,
       entitlementEndsAt: null,
+      subscription: null,
     });
 
     const response = await GET();
@@ -53,6 +55,7 @@ describe("GET /api/billing/access", () => {
       entitlementStartsAt: null,
       entitlementEndsAt: null,
       roles: ["user"],
+      subscription: null,
     });
   });
 
@@ -67,6 +70,23 @@ describe("GET /api/billing/access", () => {
       effectiveStatus: "active",
       entitlementStartsAt: "2026-03-20T12:00:00.000Z",
       entitlementEndsAt: "2026-04-20T12:00:00.000Z",
+      subscription: {
+        id: "billing-subscription:preapproval-123",
+        userId: "user-123",
+        planId: "billing-plan-pro-monthly",
+        providerSubscriptionId: "preapproval-123",
+        status: "active",
+        trialEndsAt: null,
+        currentPeriodStart: "2026-03-20T12:00:00.000Z",
+        currentPeriodEnd: "2026-04-20T12:00:00.000Z",
+        cancelAtPeriodEnd: false,
+        canceledAt: null,
+        gracePeriodEndsAt: null,
+        createdAt: "2026-03-20T12:00:00.000Z",
+        updatedAt: "2026-03-20T12:00:00.000Z",
+        planName: "MounTrack Pro Mensal",
+        planCode: "pro_monthly",
+      },
     });
 
     const response = await GET();
@@ -79,6 +99,23 @@ describe("GET /api/billing/access", () => {
       entitlementStartsAt: "2026-03-20T12:00:00.000Z",
       entitlementEndsAt: "2026-04-20T12:00:00.000Z",
       roles: ["user"],
+      subscription: {
+        id: "billing-subscription:preapproval-123",
+        userId: "user-123",
+        planId: "billing-plan-pro-monthly",
+        providerSubscriptionId: "preapproval-123",
+        status: "active",
+        trialEndsAt: null,
+        currentPeriodStart: "2026-03-20T12:00:00.000Z",
+        currentPeriodEnd: "2026-04-20T12:00:00.000Z",
+        cancelAtPeriodEnd: false,
+        canceledAt: null,
+        gracePeriodEndsAt: null,
+        createdAt: "2026-03-20T12:00:00.000Z",
+        updatedAt: "2026-03-20T12:00:00.000Z",
+        planName: "MounTrack Pro Mensal",
+        planCode: "pro_monthly",
+      },
     });
   });
 });
