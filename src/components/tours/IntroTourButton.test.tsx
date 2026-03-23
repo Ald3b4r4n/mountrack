@@ -1,21 +1,23 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import introJs from "intro.js";
 import { IntroTourButton } from "@/components/tours/IntroTourButton";
 
 const setOptionsMock = jest.fn();
 const oncompleteMock = jest.fn();
 const onexitMock = jest.fn();
 const startMock = jest.fn();
+const tourFactoryMock = jest.fn(() => ({
+  setOptions: setOptionsMock,
+  oncomplete: oncompleteMock,
+  onexit: onexitMock,
+  start: startMock,
+}));
 
 jest.mock("intro.js", () => ({
   __esModule: true,
-  default: jest.fn(() => ({
-    setOptions: setOptionsMock,
-    oncomplete: oncompleteMock,
-    onexit: onexitMock,
-    start: startMock,
-  })),
+  default: {
+    tour: tourFactoryMock,
+  },
 }));
 
 describe("IntroTourButton", () => {
@@ -46,9 +48,11 @@ describe("IntroTourButton", () => {
       </>,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: /Conhecer o app/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /Conhecer o app/i }),
+    );
 
-    expect(introJs).toHaveBeenCalled();
+    expect(tourFactoryMock).toHaveBeenCalled();
     expect(setOptionsMock).toHaveBeenCalledWith(
       expect.objectContaining({
         showProgress: true,
@@ -93,7 +97,9 @@ describe("IntroTourButton", () => {
 
     const completeHandler = oncompleteMock.mock.calls[0][0] as () => void;
     completeHandler();
-    expect(window.localStorage.getItem("mountrack-tour:dashboard-home:seen")).toBe("1");
+    expect(
+      window.localStorage.getItem("mountrack-tour:dashboard-home:seen"),
+    ).toBe("1");
 
     jest.useRealTimers();
   });

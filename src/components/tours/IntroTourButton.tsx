@@ -20,6 +20,10 @@ interface IntroTourButtonProps {
 
 const AUTO_START_DELAY_MS = 600;
 
+interface IntroTourFactory {
+  tour(): IntroTourInstance;
+}
+
 interface IntroTourInstance {
   setOptions(options: Record<string, unknown>): void;
   oncomplete(handler: () => void): void;
@@ -69,8 +73,10 @@ export function IntroTourButton({
         return;
       }
 
-      const { default: introJs } = await import("intro.js");
-      const tour = introJs() as IntroTourInstance;
+      const { default: introJs } = (await import("intro.js")) as {
+        default: IntroTourFactory;
+      };
+      const tour = introJs.tour();
       const markAsSeen = () => {
         if (!persistSeen || typeof window === "undefined") {
           return;
@@ -86,7 +92,7 @@ export function IntroTourButton({
         scrollToElement: true,
         scrollTo: "element",
         scrollPadding: 96,
-        nextLabel: "Próximo",
+        nextLabel: "Proximo",
         prevLabel: "Voltar",
         doneLabel: "Fechar",
         skipLabel: "Pular",
