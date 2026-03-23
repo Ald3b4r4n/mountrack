@@ -410,7 +410,7 @@ Implement paid access for MounTrack with:
 - whether courtesy grants expire by default
 - whether finance role can export CSV in v1 or only inspect dashboard
 
-## Temporary operational note
+## Operator access note
 
-- During the current rollout, app access stays temporarily open even for blocked billing states while the paywall copy, dashboard trial countdown, and Mercado Pago onboarding are being refined.
-- Revert the temporary open-access flag in [server-access.ts](G:/Apps/MounTrack/src/modules/billing/auth/server-access.ts) before enforcing the production paywall.
+- Regular users follow the billing decision again.
+- Owner and admin keep the controlled bypass in [server-access.ts](G:/Apps/MounTrack/src/modules/billing/auth/server-access.ts) so internal operation is not blocked by billing incidents.

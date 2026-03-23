@@ -101,14 +101,14 @@ describe("server-access", () => {
         email: "owner@mountrack.app",
       },
       roles: ["user"],
-      accessAllowed: true,
+      accessAllowed: false,
       effectiveStatus: "past_due",
       entitlementStartsAt: "2026-03-15T12:00:00.000Z",
       entitlementEndsAt: "2026-03-18T12:00:00.000Z",
     });
   });
 
-  it("blocks owner and admin when entitlement is blocked", async () => {
+  it("restores the owner and admin bypass when entitlement is blocked", async () => {
     getBillingAccessSnapshotMock.mockResolvedValue({
       entitlementStatus: "past_due",
       entitlementStartsAt: "2026-03-15T12:00:00.000Z",
@@ -124,7 +124,7 @@ describe("server-access", () => {
       },
       roles: ["owner", "admin"],
       accessAllowed: true,
-      effectiveStatus: "past_due",
+      effectiveStatus: "operator_override",
       entitlementStartsAt: "2026-03-15T12:00:00.000Z",
       entitlementEndsAt: "2026-03-18T12:00:00.000Z",
     });
@@ -148,7 +148,7 @@ describe("server-access", () => {
     expect(getBillingAccessSnapshotMock).not.toHaveBeenCalled();
   });
 
-  it("blocks the bootstrap operator in production when billing storage is unavailable", async () => {
+  it("keeps the bootstrap operator online in production when billing storage is unavailable", async () => {
     process.env.BOOTSTRAP_OWNER_EMAIL = "owner@mountrack.app";
     process.env.BOOTSTRAP_ADMIN_EMAILS = "owner@mountrack.app";
     mutableEnv.NODE_ENV = "production";
@@ -161,7 +161,7 @@ describe("server-access", () => {
       },
       roles: ["owner", "admin"],
       accessAllowed: true,
-      effectiveStatus: "missing",
+      effectiveStatus: "operator_override",
       entitlementStartsAt: null,
       entitlementEndsAt: null,
     });

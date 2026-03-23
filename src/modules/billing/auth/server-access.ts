@@ -1,6 +1,9 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { resolveAccessDecision } from "@/modules/billing/access-policy";
+import {
+  hasPrivilegedAccessBypassRole,
+  resolveAccessDecision,
+} from "@/modules/billing/access-policy";
 import { APP_SESSION_COOKIE_NAME } from "@/modules/billing/auth/session-cookie";
 import { getBootstrapRolesForEmail } from "@/modules/billing/config/bootstrap-operators";
 import {
@@ -25,8 +28,6 @@ export interface ServerAppAccessContext {
   entitlementEndsAt: string | null;
 }
 
-const TEMPORARY_OPEN_ACCESS = true;
-
 function coerceEmail(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
 }
@@ -47,16 +48,12 @@ export async function resolveServerAppAccessFromToken(
   const bootstrapRoles = getBootstrapRolesForEmail(user.email);
 
   if (getBillingStorageResponse() === "unavailable") {
-    // const operatorOverride = hasPrivilegedAccessBypassRole(bootstrapRoles);
-    const operatorOverride = false;
+    const operatorOverride = hasPrivilegedAccessBypassRole(bootstrapRoles);
 
     return {
       user,
       roles: bootstrapRoles,
-      accessAllowed:
-        TEMPORARY_OPEN_ACCESS ||
-        operatorOverride ||
-        process.env.NODE_ENV !== "production",
+      accessAllowed: operatorOverride || process.env.NODE_ENV !== "production",
       effectiveStatus: operatorOverride ? "operator_override" : "missing",
       entitlementStartsAt: null,
       entitlementEndsAt: null,
@@ -76,13 +73,13 @@ export async function resolveServerAppAccessFromToken(
     now,
   });
   const roles = Array.from(new Set([...snapshot.roles, ...bootstrapRoles]));
-  // const operatorOverride = hasPrivilegedAccessBypassRole(roles) && !decision.accessAllowed;
-  const operatorOverride = false;
+  const operatorOverride =
+    hasPrivilegedAccessBypassRole(roles) && !decision.accessAllowed;
 
   return {
     user,
     roles,
-    accessAllowed: TEMPORARY_OPEN_ACCESS || operatorOverride || decision.accessAllowed,
+    accessAllowed: operatorOverride || decision.accessAllowed,
     effectiveStatus: operatorOverride ? "operator_override" : decision.effectiveStatus,
     entitlementStartsAt: snapshot.entitlementStartsAt,
     entitlementEndsAt: snapshot.entitlementEndsAt,
