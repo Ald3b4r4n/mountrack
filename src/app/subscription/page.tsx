@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { canManageManualGrants } from "@/modules/billing/manual-grants";
 import {
   BillingSubscriptionPanel,
   type BillingAccessPayload,
@@ -64,6 +65,7 @@ function resolveDescription(payload: BillingAccessPayload) {
 
 export default async function SubscriptionPage() {
   const access = await requireServerAppAccess();
+  const canManageGrants = canManageManualGrants(access.roles);
   const initialPayload: BillingAccessPayload = {
     authenticated: true,
     accessAllowed: access.accessAllowed,
@@ -91,6 +93,11 @@ export default async function SubscriptionPage() {
             <Link href="/subscribe" className="btn-primary">
               Ver plano e pagamento
             </Link>
+            {canManageGrants ? (
+              <Link href="/billing/grants" className="btn-outline">
+                Painel de gratuidade
+              </Link>
+            ) : null}
           </div>
         </div>
 

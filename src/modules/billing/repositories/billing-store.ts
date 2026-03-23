@@ -900,6 +900,25 @@ export async function revokeManualAccessGrant(grantId: string, revokedBy: string
   return true;
 }
 
+export async function listManualAccessGrantsForUser(
+  userId: string,
+): Promise<ManualAccessGrantRecord[]> {
+  requireDatabaseUrl();
+  await ensureSchema();
+
+  const result = await getPool().query<ManualAccessGrantRow>(
+    `
+    select id, user_id, grant_type, reason, notes, starts_at, ends_at, granted_by, revoked_at, created_at
+    from billing_manual_access_grants
+    where user_id = $1
+    order by starts_at desc, created_at desc
+    `,
+    [userId],
+  );
+
+  return result.rows.map(mapManualAccessGrantRow);
+}
+
 export async function recordBillingEventIfNew(
   input: RecordBillingEventInput,
 ): Promise<{ inserted: boolean; record: BillingEventRecord }> {

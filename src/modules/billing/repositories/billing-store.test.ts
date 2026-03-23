@@ -14,6 +14,7 @@ import {
   getBillingCheckoutSessionById,
   getBillingPlanById,
   getBillingWebhookHealthSummary,
+  listManualAccessGrantsForUser,
   listBillingPlans,
   recordBillingEventIfNew,
   updateBillingEventProcessingStatus,
@@ -665,6 +666,74 @@ describe("billing-store", () => {
       },
       roles: ["owner", "finance"],
     });
+  });
+
+  it("lists manual access grants for the selected user in descending order", async () => {
+    const query = makeQueryMock((sql) => {
+      if (sql.includes("from billing_manual_access_grants")) {
+        return {
+          rows: [
+            {
+              id: "grant-2",
+              user_id: "user-a",
+              grant_type: "partner",
+              reason: "Parceiro regional",
+              notes: null,
+              starts_at: "2026-03-20T00:00:00.000Z",
+              ends_at: null,
+              granted_by: "owner-1",
+              revoked_at: null,
+              created_at: "2026-03-20T00:00:00.000Z",
+            },
+            {
+              id: "grant-1",
+              user_id: "user-a",
+              grant_type: "courtesy",
+              reason: "Primeiro ciclo",
+              notes: "Lancamento",
+              starts_at: "2026-02-20T00:00:00.000Z",
+              ends_at: "2026-03-20T00:00:00.000Z",
+              granted_by: "owner-1",
+              revoked_at: "2026-03-01T00:00:00.000Z",
+              created_at: "2026-02-20T00:00:00.000Z",
+            },
+          ],
+        };
+      }
+
+      return { rows: [] };
+    });
+
+    globalStore.__billingPool__ = { query };
+
+    const grants = await listManualAccessGrantsForUser("user-a");
+
+    expect(grants).toEqual([
+      {
+        id: "grant-2",
+        userId: "user-a",
+        grantType: "partner",
+        reason: "Parceiro regional",
+        notes: null,
+        startsAt: "2026-03-20T00:00:00.000Z",
+        endsAt: null,
+        grantedBy: "owner-1",
+        revokedAt: null,
+        createdAt: "2026-03-20T00:00:00.000Z",
+      },
+      {
+        id: "grant-1",
+        userId: "user-a",
+        grantType: "courtesy",
+        reason: "Primeiro ciclo",
+        notes: "Lancamento",
+        startsAt: "2026-02-20T00:00:00.000Z",
+        endsAt: "2026-03-20T00:00:00.000Z",
+        grantedBy: "owner-1",
+        revokedAt: "2026-03-01T00:00:00.000Z",
+        createdAt: "2026-02-20T00:00:00.000Z",
+      },
+    ]);
   });
 
   it("finds a billing plan by id", async () => {

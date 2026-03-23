@@ -230,6 +230,13 @@ export const adminAuth = adminApp ? admin.auth(adminApp) : null;
 export const hasFirebaseAdmin = Boolean(adminApp);
 export const firebaseProjectId = resolveFirebaseProjectId() ?? null;
 
+export interface FirebaseAdminUserSummary {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  disabled: boolean;
+}
+
 export async function verifyFirebaseIdToken(token: string): Promise<{ uid: string } & Record<string, unknown>> {
   if (adminAuth) {
     return adminAuth.verifyIdToken(token) as Promise<{ uid: string } & Record<string, unknown>>;
@@ -240,4 +247,37 @@ export async function verifyFirebaseIdToken(token: string): Promise<{ uid: strin
   }
 
   return verifyFirebaseTokenWithGoogleCerts(token, firebaseProjectId);
+}
+
+export async function findFirebaseUserByEmail(
+  email: string,
+): Promise<FirebaseAdminUserSummary | null> {
+  if (!adminAuth) {
+    throw new Error("AUTH_UNAVAILABLE");
+  }
+
+  try {
+    const userRecord = await adminAuth.getUserByEmail(email);
+
+    return {
+      uid: userRecord.uid,
+      email: userRecord.email ?? null,
+      displayName: userRecord.displayName ?? null,
+      disabled: userRecord.disabled,
+    };
+  } catch (error) {
+    const errorCode =
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      typeof (error as { code?: unknown }).code === "string"
+        ? (error as { code: string }).code
+        : null;
+
+    if (errorCode === "auth/user-not-found") {
+      return null;
+    }
+
+    throw new Error("AUTH_UNAVAILABLE");
+  }
 }

@@ -26,6 +26,7 @@ Implement paid access for MounTrack with:
 - The `Minha assinatura` screen now makes the ownership split explicit: cycle, access window, and cancel-at-period-end are managed in-app, while recurring charge processing remains in Mercado Pago.
 - Paid users can see their current subscription summary inside the app and request `cancel at period end` without losing the already paid period.
 - The cancellation flow must remain idempotent and preserve `current_period_end`; canceling renewal must not revoke access immediately.
+- `owner` and `admin` now have a dedicated internal panel at `/billing/grants` to look up accounts by email, review the current billing state, grant courtesy access with reason and duration, and revoke active concessions with audit trail.
 
 ## Final Architecture
 

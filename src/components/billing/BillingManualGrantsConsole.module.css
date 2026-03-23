@@ -1,0 +1,311 @@
+.panel {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.4rem;
+  border: 1px solid rgba(90, 214, 180, 0.14);
+  background:
+    radial-gradient(circle at top right, rgba(45, 212, 191, 0.09), transparent 30%),
+    linear-gradient(180deg, rgba(11, 22, 37, 0.96), rgba(8, 16, 28, 0.98));
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.eyebrow {
+  display: inline-block;
+  color: var(--accent-primary);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0.55rem 0 0;
+  color: var(--text-primary);
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
+  line-height: 1.05;
+}
+
+.description {
+  margin: 0.8rem 0 0;
+  max-width: 68ch;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.searchForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.85rem;
+  align-items: end;
+}
+
+.field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.fieldLabel {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(8, 16, 28, 0.82);
+  color: var(--text-primary);
+  padding: 0.9rem 1rem;
+  font: inherit;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 104px;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: rgba(148, 163, 184, 0.7);
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none;
+  border-color: rgba(45, 212, 191, 0.52);
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.12);
+}
+
+.results {
+  display: grid;
+  gap: 1rem;
+}
+
+.summaryGrid {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.summaryCard,
+.grantForm,
+.history {
+  padding: 1.1rem;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(8, 16, 28, 0.78);
+}
+
+.cardLabel {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.cardValue {
+  display: block;
+  margin-top: 0.55rem;
+  color: var(--text-primary);
+  font-size: 1.05rem;
+}
+
+.cardMeta {
+  margin: 0.65rem 0 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.workspace {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+}
+
+.formHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.08rem;
+}
+
+.sectionText {
+  margin: 0.45rem 0 0;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.formGrid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.historyList {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.historyCard {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.95rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(5, 12, 22, 0.5);
+}
+
+.historyHeader,
+.historyFooter {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.historyTitle {
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.historyMeta {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.historyReason {
+  margin: 0;
+  color: var(--text-primary);
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.historyNotes {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 84px;
+  padding: 0.38rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.badgeActive {
+  background: rgba(16, 185, 129, 0.14);
+  color: rgb(110, 231, 183);
+}
+
+.badgeEnded {
+  background: rgba(251, 191, 36, 0.14);
+  color: rgb(253, 224, 71);
+}
+
+.badgeRevoked {
+  background: rgba(248, 113, 113, 0.14);
+  color: rgb(252, 165, 165);
+}
+
+.revokeButton {
+  border: none;
+  border-radius: 999px;
+  background: rgba(248, 113, 113, 0.14);
+  color: rgb(254, 202, 202);
+  padding: 0.55rem 0.9rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+
+.revokeButton:hover,
+.revokeButton:focus-visible {
+  background: rgba(248, 113, 113, 0.22);
+}
+
+.revokeButton:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.emptyState {
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px dashed rgba(148, 163, 184, 0.16);
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.success,
+.error {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border-radius: 1rem;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.success {
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  background: rgba(16, 185, 129, 0.12);
+  color: rgb(167, 243, 208);
+}
+
+.error {
+  border: 1px solid rgba(248, 113, 113, 0.24);
+  background: rgba(127, 29, 29, 0.24);
+  color: rgb(254, 202, 202);
+}
+
+@media (max-width: 980px) {
+  .summaryGrid,
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .panel {
+    padding: 1rem;
+  }
+
+  .searchForm,
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .historyHeader,
+  .historyFooter {
+    flex-direction: column;
+  }
+}
