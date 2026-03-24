@@ -12,6 +12,7 @@ import {
   ensureBillingTrialEntitlement,
   getBillingAccessSnapshot,
   getBillingCheckoutSessionById,
+  getManualAccessGrantById,
   getBillingPlanById,
   getBillingWebhookHealthSummary,
   listManualAccessGrantsForUser,
@@ -19,6 +20,7 @@ import {
   recordBillingEventIfNew,
   updateBillingEventProcessingStatus,
   updateBillingCheckoutSession,
+  updateManualAccessGrant,
   upsertBillingPayment,
   upsertBillingSubscription,
   upsertBillingEntitlement,
@@ -734,6 +736,121 @@ describe("billing-store", () => {
         createdAt: "2026-02-20T00:00:00.000Z",
       },
     ]);
+  });
+
+  it("loads a single manual access grant by id", async () => {
+    const query = makeQueryMock((sql, params) => {
+      if (
+        sql.includes("from billing_manual_access_grants") &&
+        sql.includes("where id = $1")
+      ) {
+        expect(params).toEqual(["grant-9"]);
+        return {
+          rows: [
+            {
+              id: "grant-9",
+              user_id: "user-a",
+              grant_type: "staff",
+              reason: "Equipe operacional",
+              notes: "Janela interna",
+              starts_at: "2026-03-20T00:00:00.000Z",
+              ends_at: null,
+              granted_by: "owner-1",
+              revoked_at: null,
+              created_at: "2026-03-20T00:00:00.000Z",
+            },
+          ],
+        };
+      }
+
+      return { rows: [] };
+    });
+
+    globalStore.__billingPool__ = { query };
+
+    const grant = await getManualAccessGrantById("grant-9");
+
+    expect(grant).toEqual({
+      id: "grant-9",
+      userId: "user-a",
+      grantType: "staff",
+      reason: "Equipe operacional",
+      notes: "Janela interna",
+      startsAt: "2026-03-20T00:00:00.000Z",
+      endsAt: null,
+      grantedBy: "owner-1",
+      revokedAt: null,
+      createdAt: "2026-03-20T00:00:00.000Z",
+    });
+  });
+
+  it("updates an active manual access grant without revogar o registro", async () => {
+    const query = makeQueryMock((sql, params) => {
+      if (
+        sql.includes("update billing_manual_access_grants") &&
+        sql.includes("where id = $1 and revoked_at is null")
+      ) {
+        expect(params).toEqual([
+          "grant-9",
+          "partner",
+          "Prazo ajustado",
+          "Extensao aprovada",
+          "2026-06-21T00:00:00.000Z",
+        ]);
+
+        return {
+          rows: [
+            {
+              id: "grant-9",
+              user_id: "user-a",
+              grant_type: "partner",
+              reason: "Prazo ajustado",
+              notes: "Extensao aprovada",
+              starts_at: "2026-03-23T00:00:00.000Z",
+              ends_at: "2026-06-21T00:00:00.000Z",
+              granted_by: "owner-1",
+              revoked_at: null,
+              created_at: "2026-03-23T00:00:00.000Z",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("insert into billing_audit_logs")) {
+        expect(params?.[1]).toBe("owner-2");
+        expect(params?.[2]).toBe("billing.manual_grant_updated");
+        expect(params?.[4]).toBe("grant-9");
+        return { rows: [] };
+      }
+
+      return { rows: [] };
+    });
+
+    globalStore.__billingPool__ = { query };
+
+    const grant = await updateManualAccessGrant(
+      {
+        id: "grant-9",
+        grantType: "partner",
+        reason: "Prazo ajustado",
+        notes: "Extensao aprovada",
+        endsAt: "2026-06-21T00:00:00.000Z",
+      },
+      "owner-2",
+    );
+
+    expect(grant).toEqual({
+      id: "grant-9",
+      userId: "user-a",
+      grantType: "partner",
+      reason: "Prazo ajustado",
+      notes: "Extensao aprovada",
+      startsAt: "2026-03-23T00:00:00.000Z",
+      endsAt: "2026-06-21T00:00:00.000Z",
+      grantedBy: "owner-1",
+      revokedAt: null,
+      createdAt: "2026-03-23T00:00:00.000Z",
+    });
   });
 
   it("finds a billing plan by id", async () => {

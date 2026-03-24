@@ -237,6 +237,22 @@ export interface FirebaseAdminUserSummary {
   disabled: boolean;
 }
 
+export interface FirebaseAdminUsersPage {
+  users: FirebaseAdminUserSummary[];
+  nextPageToken: string | null;
+}
+
+function mapFirebaseUserRecord(
+  userRecord: admin.auth.UserRecord,
+): FirebaseAdminUserSummary {
+  return {
+    uid: userRecord.uid,
+    email: userRecord.email ?? null,
+    displayName: userRecord.displayName ?? null,
+    disabled: userRecord.disabled,
+  };
+}
+
 export async function verifyFirebaseIdToken(token: string): Promise<{ uid: string } & Record<string, unknown>> {
   if (adminAuth) {
     return adminAuth.verifyIdToken(token) as Promise<{ uid: string } & Record<string, unknown>>;
@@ -259,12 +275,7 @@ export async function findFirebaseUserByEmail(
   try {
     const userRecord = await adminAuth.getUserByEmail(email);
 
-    return {
-      uid: userRecord.uid,
-      email: userRecord.email ?? null,
-      displayName: userRecord.displayName ?? null,
-      disabled: userRecord.disabled,
-    };
+    return mapFirebaseUserRecord(userRecord);
   } catch (error) {
     const errorCode =
       typeof error === "object" &&
@@ -278,6 +289,58 @@ export async function findFirebaseUserByEmail(
       return null;
     }
 
+    throw new Error("AUTH_UNAVAILABLE");
+  }
+}
+
+export async function findFirebaseUserByUid(
+  uid: string,
+): Promise<FirebaseAdminUserSummary | null> {
+  if (!adminAuth) {
+    throw new Error("AUTH_UNAVAILABLE");
+  }
+
+  try {
+    const userRecord = await adminAuth.getUser(uid);
+    return mapFirebaseUserRecord(userRecord);
+  } catch (error) {
+    const errorCode =
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      typeof (error as { code?: unknown }).code === "string"
+        ? (error as { code: string }).code
+        : null;
+
+    if (errorCode === "auth/user-not-found") {
+      return null;
+    }
+
+    throw new Error("AUTH_UNAVAILABLE");
+  }
+}
+
+export async function listFirebaseUsers(
+  limit = 25,
+  pageToken?: string | null,
+): Promise<FirebaseAdminUsersPage> {
+  if (!adminAuth) {
+    throw new Error("AUTH_UNAVAILABLE");
+  }
+
+  const normalizedLimit = Math.max(1, Math.min(1000, Math.trunc(limit || 25)));
+
+  try {
+    const listedUsers = await adminAuth.listUsers(
+      normalizedLimit,
+      pageToken ?? undefined,
+    );
+
+    return {
+      users: listedUsers.users.map(mapFirebaseUserRecord),
+      nextPageToken: listedUsers.pageToken ?? null,
+    };
+  } catch {
     throw new Error("AUTH_UNAVAILABLE");
   }
 }

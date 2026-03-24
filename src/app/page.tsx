@@ -20,6 +20,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { BillingManualGrantsShortcut } from "@/components/billing/BillingManualGrantsShortcut";
 import { BillingTrialBanner } from "@/components/billing/BillingTrialBanner";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
@@ -538,6 +539,7 @@ export default function Home() {
           >
             Assinatura
           </Link>
+          <BillingManualGrantsShortcut />
           <Link
             href="/journal"
             className="nav-pill"

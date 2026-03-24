@@ -364,6 +364,14 @@ export interface SaveManualAccessGrantInput {
   grantedBy: string;
 }
 
+export interface UpdateManualAccessGrantInput {
+  id: string;
+  grantType: ManualAccessGrantRecord["grantType"];
+  reason: string;
+  notes?: string | null;
+  endsAt?: string | null;
+}
+
 export interface UpsertBillingPaymentInput {
   id: string;
   userId: string;
@@ -898,6 +906,72 @@ export async function revokeManualAccessGrant(grantId: string, revokedBy: string
   );
 
   return true;
+}
+
+export async function getManualAccessGrantById(
+  grantId: string,
+): Promise<ManualAccessGrantRecord | null> {
+  requireDatabaseUrl();
+  await ensureSchema();
+
+  const result = await getPool().query<ManualAccessGrantRow>(
+    `
+    select id, user_id, grant_type, reason, notes, starts_at, ends_at, granted_by, revoked_at, created_at
+    from billing_manual_access_grants
+    where id = $1
+    limit 1
+    `,
+    [grantId],
+  );
+
+  return result.rows[0] ? mapManualAccessGrantRow(result.rows[0]) : null;
+}
+
+export async function updateManualAccessGrant(
+  input: UpdateManualAccessGrantInput,
+  updatedBy: string,
+): Promise<ManualAccessGrantRecord | null> {
+  requireDatabaseUrl();
+  await ensureSchema();
+
+  const result = await getPool().query<ManualAccessGrantRow>(
+    `
+    update billing_manual_access_grants
+    set
+      grant_type = $2,
+      reason = $3,
+      notes = $4,
+      ends_at = $5
+    where id = $1 and revoked_at is null
+    returning id, user_id, grant_type, reason, notes, starts_at, ends_at, granted_by, revoked_at, created_at
+    `,
+    [
+      input.id,
+      input.grantType,
+      input.reason,
+      input.notes ?? null,
+      input.endsAt ?? null,
+    ],
+  );
+
+  if (!result.rows[0]) {
+    return null;
+  }
+
+  await appendAuditLog(
+    getPool(),
+    updatedBy,
+    "billing.manual_grant_updated",
+    "manual_access_grant",
+    input.id,
+    {
+      userId: result.rows[0].user_id,
+      grantType: input.grantType,
+      reason: input.reason,
+    },
+  );
+
+  return mapManualAccessGrantRow(result.rows[0]);
 }
 
 export async function listManualAccessGrantsForUser(

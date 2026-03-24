@@ -61,6 +61,11 @@ export interface BillingManualGrantsPayload {
   grants: ManualAccessGrantRecord[];
 }
 
+export interface BillingManualGrantUsersPayload {
+  users: FirebaseAdminUserSummary[];
+  nextPageToken: string | null;
+}
+
 export function canManageManualGrants(roles: readonly AppRole[]): boolean {
   return hasBillingPermission(roles, "billing:manual-grants:manage");
 }

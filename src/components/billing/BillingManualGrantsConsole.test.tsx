@@ -6,6 +6,24 @@ describe("BillingManualGrantsConsole", () => {
   const originalFetch = global.fetch;
   const originalConfirm = window.confirm;
 
+  const usersPayload = {
+    users: [
+      {
+        uid: "target-1",
+        email: "target@example.com",
+        displayName: "Target User",
+        disabled: false,
+      },
+      {
+        uid: "target-2",
+        email: "other@example.com",
+        displayName: "Other User",
+        disabled: false,
+      },
+    ],
+    nextPageToken: "cursor-2",
+  } as const;
+
   const payload = {
     targetUser: {
       uid: "target-1",
@@ -49,49 +67,179 @@ describe("BillingManualGrantsConsole", () => {
     window.confirm = originalConfirm;
   });
 
-  it("loads a target user and revokes an active grant", async () => {
-    jest
-      .mocked(global.fetch)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => payload,
-      } as Response)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ revoked: true }),
-      } as Response)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          ...payload,
-          access: {
-            ...payload.access,
-            accessAllowed: false,
-            effectiveStatus: "missing",
-            manualGrantType: null,
-          },
-          grants: [
-            {
-              ...payload.grants[0],
-              revokedAt: "2026-03-24T09:00:00.000Z",
-            },
-          ],
-        }),
-      } as Response);
+  it("loads the user directory and opens a selected account", async () => {
+    jest.mocked(global.fetch).mockImplementation(async (input) => {
+      const url = String(input);
+
+      if (url === "/api/billing/manual-grants/users") {
+        return {
+          ok: true,
+          json: async () => usersPayload,
+        } as Response;
+      }
+
+      if (url === "/api/billing/manual-grants?uid=target-1") {
+        return {
+          ok: true,
+          json: async () => payload,
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch URL: ${url}`);
+    });
 
     render(<BillingManualGrantsConsole />);
 
-    await userEvent.type(
-      screen.getByLabelText("E-mail da conta"),
-      "target@example.com",
+    expect(await screen.findByText("Other User")).toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /Target User/i }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Buscar conta" }));
 
+    expect(await screen.findByText("Acesso promocional")).toBeInTheDocument();
     expect(
-      await screen.findByText("Target User"),
+      screen.getByRole("heading", { name: "Conceder gratuidade" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Acesso promocional")).toBeInTheDocument();
+  });
 
+  it("edits an active grant and refreshes the payload", async () => {
+    jest.mocked(global.fetch).mockImplementation(async (input, init) => {
+      const url = String(input);
+
+      if (url === "/api/billing/manual-grants/users") {
+        return {
+          ok: true,
+          json: async () => usersPayload,
+        } as Response;
+      }
+
+      if (url === "/api/billing/manual-grants?uid=target-1") {
+        return {
+          ok: true,
+          json: async () => payload,
+        } as Response;
+      }
+
+      if (
+        url === "/api/billing/manual-grants/grant-1" &&
+        init?.method === "PUT"
+      ) {
+        return {
+          ok: true,
+          json: async () => ({
+            ...payload,
+            grants: [
+              {
+                ...payload.grants[0],
+                grantType: "partner",
+                reason: "Parceria ampliada",
+                notes: "Novo ciclo",
+                endsAt: "2026-06-21T12:00:00.000Z",
+              },
+            ],
+          }),
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch URL: ${url}`);
+    });
+
+    render(<BillingManualGrantsConsole />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Target User/i }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Editar" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: "Editar gratuidade" }),
+      ).toBeInTheDocument();
+    });
+
+    await userEvent.selectOptions(screen.getByLabelText("Tipo"), "partner");
+    await userEvent.clear(screen.getByLabelText("Motivo"));
+    await userEvent.type(screen.getByLabelText("Motivo"), "Parceria ampliada");
+    await userEvent.clear(screen.getByLabelText("Observacoes internas"));
+    await userEvent.type(
+      screen.getByLabelText("Observacoes internas"),
+      "Novo ciclo",
+    );
+    await userEvent.selectOptions(screen.getByLabelText("Duracao"), "90");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Salvar edicao" }),
+    );
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/billing/manual-grants/grant-1",
+        expect.objectContaining({
+          method: "PUT",
+        }),
+      );
+    });
+    expect(
+      await screen.findByText("Gratuidade atualizada com sucesso."),
+    ).toBeInTheDocument();
+  });
+
+  it("revokes an active grant from the history", async () => {
+    let lookupCount = 0;
+
+    jest.mocked(global.fetch).mockImplementation(async (input, init) => {
+      const url = String(input);
+
+      if (url === "/api/billing/manual-grants/users") {
+        return {
+          ok: true,
+          json: async () => usersPayload,
+        } as Response;
+      }
+
+      if (url === "/api/billing/manual-grants?uid=target-1") {
+        lookupCount += 1;
+
+        return {
+          ok: true,
+          json: async () =>
+            lookupCount === 1
+              ? payload
+              : {
+                  ...payload,
+                  access: {
+                    ...payload.access,
+                    accessAllowed: false,
+                    effectiveStatus: "missing",
+                    manualGrantType: null,
+                  },
+                  grants: [
+                    {
+                      ...payload.grants[0],
+                      revokedAt: "2026-03-24T09:00:00.000Z",
+                    },
+                  ],
+                },
+        } as Response;
+      }
+
+      if (
+        url === "/api/billing/manual-grants/grant-1" &&
+        init?.method === "DELETE"
+      ) {
+        return {
+          ok: true,
+          json: async () => ({ revoked: true }),
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch URL: ${url}`);
+    });
+
+    render(<BillingManualGrantsConsole />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Target User/i }),
+    );
     await userEvent.click(screen.getByRole("button", { name: "Revogar" }));
 
     expect(window.confirm).toHaveBeenCalled();

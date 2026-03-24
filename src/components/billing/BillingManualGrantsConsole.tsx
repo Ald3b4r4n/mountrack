@@ -1,8 +1,9 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useState } from "react";
 import type {
   BillingManualGrantsPayload,
+  BillingManualGrantUsersPayload,
   ManualGrantDurationOptionValue,
 } from "@/modules/billing/manual-grants";
 import {
@@ -13,7 +14,12 @@ import type {
   ManualAccessGrantRecord,
   ManualAccessGrantType,
 } from "@/modules/billing/domain/types";
+import type { FirebaseAdminUserSummary } from "@/lib/firebase-admin";
 import styles from "./BillingManualGrantsConsole.module.css";
+
+const DEFAULT_GRANT_TYPE: ManualAccessGrantType = "courtesy";
+const DEFAULT_DURATION: ManualGrantDurationOptionValue = "30";
+const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 function formatDateTime(
   value: string | Date | null | undefined,
@@ -76,26 +82,116 @@ function resolveGrantState(
   return { label: "Ativa", tone: "active" };
 }
 
+function resolveDurationValue(
+  grant: ManualAccessGrantRecord,
+): ManualGrantDurationOptionValue {
+  if (!grant.endsAt) {
+    return "none";
+  }
+
+  const durationInDays = Math.round(
+    (new Date(grant.endsAt).getTime() - new Date(grant.startsAt).getTime()) /
+      ONE_DAY_IN_MS,
+  );
+  const matchedOption = MANUAL_GRANT_DURATION_OPTIONS.find(
+    (option) =>
+      option.value !== "none" && Number(option.value) === durationInDays,
+  );
+
+  return matchedOption?.value ?? DEFAULT_DURATION;
+}
+
+function resolveUserLabel(user: FirebaseAdminUserSummary): string {
+  return user.displayName || user.email || user.uid;
+}
+
 export function BillingManualGrantsConsole() {
   const [email, setEmail] = useState("");
   const [payload, setPayload] = useState<BillingManualGrantsPayload | null>(
     null,
   );
-  const [grantType, setGrantType] = useState<ManualAccessGrantType>("courtesy");
+  const [directoryUsers, setDirectoryUsers] = useState<FirebaseAdminUserSummary[]>(
+    [],
+  );
+  const [directoryCursor, setDirectoryCursor] = useState<string | null>(null);
+  const [grantType, setGrantType] =
+    useState<ManualAccessGrantType>(DEFAULT_GRANT_TYPE);
   const [durationValue, setDurationValue] =
-    useState<ManualGrantDurationOptionValue>("30");
+    useState<ManualGrantDurationOptionValue>(DEFAULT_DURATION);
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
+  const [editingGrantId, setEditingGrantId] = useState<string | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
+  const [directoryError, setDirectoryError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [isDirectoryLoading, setIsDirectoryLoading] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [revokingGrantId, setRevokingGrantId] = useState<string | null>(null);
 
-  async function lookupByEmail(targetEmail: string) {
-    const normalizedEmail = targetEmail.trim().toLowerCase();
-    if (!normalizedEmail) {
-      setLookupError("Informe o e-mail da conta que vai receber a gratuidade.");
+  function resetGrantForm() {
+    setEditingGrantId(null);
+    setGrantType(DEFAULT_GRANT_TYPE);
+    setDurationValue(DEFAULT_DURATION);
+    setReason("");
+    setNotes("");
+  }
+
+  const loadUserDirectory = useCallback(async (cursor?: string | null) => {
+    const isLoadingMore = Boolean(cursor);
+
+    if (!isLoadingMore) {
+      setIsDirectoryLoading(true);
+    }
+
+    setDirectoryError(null);
+
+    try {
+      const response = await fetch(
+        cursor
+          ? `/api/billing/manual-grants/users?cursor=${encodeURIComponent(cursor)}`
+          : "/api/billing/manual-grants/users",
+      );
+      const data = (await response.json().catch(() => null)) as
+        | BillingManualGrantUsersPayload
+        | { error?: string }
+        | null;
+
+      if (!response.ok || !data || !("users" in data)) {
+        setDirectoryError(
+          (data && "error" in data && data.error) ||
+            "Nao foi possivel carregar os usuarios.",
+        );
+        return;
+      }
+
+      setDirectoryUsers((currentUsers) =>
+        isLoadingMore ? [...currentUsers, ...data.users] : data.users,
+      );
+      setDirectoryCursor(data.nextPageToken);
+    } catch (error) {
+      console.error("Failed to load billing manual grants users", error);
+      setDirectoryError("Nao foi possivel carregar os usuarios.");
+    } finally {
+      if (!isLoadingMore) {
+        setIsDirectoryLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadUserDirectory();
+  }, [loadUserDirectory]);
+
+  async function lookupTarget(target: {
+    email?: string | null;
+    uid?: string | null;
+  }) {
+    const normalizedEmail = target.email?.trim().toLowerCase() ?? "";
+    const normalizedUid = target.uid?.trim() ?? "";
+
+    if (!normalizedEmail && !normalizedUid) {
+      setLookupError("Escolha um usuario ou informe o e-mail da conta.");
       return;
     }
 
@@ -104,8 +200,16 @@ export function BillingManualGrantsConsole() {
     setFeedback(null);
 
     try {
+      const searchParams = new URLSearchParams();
+
+      if (normalizedUid) {
+        searchParams.set("uid", normalizedUid);
+      } else {
+        searchParams.set("email", normalizedEmail);
+      }
+
       const response = await fetch(
-        `/api/billing/manual-grants?email=${encodeURIComponent(normalizedEmail)}`,
+        `/api/billing/manual-grants?${searchParams.toString()}`,
       );
       const data = (await response.json().catch(() => null)) as
         | BillingManualGrantsPayload
@@ -114,6 +218,7 @@ export function BillingManualGrantsConsole() {
 
       if (!response.ok || !data || !("targetUser" in data)) {
         setPayload(null);
+        resetGrantForm();
         setLookupError(
           (data && "error" in data && data.error) ||
             "Nao foi possivel localizar esse usuario.",
@@ -122,13 +227,13 @@ export function BillingManualGrantsConsole() {
       }
 
       setPayload(data);
-      setEmail(normalizedEmail);
-      setReason("");
-      setNotes("");
+      setEmail(data.targetUser.email ?? normalizedEmail);
+      resetGrantForm();
       setFeedback(null);
     } catch (error) {
       console.error("Failed to load billing manual grants", error);
       setPayload(null);
+      resetGrantForm();
       setLookupError("Nao foi possivel localizar esse usuario.");
     } finally {
       setIsSearching(false);
@@ -137,13 +242,13 @@ export function BillingManualGrantsConsole() {
 
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await lookupByEmail(email);
+    await lookupTarget({ email });
   }
 
   async function handleSaveGrant(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!payload?.targetUser.email || isSaving) {
+    if ((!payload?.targetUser.email && !payload?.targetUser.uid) || isSaving) {
       return;
     }
 
@@ -151,14 +256,20 @@ export function BillingManualGrantsConsole() {
     setLookupError(null);
     setFeedback(null);
 
+    const isEditing = Boolean(editingGrantId);
+    const requestUrl = isEditing
+      ? `/api/billing/manual-grants/${editingGrantId}`
+      : "/api/billing/manual-grants";
+    const requestMethod = isEditing ? "PUT" : "POST";
+
     try {
-      const response = await fetch("/api/billing/manual-grants", {
-        method: "POST",
+      const response = await fetch(requestUrl, {
+        method: requestMethod,
         headers: {
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          targetEmail: payload.targetUser.email,
+          ...(isEditing ? {} : { targetEmail: payload.targetUser.email }),
           grantType,
           reason,
           notes,
@@ -173,18 +284,27 @@ export function BillingManualGrantsConsole() {
       if (!response.ok || !data || !("targetUser" in data)) {
         setLookupError(
           (data && "error" in data && data.error) ||
-            "Nao foi possivel salvar a gratuidade.",
+            (isEditing
+              ? "Nao foi possivel atualizar a gratuidade."
+              : "Nao foi possivel salvar a gratuidade."),
         );
         return;
       }
 
       setPayload(data);
-      setReason("");
-      setNotes("");
-      setFeedback("Gratuidade registrada e auditada com sucesso.");
+      resetGrantForm();
+      setFeedback(
+        isEditing
+          ? "Gratuidade atualizada com sucesso."
+          : "Gratuidade registrada e auditada com sucesso.",
+      );
     } catch (error) {
       console.error("Failed to save billing manual grant", error);
-      setLookupError("Nao foi possivel salvar a gratuidade.");
+      setLookupError(
+        isEditing
+          ? "Nao foi possivel atualizar a gratuidade."
+          : "Nao foi possivel salvar a gratuidade.",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -222,9 +342,14 @@ export function BillingManualGrantsConsole() {
         return;
       }
 
-      if (payload?.targetUser.email) {
-        await lookupByEmail(payload.targetUser.email);
+      if (editingGrantId === grant.id) {
+        resetGrantForm();
       }
+
+      await lookupTarget({
+        uid: payload?.targetUser.uid ?? null,
+        email: payload?.targetUser.email ?? null,
+      });
 
       setFeedback("Gratuidade revogada com sucesso.");
     } catch (error) {
@@ -235,6 +360,16 @@ export function BillingManualGrantsConsole() {
     }
   }
 
+  function handleEditGrant(grant: ManualAccessGrantRecord) {
+    setEditingGrantId(grant.id);
+    setGrantType(grant.grantType);
+    setDurationValue(resolveDurationValue(grant));
+    setReason(grant.reason);
+    setNotes(grant.notes ?? "");
+    setLookupError(null);
+    setFeedback(null);
+  }
+
   return (
     <section className={`glass-panel ${styles.panel}`}>
       <div className={styles.header}>
@@ -242,32 +377,93 @@ export function BillingManualGrantsConsole() {
           <span className={styles.eyebrow}>Concessoes de gratuidade</span>
           <h2 className={styles.title}>Controle manual para owner e admin.</h2>
           <p className={styles.description}>
-            Localize a conta pelo e-mail, confira o acesso atual e registre uma
-            gratuidade com motivo, prazo e auditoria.
+            Veja o diretorio de contas, abra o historico de cada usuario e
+            conceda, edite ou revogue gratuidades com motivo e auditoria.
           </p>
         </div>
       </div>
 
-      <form className={styles.searchForm} onSubmit={handleSearch}>
-        <label className={styles.field}>
-          <span className={styles.fieldLabel}>E-mail da conta</span>
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="usuario@exemplo.com"
-            className={styles.input}
-          />
-        </label>
+      <section className={styles.directorySection}>
+        <div className={styles.formHeader}>
+          <div>
+            <h3 className={styles.sectionTitle}>Todos os usuarios</h3>
+            <p className={styles.sectionText}>
+              Abra qualquer conta a partir do diretorio ou use a busca direta
+              por e-mail quando precisar ir mais rapido.
+            </p>
+          </div>
+        </div>
 
-        <button
-          type="submit"
-          className="btn-primary"
-          disabled={isSearching}
-        >
-          {isSearching ? "Buscando..." : "Buscar conta"}
-        </button>
-      </form>
+        <div className={styles.directoryToolbar}>
+          <form className={styles.searchForm} onSubmit={handleSearch}>
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>Buscar por e-mail</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="usuario@exemplo.com"
+                className={styles.input}
+              />
+            </label>
+
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={isSearching}
+            >
+              {isSearching ? "Buscando..." : "Buscar conta"}
+            </button>
+          </form>
+        </div>
+
+        {directoryError ? (
+          <p className={styles.error}>{directoryError}</p>
+        ) : null}
+
+        <div className={styles.directoryList}>
+          {directoryUsers.map((user) => {
+            const isSelected = payload?.targetUser.uid === user.uid;
+
+            return (
+              <button
+                key={user.uid}
+                type="button"
+                className={`${styles.userCard} ${
+                  isSelected ? styles.userCardSelected : ""
+                }`}
+                onClick={() => void lookupTarget({ uid: user.uid })}
+              >
+                <strong className={styles.userName}>{resolveUserLabel(user)}</strong>
+                <span className={styles.userMeta}>
+                  {user.email ?? "Sem e-mail"} · UID {user.uid}
+                  {user.disabled ? " · conta desativada" : ""}
+                </span>
+              </button>
+            );
+          })}
+
+          {isDirectoryLoading ? (
+            <div className={styles.emptyState}>Carregando usuarios...</div>
+          ) : null}
+
+          {!isDirectoryLoading && directoryUsers.length === 0 ? (
+            <div className={styles.emptyState}>
+              Nenhum usuario retornado pelo Firebase Admin.
+            </div>
+          ) : null}
+        </div>
+
+        {directoryCursor ? (
+          <button
+            type="button"
+            className={styles.loadMoreButton}
+            onClick={() => void loadUserDirectory(directoryCursor)}
+          >
+            Carregar mais usuarios
+          </button>
+        ) : null}
+      </section>
 
       {lookupError ? <p className={styles.error}>{lookupError}</p> : null}
       {feedback ? <p className={styles.success}>{feedback}</p> : null}
@@ -278,7 +474,7 @@ export function BillingManualGrantsConsole() {
             <article className={styles.summaryCard}>
               <span className={styles.cardLabel}>Conta alvo</span>
               <strong className={styles.cardValue}>
-                {payload.targetUser.displayName || payload.targetUser.email}
+                {resolveUserLabel(payload.targetUser)}
               </strong>
               <p className={styles.cardMeta}>
                 UID: {payload.targetUser.uid}
@@ -294,9 +490,9 @@ export function BillingManualGrantsConsole() {
                 {resolveAccessStatusLabel(payload)}
               </strong>
               <p className={styles.cardMeta}>
-                Inicio: {formatDateTime(payload.access.entitlementStartsAt) ?? "—"}
+                Inicio: {formatDateTime(payload.access.entitlementStartsAt) ?? "-"}
                 <br />
-                Fim: {formatDateTime(payload.access.entitlementEndsAt) ?? "—"}
+                Fim: {formatDateTime(payload.access.entitlementEndsAt) ?? "-"}
               </p>
             </article>
 
@@ -308,7 +504,7 @@ export function BillingManualGrantsConsole() {
               <p className={styles.cardMeta}>
                 Status: {payload.subscription?.status ?? "sem assinatura"}
                 <br />
-                Ciclo: {formatDateTime(payload.subscription?.currentPeriodEnd) ?? "—"}
+                Ciclo: {formatDateTime(payload.subscription?.currentPeriodEnd) ?? "-"}
               </p>
             </article>
           </section>
@@ -317,10 +513,13 @@ export function BillingManualGrantsConsole() {
             <form className={styles.grantForm} onSubmit={handleSaveGrant}>
               <div className={styles.formHeader}>
                 <div>
-                  <h3 className={styles.sectionTitle}>Conceder gratuidade</h3>
+                  <h3 className={styles.sectionTitle}>
+                    {editingGrantId ? "Editar gratuidade" : "Conceder gratuidade"}
+                  </h3>
                   <p className={styles.sectionText}>
-                    Registre o motivo e o prazo para a concessao. O historico
-                    fica auditado no billing.
+                    {editingGrantId
+                      ? "Ajuste tipo, motivo e prazo do grant selecionado. A trilha de auditoria continua registrada."
+                      : "Registre o motivo e o prazo para a concessao. O historico fica auditado no billing."}
                   </p>
                 </div>
               </div>
@@ -387,13 +586,31 @@ export function BillingManualGrantsConsole() {
                 />
               </label>
 
-              <button
-                type="submit"
-                className="btn-primary"
-                disabled={isSaving || payload.targetUser.disabled}
-              >
-                {isSaving ? "Registrando..." : "Conceder gratuidade"}
-              </button>
+              <div className={styles.formActions}>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={isSaving || payload.targetUser.disabled}
+                >
+                  {isSaving
+                    ? editingGrantId
+                      ? "Salvando..."
+                      : "Registrando..."
+                    : editingGrantId
+                      ? "Salvar edicao"
+                      : "Conceder gratuidade"}
+                </button>
+
+                {editingGrantId ? (
+                  <button
+                    type="button"
+                    className={styles.secondaryButton}
+                    onClick={resetGrantForm}
+                  >
+                    Cancelar edicao
+                  </button>
+                ) : null}
+              </div>
             </form>
 
             <section className={styles.history}>
@@ -401,8 +618,8 @@ export function BillingManualGrantsConsole() {
                 <div>
                   <h3 className={styles.sectionTitle}>Historico de concessoes</h3>
                   <p className={styles.sectionText}>
-                    O grant ativo pode ser revogado aqui. Os anteriores ficam
-                    visiveis para consulta.
+                    Abra um grant para editar, ou revogue o que ainda estiver
+                    ativo. O restante continua visivel para consulta.
                   </p>
                 </div>
               </div>
@@ -420,7 +637,7 @@ export function BillingManualGrantsConsole() {
                               {MANUAL_GRANT_TYPE_LABELS[grant.grantType]}
                             </strong>
                             <p className={styles.historyMeta}>
-                              {formatDateTime(grant.startsAt) ?? "—"}{" "}
+                              {formatDateTime(grant.startsAt) ?? "-"}{" "}
                               {grant.endsAt
                                 ? `ate ${formatDateTime(grant.endsAt)}`
                                 : "sem prazo"}
@@ -452,18 +669,29 @@ export function BillingManualGrantsConsole() {
                               : ""}
                           </span>
 
-                          {!grant.revokedAt && state.tone === "active" ? (
-                            <button
-                              type="button"
-                              className={styles.revokeButton}
-                              onClick={() => handleRevokeGrant(grant)}
-                              disabled={revokingGrantId === grant.id}
-                            >
-                              {revokingGrantId === grant.id
-                                ? "Revogando..."
-                                : "Revogar"}
-                            </button>
-                          ) : null}
+                          <div className={styles.historyActions}>
+                            {!grant.revokedAt ? (
+                              <button
+                                type="button"
+                                className={styles.editButton}
+                                onClick={() => handleEditGrant(grant)}
+                              >
+                                Editar
+                              </button>
+                            ) : null}
+                            {!grant.revokedAt && state.tone === "active" ? (
+                              <button
+                                type="button"
+                                className={styles.revokeButton}
+                                onClick={() => handleRevokeGrant(grant)}
+                                disabled={revokingGrantId === grant.id}
+                              >
+                                {revokingGrantId === grant.id
+                                  ? "Revogando..."
+                                  : "Revogar"}
+                              </button>
+                            ) : null}
+                          </div>
                         </div>
                       </article>
                     );

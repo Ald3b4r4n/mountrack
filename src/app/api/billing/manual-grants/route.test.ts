@@ -19,6 +19,7 @@ jest.mock("@/modules/billing/manual-grants-server", () => ({
 
 jest.mock("@/lib/firebase-admin", () => ({
   findFirebaseUserByEmail: jest.fn(),
+  findFirebaseUserByUid: jest.fn(),
 }));
 
 import { NextRequest } from "next/server";
@@ -34,7 +35,10 @@ import {
   canManageManualGrants,
 } from "@/modules/billing/manual-grants";
 import { buildBillingManualGrantsPayload } from "@/modules/billing/manual-grants-server";
-import { findFirebaseUserByEmail } from "@/lib/firebase-admin";
+import {
+  findFirebaseUserByEmail,
+  findFirebaseUserByUid,
+} from "@/lib/firebase-admin";
 
 const readServerAppAccessMock = jest.mocked(readServerAppAccess);
 const getBillingStorageResponseMock = jest.mocked(getBillingStorageResponse);
@@ -42,6 +46,7 @@ const saveManualAccessGrantMock = jest.mocked(saveManualAccessGrant);
 const buildBillingManualGrantsPayloadMock = jest.mocked(buildBillingManualGrantsPayload);
 const canManageManualGrantsMock = jest.mocked(canManageManualGrants);
 const findFirebaseUserByEmailMock = jest.mocked(findFirebaseUserByEmail);
+const findFirebaseUserByUidMock = jest.mocked(findFirebaseUserByUid);
 
 const operatorAccess: ServerAppAccessContext = {
   user: {
@@ -85,14 +90,14 @@ describe("billing manual grants routes", () => {
     getBillingStorageResponseMock.mockReturnValue("database");
   });
 
-  it("returns 400 when searching without an email", async () => {
+  it("returns 400 when searching without a target user", async () => {
     const response = (await GET(
       new NextRequest("http://localhost/api/billing/manual-grants"),
     ))!;
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({
-      error: "Missing target email",
+      error: "Missing target user",
     });
   });
 
@@ -126,6 +131,21 @@ describe("billing manual grants routes", () => {
       "target@example.com",
     );
     expect(buildBillingManualGrantsPayloadMock).toHaveBeenCalledWith(targetUser);
+    await expect(response.json()).resolves.toEqual(payload);
+  });
+
+  it("supports loading the target user by uid", async () => {
+    findFirebaseUserByUidMock.mockResolvedValue(targetUser);
+    buildBillingManualGrantsPayloadMock.mockResolvedValue(payload);
+
+    const response = (await GET(
+      new NextRequest(
+        "http://localhost/api/billing/manual-grants?uid=target-1",
+      ),
+    ))!;
+
+    expect(response.status).toBe(200);
+    expect(findFirebaseUserByUidMock).toHaveBeenCalledWith("target-1");
     await expect(response.json()).resolves.toEqual(payload);
   });
 

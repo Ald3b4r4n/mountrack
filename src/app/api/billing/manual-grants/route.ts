@@ -9,7 +9,10 @@ import {
   getBillingStorageResponse,
   saveManualAccessGrant,
 } from "@/modules/billing/repositories/billing-store";
-import { findFirebaseUserByEmail } from "@/lib/firebase-admin";
+import {
+  findFirebaseUserByEmail,
+  findFirebaseUserByUid,
+} from "@/lib/firebase-admin";
 
 export const runtime = "nodejs";
 
@@ -63,12 +66,16 @@ export async function GET(request: NextRequest) {
   }
 
   const email = request.nextUrl.searchParams.get("email")?.trim().toLowerCase();
-  if (!email) {
-    return createJsonError("Missing target email", 400);
+  const uid = request.nextUrl.searchParams.get("uid")?.trim();
+
+  if (!email && !uid) {
+    return createJsonError("Missing target user", 400);
   }
 
   try {
-    const targetUser = await findFirebaseUserByEmail(email);
+    const targetUser = uid
+      ? await findFirebaseUserByUid(uid)
+      : await findFirebaseUserByEmail(email!);
 
     if (!targetUser) {
       return createJsonError("Target user not found", 404);

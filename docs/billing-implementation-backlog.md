@@ -336,6 +336,18 @@ Implement paid access for MounTrack with:
 6. Build roles screen restricted to owner.
 7. Show audit history for privileged actions.
 
+### Current state (2026-03-23)
+
+- `owner` and `admin` now have `/billing/grants` as the operational console for courtesy access.
+- The console supports:
+  - paginated user directory via Firebase Admin
+  - direct lookup by email
+  - grant creation with reason, notes, type, and duration
+  - edit of non-revoked grants
+  - revocation of active grants
+- The owner home/dashboard now exposes a direct shortcut to `/billing/grants`.
+- Current limitation: the panel still does not offer advanced filters or audit-log browsing beyond the per-user grant history.
+
 ### Risks
 
 - overpowered support users
