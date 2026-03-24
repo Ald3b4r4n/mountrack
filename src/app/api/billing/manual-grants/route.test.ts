@@ -80,6 +80,7 @@ const payload: BillingManualGrantsPayload = {
   },
   subscription: null,
   grants: [],
+  auditLogs: [],
 };
 
 describe("billing manual grants routes", () => {

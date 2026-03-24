@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type {
   BillingManualGrantsPayload,
   BillingManualGrantUsersPayload,
@@ -105,6 +105,27 @@ function resolveUserLabel(user: FirebaseAdminUserSummary): string {
   return user.displayName || user.email || user.uid;
 }
 
+function resolveAuditActionLabel(action: string): string {
+  switch (action) {
+    case "billing.manual_grant_saved":
+      return "Gratuidade concedida";
+    case "billing.manual_grant_updated":
+      return "Gratuidade editada";
+    case "billing.manual_grant_revoked":
+      return "Gratuidade revogada";
+    default:
+      return action;
+  }
+}
+
+function readAuditMetadataValue(
+  metadata: Record<string, unknown>,
+  key: string,
+): string | null {
+  const value = metadata[key];
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
 export function BillingManualGrantsConsole() {
   const [email, setEmail] = useState("");
   const [payload, setPayload] = useState<BillingManualGrantsPayload | null>(
@@ -114,6 +135,7 @@ export function BillingManualGrantsConsole() {
     [],
   );
   const [directoryCursor, setDirectoryCursor] = useState<string | null>(null);
+  const [directoryFilter, setDirectoryFilter] = useState("");
   const [grantType, setGrantType] =
     useState<ManualAccessGrantType>(DEFAULT_GRANT_TYPE);
   const [durationValue, setDurationValue] =
@@ -128,6 +150,26 @@ export function BillingManualGrantsConsole() {
   const [isSearching, setIsSearching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [revokingGrantId, setRevokingGrantId] = useState<string | null>(null);
+
+  const filteredDirectoryUsers = useMemo(() => {
+    const normalizedFilter = directoryFilter.trim().toLowerCase();
+
+    if (!normalizedFilter) {
+      return directoryUsers;
+    }
+
+    return directoryUsers.filter((user) => {
+      const haystacks = [
+        user.displayName ?? "",
+        user.email ?? "",
+        user.uid,
+      ];
+
+      return haystacks.some((value) =>
+        value.toLowerCase().includes(normalizedFilter),
+      );
+    });
+  }, [directoryFilter, directoryUsers]);
 
   function resetGrantForm() {
     setEditingGrantId(null);
@@ -415,6 +457,21 @@ export function BillingManualGrantsConsole() {
               {isSearching ? "Buscando..." : "Buscar conta"}
             </button>
           </form>
+
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>Filtrar diretorio carregado</span>
+            <input
+              type="search"
+              value={directoryFilter}
+              onChange={(event) => setDirectoryFilter(event.target.value)}
+              placeholder="Nome, e-mail ou UID"
+              className={styles.input}
+            />
+          </label>
+
+          <p className={styles.directorySummary}>
+            Exibindo {filteredDirectoryUsers.length} de {directoryUsers.length} usuarios carregados.
+          </p>
         </div>
 
         {directoryError ? (
@@ -422,7 +479,7 @@ export function BillingManualGrantsConsole() {
         ) : null}
 
         <div className={styles.directoryList}>
-          {directoryUsers.map((user) => {
+          {filteredDirectoryUsers.map((user) => {
             const isSelected = payload?.targetUser.uid === user.uid;
 
             return (
@@ -450,6 +507,14 @@ export function BillingManualGrantsConsole() {
           {!isDirectoryLoading && directoryUsers.length === 0 ? (
             <div className={styles.emptyState}>
               Nenhum usuario retornado pelo Firebase Admin.
+            </div>
+          ) : null}
+
+          {!isDirectoryLoading &&
+          directoryUsers.length > 0 &&
+          filteredDirectoryUsers.length === 0 ? (
+            <div className={styles.emptyState}>
+              Nenhum usuario carregado corresponde ao filtro atual.
             </div>
           ) : null}
         </div>
@@ -702,6 +767,69 @@ export function BillingManualGrantsConsole() {
                   Nenhuma gratuidade registrada para essa conta ainda.
                 </div>
               )}
+
+              <div className={styles.auditSection}>
+                <div className={styles.formHeader}>
+                  <div>
+                    <h3 className={styles.sectionTitle}>Auditoria recente</h3>
+                    <p className={styles.sectionText}>
+                      Eventos mais recentes ligados a essa conta para consulta
+                      operacional rapida.
+                    </p>
+                  </div>
+                </div>
+
+                {payload.auditLogs.length ? (
+                  <div className={styles.auditList}>
+                    {payload.auditLogs.map((auditLog) => {
+                      const grantType = readAuditMetadataValue(
+                        auditLog.metadata,
+                        "grantType",
+                      );
+                      const reason = readAuditMetadataValue(
+                        auditLog.metadata,
+                        "reason",
+                      );
+
+                      return (
+                        <article key={auditLog.id} className={styles.auditCard}>
+                          <div className={styles.auditHeader}>
+                            <strong className={styles.historyTitle}>
+                              {resolveAuditActionLabel(auditLog.action)}
+                            </strong>
+                            <span className={styles.historyMeta}>
+                              {formatDateTime(auditLog.createdAt) ?? "-"}
+                            </span>
+                          </div>
+
+                          <p className={styles.auditMeta}>
+                            Operador: {auditLog.actorUserId}
+                            {" · "}
+                            Alvo: {auditLog.targetType}
+                          </p>
+
+                          {grantType || reason ? (
+                            <p className={styles.auditNotes}>
+                              {grantType
+                                ? `Tipo: ${
+                                    MANUAL_GRANT_TYPE_LABELS[
+                                      grantType as ManualAccessGrantType
+                                    ] ?? grantType
+                                  }`
+                                : "Tipo nao informado"}
+                              {reason ? ` · Motivo: ${reason}` : ""}
+                            </p>
+                          ) : null}
+                        </article>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className={styles.emptyState}>
+                    Nenhum evento de auditoria encontrado para essa conta ainda.
+                  </div>
+                )}
+              </div>
             </section>
           </section>
         </div>

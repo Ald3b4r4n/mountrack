@@ -9,6 +9,7 @@ import {
   getBillingAccessSnapshot,
   getBillingPlanById,
   getLatestBillingSubscriptionForUser,
+  listBillingAuditLogsForUser,
   listManualAccessGrantsForUser,
 } from "@/modules/billing/repositories/billing-store";
 import type { FirebaseAdminUserSummary } from "@/lib/firebase-admin";
@@ -17,10 +18,11 @@ export async function buildBillingManualGrantsPayload(
   targetUser: FirebaseAdminUserSummary,
   now = new Date(),
 ): Promise<BillingManualGrantsPayload> {
-  const [snapshot, subscription, grants] = await Promise.all([
+  const [snapshot, subscription, grants, auditLogs] = await Promise.all([
     getBillingAccessSnapshot(targetUser.uid, now),
     getLatestBillingSubscriptionForUser(targetUser.uid, now),
     listManualAccessGrantsForUser(targetUser.uid),
+    listBillingAuditLogsForUser(targetUser.uid),
   ]);
   const decision = resolveAccessDecision({
     entitlementStatus: snapshot.entitlementStatus,
@@ -55,5 +57,6 @@ export async function buildBillingManualGrantsPayload(
         }
       : null,
     grants,
+    auditLogs,
   };
 }

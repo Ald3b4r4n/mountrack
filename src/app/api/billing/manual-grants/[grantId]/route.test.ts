@@ -65,6 +65,7 @@ const payload: BillingManualGrantsPayload = {
   },
   subscription: null,
   grants: [],
+  auditLogs: [],
 };
 
 describe("DELETE /api/billing/manual-grants/[grantId]", () => {

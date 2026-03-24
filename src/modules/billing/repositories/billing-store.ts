@@ -314,6 +314,16 @@ interface BillingCheckoutSessionRow {
   created_at: string;
 }
 
+interface BillingAuditLogRow {
+  id: string;
+  actor_user_id: string;
+  action: string;
+  target_type: string;
+  target_id: string;
+  metadata_json: Record<string, unknown> | string | null;
+  created_at: string;
+}
+
 export interface RecordBillingEventInput {
   provider: string;
   providerEventId: string;
@@ -544,6 +554,23 @@ function mapBillingCheckoutSessionRow(row: BillingCheckoutSessionRow): BillingCh
     providerCheckoutUrl: row.provider_checkout_url,
     status: row.status,
     expiresAt: row.expires_at,
+    createdAt: row.created_at,
+  };
+}
+
+function mapBillingAuditLogRow(row: BillingAuditLogRow) {
+  const metadata =
+    typeof row.metadata_json === "string"
+      ? (JSON.parse(row.metadata_json) as Record<string, unknown>)
+      : (row.metadata_json ?? {});
+
+  return {
+    id: row.id,
+    actorUserId: row.actor_user_id,
+    action: row.action,
+    targetType: row.target_type,
+    targetId: row.target_id,
+    metadata,
     createdAt: row.created_at,
   };
 }
@@ -991,6 +1018,46 @@ export async function listManualAccessGrantsForUser(
   );
 
   return result.rows.map(mapManualAccessGrantRow);
+}
+
+export async function listBillingAuditLogsForUser(
+  userId: string,
+  limit = 20,
+): Promise<
+  Array<{
+    id: string;
+    actorUserId: string;
+    action: string;
+    targetType: string;
+    targetId: string;
+    metadata: Record<string, unknown>;
+    createdAt: string;
+  }>
+> {
+  requireDatabaseUrl();
+  await ensureSchema();
+
+  const result = await getPool().query<BillingAuditLogRow>(
+    `
+    select
+      id,
+      actor_user_id,
+      action,
+      target_type,
+      target_id,
+      metadata_json,
+      created_at::text
+    from billing_audit_logs
+    where
+      (target_type = 'user' and target_id = $1)
+      or metadata_json->>'userId' = $1
+    order by created_at desc
+    limit $2
+    `,
+    [userId, limit],
+  );
+
+  return result.rows.map(mapBillingAuditLogRow);
 }
 
 export async function recordBillingEventIfNew(

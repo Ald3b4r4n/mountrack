@@ -54,6 +54,21 @@ describe("BillingManualGrantsConsole", () => {
         createdAt: "2026-03-23T12:00:00.000Z",
       },
     ],
+    auditLogs: [
+      {
+        id: "audit-1",
+        actorUserId: "owner-1",
+        action: "billing.manual_grant_saved",
+        targetType: "manual_access_grant",
+        targetId: "grant-1",
+        metadata: {
+          userId: "target-1",
+          grantType: "courtesy",
+          reason: "Acesso promocional",
+        },
+        createdAt: "2026-03-23T12:00:00.000Z",
+      },
+    ],
   } as const;
 
   beforeEach(() => {
@@ -98,8 +113,40 @@ describe("BillingManualGrantsConsole", () => {
 
     expect(await screen.findByText("Acesso promocional")).toBeInTheDocument();
     expect(
+      screen.getByText("Gratuidade concedida"),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole("heading", { name: "Conceder gratuidade" }),
     ).toBeInTheDocument();
+  });
+
+  it("filters the loaded directory locally without another request", async () => {
+    jest.mocked(global.fetch).mockImplementation(async (input) => {
+      const url = String(input);
+
+      if (url === "/api/billing/manual-grants/users") {
+        return {
+          ok: true,
+          json: async () => usersPayload,
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch URL: ${url}`);
+    });
+
+    render(<BillingManualGrantsConsole />);
+
+    expect(await screen.findByText("Target User")).toBeInTheDocument();
+    expect(screen.getByText("Other User")).toBeInTheDocument();
+
+    await userEvent.type(
+      screen.getByLabelText("Filtrar diretorio carregado"),
+      "other",
+    );
+
+    expect(screen.queryByText("Target User")).not.toBeInTheDocument();
+    expect(screen.getByText("Other User")).toBeInTheDocument();
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   it("edits an active grant and refreshes the payload", async () => {

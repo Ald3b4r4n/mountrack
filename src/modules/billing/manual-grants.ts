@@ -54,11 +54,22 @@ export interface BillingManualGrantSubscriptionSummary {
   updatedAt: string;
 }
 
+export interface BillingAuditLogSummary {
+  id: string;
+  actorUserId: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
 export interface BillingManualGrantsPayload {
   targetUser: FirebaseAdminUserSummary;
   access: BillingManualGrantAccessSummary;
   subscription: BillingManualGrantSubscriptionSummary | null;
   grants: ManualAccessGrantRecord[];
+  auditLogs: BillingAuditLogSummary[];
 }
 
 export interface BillingManualGrantUsersPayload {

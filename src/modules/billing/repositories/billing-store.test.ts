@@ -15,6 +15,7 @@ import {
   getManualAccessGrantById,
   getBillingPlanById,
   getBillingWebhookHealthSummary,
+  listBillingAuditLogsForUser,
   listManualAccessGrantsForUser,
   listBillingPlans,
   recordBillingEventIfNew,
@@ -734,6 +735,79 @@ describe("billing-store", () => {
         grantedBy: "owner-1",
         revokedAt: "2026-03-01T00:00:00.000Z",
         createdAt: "2026-02-20T00:00:00.000Z",
+      },
+    ]);
+  });
+
+  it("lists recent billing audit logs for the selected user", async () => {
+    const query = makeQueryMock((sql, params) => {
+      if (sql.includes("from billing_audit_logs")) {
+        expect(params).toEqual(["user-a", 20]);
+        return {
+          rows: [
+            {
+              id: "audit-2",
+              actor_user_id: "owner-1",
+              action: "billing.manual_grant_updated",
+              target_type: "manual_access_grant",
+              target_id: "grant-2",
+              metadata_json: {
+                userId: "user-a",
+                grantType: "partner",
+                reason: "Prazo ampliado",
+              },
+              created_at: "2026-03-23T09:00:00.000Z",
+            },
+            {
+              id: "audit-1",
+              actor_user_id: "owner-1",
+              action: "billing.manual_grant_saved",
+              target_type: "manual_access_grant",
+              target_id: "grant-1",
+              metadata_json: {
+                userId: "user-a",
+                grantType: "courtesy",
+                reason: "Lancamento",
+              },
+              created_at: "2026-03-22T09:00:00.000Z",
+            },
+          ],
+        };
+      }
+
+      return { rows: [] };
+    });
+
+    globalStore.__billingPool__ = { query };
+
+    const auditLogs = await listBillingAuditLogsForUser("user-a");
+
+    expect(auditLogs).toEqual([
+      {
+        id: "audit-2",
+        actorUserId: "owner-1",
+        action: "billing.manual_grant_updated",
+        targetType: "manual_access_grant",
+        targetId: "grant-2",
+        metadata: {
+          userId: "user-a",
+          grantType: "partner",
+          reason: "Prazo ampliado",
+        },
+        createdAt: "2026-03-23T09:00:00.000Z",
+      },
+      {
+        id: "audit-1",
+        actorUserId: "owner-1",
+        action: "billing.manual_grant_saved",
+        targetType: "manual_access_grant",
+        targetId: "grant-1",
+        metadata: {
+          userId: "user-a",
+          grantType: "courtesy",
+          reason: "Lancamento",
+        },
+        createdAt: "2026-03-22T09:00:00.000Z",
       },
     ]);
   });
