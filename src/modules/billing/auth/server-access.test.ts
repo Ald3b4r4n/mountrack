@@ -8,7 +8,9 @@ jest.mock("@/modules/billing/repositories/billing-store", () => ({
   bootstrapBillingOwner: jest.fn(),
   ensureBillingTrialEntitlement: jest.fn(),
   getBillingAccessSnapshot: jest.fn(),
+  getBillingPlanById: jest.fn(),
   getBillingStorageResponse: jest.fn(),
+  getLatestBillingSubscriptionForUser: jest.fn(),
 }));
 
 import { verifyFirebaseIdToken } from "@/lib/firebase-admin";
@@ -16,7 +18,9 @@ import {
   bootstrapBillingOwner,
   ensureBillingTrialEntitlement,
   getBillingAccessSnapshot,
+  getBillingPlanById,
   getBillingStorageResponse,
+  getLatestBillingSubscriptionForUser,
 } from "@/modules/billing/repositories/billing-store";
 import { resolveServerAppAccessFromToken } from "@/modules/billing/auth/server-access";
 
@@ -24,7 +28,9 @@ const verifyFirebaseIdTokenMock = jest.mocked(verifyFirebaseIdToken);
 const bootstrapBillingOwnerMock = jest.mocked(bootstrapBillingOwner);
 const ensureBillingTrialEntitlementMock = jest.mocked(ensureBillingTrialEntitlement);
 const getBillingAccessSnapshotMock = jest.mocked(getBillingAccessSnapshot);
+const getBillingPlanByIdMock = jest.mocked(getBillingPlanById);
 const getBillingStorageResponseMock = jest.mocked(getBillingStorageResponse);
+const getLatestBillingSubscriptionForUserMock = jest.mocked(getLatestBillingSubscriptionForUser);
 const originalBootstrapOwnerEmail = process.env.BOOTSTRAP_OWNER_EMAIL;
 const originalBootstrapAdminEmails = process.env.BOOTSTRAP_ADMIN_EMAILS;
 const originalNodeEnv = process.env.NODE_ENV;
@@ -43,11 +49,38 @@ describe("server-access", () => {
     });
     bootstrapBillingOwnerMock.mockResolvedValue(["owner"]);
     ensureBillingTrialEntitlementMock.mockResolvedValue(null);
+    getLatestBillingSubscriptionForUserMock.mockResolvedValue(null);
+    getBillingPlanByIdMock.mockResolvedValue(null);
   });
 
   it("returns null when there is no session token", async () => {
     await expect(resolveServerAppAccessFromToken(null)).resolves.toBeNull();
     expect(verifyFirebaseIdTokenMock).not.toHaveBeenCalled();
+  });
+
+  it("returns null when the Firebase session token has expired", async () => {
+    verifyFirebaseIdTokenMock.mockRejectedValue({
+      code: "auth/id-token-expired",
+      message: "Firebase ID token has expired",
+    });
+
+    await expect(
+      resolveServerAppAccessFromToken("expired-firebase-session-token"),
+    ).resolves.toBeNull();
+
+    expect(bootstrapBillingOwnerMock).not.toHaveBeenCalled();
+    expect(ensureBillingTrialEntitlementMock).not.toHaveBeenCalled();
+  });
+
+  it("returns null when the Firebase session token is invalid", async () => {
+    verifyFirebaseIdTokenMock.mockRejectedValue(new Error("UNAUTHORIZED"));
+
+    await expect(
+      resolveServerAppAccessFromToken("invalid-firebase-session-token"),
+    ).resolves.toBeNull();
+
+    expect(bootstrapBillingOwnerMock).not.toHaveBeenCalled();
+    expect(ensureBillingTrialEntitlementMock).not.toHaveBeenCalled();
   });
 
   it("allows access when the billing snapshot resolves to an allowed entitlement", async () => {
@@ -71,6 +104,7 @@ describe("server-access", () => {
       effectiveStatus: "trialing",
       entitlementStartsAt: "2026-03-15T12:00:00.000Z",
       entitlementEndsAt: "2026-03-18T12:00:00.000Z",
+      subscription: null,
     });
 
     expect(bootstrapBillingOwnerMock).toHaveBeenCalledWith("user-123", "owner@mountrack.app");
@@ -105,6 +139,7 @@ describe("server-access", () => {
       effectiveStatus: "past_due",
       entitlementStartsAt: "2026-03-15T12:00:00.000Z",
       entitlementEndsAt: "2026-03-18T12:00:00.000Z",
+      subscription: null,
     });
   });
 
@@ -127,6 +162,7 @@ describe("server-access", () => {
       effectiveStatus: "operator_override",
       entitlementStartsAt: "2026-03-15T12:00:00.000Z",
       entitlementEndsAt: "2026-03-18T12:00:00.000Z",
+      subscription: null,
     });
   });
 
@@ -143,6 +179,7 @@ describe("server-access", () => {
       effectiveStatus: "missing",
       entitlementStartsAt: null,
       entitlementEndsAt: null,
+      subscription: null,
     });
     expect(ensureBillingTrialEntitlementMock).not.toHaveBeenCalled();
     expect(getBillingAccessSnapshotMock).not.toHaveBeenCalled();
@@ -164,6 +201,7 @@ describe("server-access", () => {
       effectiveStatus: "operator_override",
       entitlementStartsAt: null,
       entitlementEndsAt: null,
+      subscription: null,
     });
   });
 });

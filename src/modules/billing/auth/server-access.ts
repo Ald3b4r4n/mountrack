@@ -39,6 +39,31 @@ function coerceEmail(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
 }
 
+function isInvalidSessionError(error: unknown): boolean {
+  if (
+    error instanceof Error &&
+    (error.message === "UNAUTHORIZED" || error.message === "auth/invalid-id-token")
+  ) {
+    return true;
+  }
+
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  const code =
+    "code" in error && typeof (error as { code?: unknown }).code === "string"
+      ? (error as { code: string }).code
+      : null;
+
+  return (
+    code === "auth/id-token-expired" ||
+    code === "auth/id-token-revoked" ||
+    code === "auth/invalid-id-token" ||
+    code === "auth/argument-error"
+  );
+}
+
 export async function resolveServerAppAccessFromToken(
   sessionToken: string | null,
   now = new Date(),
@@ -47,7 +72,18 @@ export async function resolveServerAppAccessFromToken(
     return null;
   }
 
-  const decodedToken = await verifyFirebaseIdToken(sessionToken);
+  let decodedToken: Awaited<ReturnType<typeof verifyFirebaseIdToken>>;
+
+  try {
+    decodedToken = await verifyFirebaseIdToken(sessionToken);
+  } catch (error) {
+    if (isInvalidSessionError(error)) {
+      return null;
+    }
+
+    throw error;
+  }
+
   const user = {
     uid: decodedToken.uid,
     email: coerceEmail(decodedToken.email),
