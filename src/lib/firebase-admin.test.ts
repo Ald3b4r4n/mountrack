@@ -85,3 +85,100 @@ describe("verifyFirebaseIdToken", () => {
     await expect(verifyFirebaseIdToken("invalid-token")).rejects.toThrow("AUTH_UNAVAILABLE");
   });
 });
+
+describe("searchFirebaseUsers", () => {
+  const originalProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const originalServerProjectId = process.env.FIREBASE_PROJECT_ID;
+  const originalClientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const originalPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
+  const originalServiceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+
+  afterEach(() => {
+    jest.resetModules();
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = originalProjectId;
+    process.env.FIREBASE_PROJECT_ID = originalServerProjectId;
+    process.env.FIREBASE_CLIENT_EMAIL = originalClientEmail;
+    process.env.FIREBASE_PRIVATE_KEY = originalPrivateKey;
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON = originalServiceAccountJson;
+    jest.unmock("firebase-admin");
+  });
+
+  it("filters Firebase users across pages and preserves pagination cursor", async () => {
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = "";
+    process.env.FIREBASE_PROJECT_ID = "mountrack-app";
+    process.env.FIREBASE_CLIENT_EMAIL = "admin@mountrack.app";
+    process.env.FIREBASE_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\\nabc\\n-----END PRIVATE KEY-----";
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON = "";
+
+    const listUsersMock = jest
+      .fn()
+      .mockResolvedValueOnce({
+        users: [
+          {
+            uid: "user-1",
+            email: "alpha@example.com",
+            displayName: "Alpha User",
+            disabled: false,
+          },
+          {
+            uid: "user-2",
+            email: "other@example.com",
+            displayName: "Other Person",
+            disabled: false,
+          },
+        ],
+        pageToken: "cursor-2",
+      })
+      .mockResolvedValueOnce({
+        users: [
+          {
+            uid: "user-3",
+            email: "someone@example.com",
+            displayName: "Secondary Other",
+            disabled: false,
+          },
+        ],
+        pageToken: null,
+      });
+
+    jest.doMock("firebase-admin", () => ({
+      __esModule: true,
+      default: {
+        apps: [{}],
+        initializeApp: jest.fn(),
+        credential: { cert: jest.fn(() => ({})) },
+        auth: jest.fn(() => ({
+          listUsers: listUsersMock,
+        })),
+        firestore: jest.fn(),
+      },
+    }));
+
+    let searchFirebaseUsers!: typeof import("@/lib/firebase-admin").searchFirebaseUsers;
+    await jest.isolateModulesAsync(async () => {
+      ({ searchFirebaseUsers } = await import("@/lib/firebase-admin"));
+    });
+
+    const result = await searchFirebaseUsers("other", 2);
+
+    expect(result).toEqual({
+      users: [
+        {
+          uid: "user-2",
+          email: "other@example.com",
+          displayName: "Other Person",
+          disabled: false,
+        },
+        {
+          uid: "user-3",
+          email: "someone@example.com",
+          displayName: "Secondary Other",
+          disabled: false,
+        },
+      ],
+      nextPageToken: null,
+    });
+    expect(listUsersMock).toHaveBeenCalledWith(50, undefined);
+    expect(listUsersMock).toHaveBeenCalledWith(50, "cursor-2");
+  });
+});

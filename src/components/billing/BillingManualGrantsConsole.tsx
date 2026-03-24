@@ -128,6 +128,8 @@ function readAuditMetadataValue(
 
 export function BillingManualGrantsConsole() {
   const [email, setEmail] = useState("");
+  const [directoryQuery, setDirectoryQuery] = useState("");
+  const [activeDirectoryQuery, setActiveDirectoryQuery] = useState("");
   const [payload, setPayload] = useState<BillingManualGrantsPayload | null>(
     null,
   );
@@ -179,7 +181,12 @@ export function BillingManualGrantsConsole() {
     setNotes("");
   }
 
-  const loadUserDirectory = useCallback(async (cursor?: string | null) => {
+  const loadUserDirectory = useCallback(async (options?: {
+    cursor?: string | null;
+    query?: string;
+  }) => {
+    const cursor = options?.cursor ?? null;
+    const query = options?.query ?? "";
     const isLoadingMore = Boolean(cursor);
 
     if (!isLoadingMore) {
@@ -189,9 +196,19 @@ export function BillingManualGrantsConsole() {
     setDirectoryError(null);
 
     try {
+      const searchParams = new URLSearchParams();
+
+      if (cursor) {
+        searchParams.set("cursor", cursor);
+      }
+
+      if (query.trim()) {
+        searchParams.set("query", query.trim());
+      }
+
       const response = await fetch(
-        cursor
-          ? `/api/billing/manual-grants/users?cursor=${encodeURIComponent(cursor)}`
+        searchParams.size
+          ? `/api/billing/manual-grants/users?${searchParams.toString()}`
           : "/api/billing/manual-grants/users",
       );
       const data = (await response.json().catch(() => null)) as
@@ -211,6 +228,9 @@ export function BillingManualGrantsConsole() {
         isLoadingMore ? [...currentUsers, ...data.users] : data.users,
       );
       setDirectoryCursor(data.nextPageToken);
+      if (!isLoadingMore) {
+        setActiveDirectoryQuery(query.trim());
+      }
     } catch (error) {
       console.error("Failed to load billing manual grants users", error);
       setDirectoryError("Nao foi possivel carregar os usuarios.");
@@ -224,6 +244,11 @@ export function BillingManualGrantsConsole() {
   useEffect(() => {
     void loadUserDirectory();
   }, [loadUserDirectory]);
+
+  async function handleDirectorySearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await loadUserDirectory({ query: directoryQuery });
+  }
 
   async function lookupTarget(target: {
     email?: string | null;
@@ -458,19 +483,43 @@ export function BillingManualGrantsConsole() {
             </button>
           </form>
 
+          <form className={styles.searchForm} onSubmit={handleDirectorySearch}>
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>Buscar no diretorio</span>
+              <input
+                type="search"
+                value={directoryQuery}
+                onChange={(event) => setDirectoryQuery(event.target.value)}
+                placeholder="Nome, e-mail ou UID"
+                className={styles.input}
+              />
+            </label>
+
+            <button
+              type="submit"
+              className={styles.secondaryButton}
+              disabled={isDirectoryLoading}
+            >
+              {isDirectoryLoading ? "Carregando..." : "Buscar diretorio"}
+            </button>
+          </form>
+
           <label className={styles.field}>
-            <span className={styles.fieldLabel}>Filtrar diretorio carregado</span>
+            <span className={styles.fieldLabel}>Refinar resultados carregados</span>
             <input
               type="search"
               value={directoryFilter}
               onChange={(event) => setDirectoryFilter(event.target.value)}
-              placeholder="Nome, e-mail ou UID"
+              placeholder="Filtrar apenas os resultados na tela"
               className={styles.input}
             />
           </label>
 
           <p className={styles.directorySummary}>
             Exibindo {filteredDirectoryUsers.length} de {directoryUsers.length} usuarios carregados.
+            {activeDirectoryQuery
+              ? ` Busca ativa: "${activeDirectoryQuery}".`
+              : " Diretório geral carregado."}
           </p>
         </div>
 
@@ -523,7 +572,12 @@ export function BillingManualGrantsConsole() {
           <button
             type="button"
             className={styles.loadMoreButton}
-            onClick={() => void loadUserDirectory(directoryCursor)}
+            onClick={() =>
+              void loadUserDirectory({
+                cursor: directoryCursor,
+                query: activeDirectoryQuery,
+              })
+            }
           >
             Carregar mais usuarios
           </button>

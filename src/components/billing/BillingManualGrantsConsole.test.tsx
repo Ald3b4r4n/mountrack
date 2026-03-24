@@ -140,13 +140,59 @@ describe("BillingManualGrantsConsole", () => {
     expect(screen.getByText("Other User")).toBeInTheDocument();
 
     await userEvent.type(
-      screen.getByLabelText("Filtrar diretorio carregado"),
+      screen.getByLabelText("Refinar resultados carregados"),
       "other",
     );
 
     expect(screen.queryByText("Target User")).not.toBeInTheDocument();
     expect(screen.getByText("Other User")).toBeInTheDocument();
     expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("searches the full directory remotely when requested", async () => {
+    jest.mocked(global.fetch).mockImplementation(async (input) => {
+      const url = String(input);
+
+      if (url === "/api/billing/manual-grants/users") {
+        return {
+          ok: true,
+          json: async () => usersPayload,
+        } as Response;
+      }
+
+      if (url === "/api/billing/manual-grants/users?query=other") {
+        return {
+          ok: true,
+          json: async () => ({
+            users: [usersPayload.users[1]],
+            nextPageToken: null,
+          }),
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch URL: ${url}`);
+    });
+
+    render(<BillingManualGrantsConsole />);
+
+    expect(await screen.findByText("Target User")).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText("Buscar no diretorio"), "other");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Buscar diretorio" }),
+    );
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/billing/manual-grants/users?query=other",
+      );
+    });
+
+    expect(screen.queryByText("Target User")).not.toBeInTheDocument();
+    expect(screen.getByText("Other User")).toBeInTheDocument();
+    expect(
+      screen.getByText('Exibindo 1 de 1 usuarios carregados. Busca ativa: "other".'),
+    ).toBeInTheDocument();
   });
 
   it("edits an active grant and refreshes the payload", async () => {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readServerAppAccess } from "@/modules/billing/auth/server-access";
 import { canManageManualGrants } from "@/modules/billing/manual-grants";
 import { getBillingStorageResponse } from "@/modules/billing/repositories/billing-store";
-import { listFirebaseUsers } from "@/lib/firebase-admin";
+import { listFirebaseUsers, searchFirebaseUsers } from "@/lib/firebase-admin";
 
 export const runtime = "nodejs";
 
@@ -35,9 +35,12 @@ export async function GET(request: NextRequest) {
   }
 
   const cursor = request.nextUrl.searchParams.get("cursor");
+  const query = request.nextUrl.searchParams.get("query")?.trim() ?? "";
 
   try {
-    const payload = await listFirebaseUsers(25, cursor);
+    const payload = query
+      ? await searchFirebaseUsers(query, 25, cursor)
+      : await listFirebaseUsers(25, cursor);
     return NextResponse.json(payload, { status: 200 });
   } catch (error) {
     if (error instanceof Error && error.message === "AUTH_UNAVAILABLE") {

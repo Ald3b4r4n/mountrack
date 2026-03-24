@@ -253,6 +253,21 @@ function mapFirebaseUserRecord(
   };
 }
 
+function matchesFirebaseUserQuery(
+  user: FirebaseAdminUserSummary,
+  query: string,
+): boolean {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return true;
+  }
+
+  return [user.displayName ?? "", user.email ?? "", user.uid].some((value) =>
+    value.toLowerCase().includes(normalizedQuery),
+  );
+}
+
 export async function verifyFirebaseIdToken(token: string): Promise<{ uid: string } & Record<string, unknown>> {
   if (adminAuth) {
     return adminAuth.verifyIdToken(token) as Promise<{ uid: string } & Record<string, unknown>>;
@@ -339,6 +354,57 @@ export async function listFirebaseUsers(
     return {
       users: listedUsers.users.map(mapFirebaseUserRecord),
       nextPageToken: listedUsers.pageToken ?? null,
+    };
+  } catch {
+    throw new Error("AUTH_UNAVAILABLE");
+  }
+}
+
+export async function searchFirebaseUsers(
+  query: string,
+  limit = 25,
+  pageToken?: string | null,
+): Promise<FirebaseAdminUsersPage> {
+  if (!adminAuth) {
+    throw new Error("AUTH_UNAVAILABLE");
+  }
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedLimit = Math.max(1, Math.min(100, Math.trunc(limit || 25)));
+  const pageSize = Math.max(50, normalizedLimit * 2);
+  const maxScannedUsers = 500;
+
+  let scannedUsers = 0;
+  let nextToken = pageToken ?? undefined;
+  const matchedUsers: FirebaseAdminUserSummary[] = [];
+
+  try {
+    while (matchedUsers.length < normalizedLimit && scannedUsers < maxScannedUsers) {
+      const listedUsers = await adminAuth.listUsers(pageSize, nextToken);
+      const mappedUsers = listedUsers.users.map(mapFirebaseUserRecord);
+
+      scannedUsers += mappedUsers.length;
+
+      for (const user of mappedUsers) {
+        if (matchesFirebaseUserQuery(user, normalizedQuery)) {
+          matchedUsers.push(user);
+        }
+
+        if (matchedUsers.length >= normalizedLimit) {
+          break;
+        }
+      }
+
+      nextToken = listedUsers.pageToken ?? undefined;
+
+      if (!nextToken || mappedUsers.length === 0) {
+        break;
+      }
+    }
+
+    return {
+      users: matchedUsers.slice(0, normalizedLimit),
+      nextPageToken: nextToken ?? null,
     };
   } catch {
     throw new Error("AUTH_UNAVAILABLE");
