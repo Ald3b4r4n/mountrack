@@ -13,6 +13,7 @@ jest.mock("@/modules/billing/repositories/billing-store", () => ({
 }));
 
 jest.mock("@/lib/firebase-admin", () => ({
+  getFirebaseAdminUnavailableMessage: jest.fn(),
   listFirebaseUsers: jest.fn(),
   searchFirebaseUsers: jest.fn(),
 }));
@@ -22,11 +23,16 @@ import { GET } from "@/app/api/billing/manual-grants/users/route";
 import { readServerAppAccess } from "@/modules/billing/auth/server-access";
 import { canManageManualGrants } from "@/modules/billing/manual-grants";
 import { getBillingStorageResponse } from "@/modules/billing/repositories/billing-store";
-import { listFirebaseUsers, searchFirebaseUsers } from "@/lib/firebase-admin";
+import {
+  getFirebaseAdminUnavailableMessage,
+  listFirebaseUsers,
+  searchFirebaseUsers,
+} from "@/lib/firebase-admin";
 
 const readServerAppAccessMock = jest.mocked(readServerAppAccess);
 const canManageManualGrantsMock = jest.mocked(canManageManualGrants);
 const getBillingStorageResponseMock = jest.mocked(getBillingStorageResponse);
+const getFirebaseAdminUnavailableMessageMock = jest.mocked(getFirebaseAdminUnavailableMessage);
 const listFirebaseUsersMock = jest.mocked(listFirebaseUsers);
 const searchFirebaseUsersMock = jest.mocked(searchFirebaseUsers);
 
@@ -47,6 +53,9 @@ describe("GET /api/billing/manual-grants/users", () => {
     });
     canManageManualGrantsMock.mockReturnValue(true);
     getBillingStorageResponseMock.mockReturnValue("database");
+    getFirebaseAdminUnavailableMessageMock.mockReturnValue(
+      "Firebase Admin indisponivel. Configure FIREBASE_SERVICE_ACCOUNT_JSON ou FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL e FIREBASE_PRIVATE_KEY.",
+    );
   });
 
   it("returns a paginated directory of firebase users", async () => {
@@ -127,6 +136,20 @@ describe("GET /api/billing/manual-grants/users", () => {
     expect(response.status).toBe(403);
     await expect(response.json()).resolves.toEqual({
       error: "Forbidden",
+    });
+  });
+
+  it("returns an actionable 503 when Firebase Admin is not configured", async () => {
+    listFirebaseUsersMock.mockRejectedValue(new Error("AUTH_UNAVAILABLE"));
+
+    const response = (await GET(
+      new NextRequest("http://localhost/api/billing/manual-grants/users"),
+    ))!;
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      error:
+        "Firebase Admin indisponivel. Configure FIREBASE_SERVICE_ACCOUNT_JSON ou FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL e FIREBASE_PRIVATE_KEY.",
     });
   });
 });

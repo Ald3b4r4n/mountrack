@@ -86,6 +86,58 @@ describe("verifyFirebaseIdToken", () => {
   });
 });
 
+describe("getFirebaseAdminUnavailableMessage", () => {
+  const originalProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const originalServerProjectId = process.env.FIREBASE_PROJECT_ID;
+  const originalClientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const originalPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
+  const originalServiceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+
+  afterEach(() => {
+    jest.resetModules();
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = originalProjectId;
+    process.env.FIREBASE_PROJECT_ID = originalServerProjectId;
+    process.env.FIREBASE_CLIENT_EMAIL = originalClientEmail;
+    process.env.FIREBASE_PRIVATE_KEY = originalPrivateKey;
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON = originalServiceAccountJson;
+    jest.unmock("firebase-admin");
+  });
+
+  it("explains when Firebase Admin credentials are missing", async () => {
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = "mountrack-app";
+    process.env.FIREBASE_PROJECT_ID = "";
+    process.env.FIREBASE_CLIENT_EMAIL = "";
+    process.env.FIREBASE_PRIVATE_KEY = "";
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON = "";
+
+    let getFirebaseAdminUnavailableMessage!: typeof import("@/lib/firebase-admin").getFirebaseAdminUnavailableMessage;
+    await jest.isolateModulesAsync(async () => {
+      ({ getFirebaseAdminUnavailableMessage } = await import("@/lib/firebase-admin"));
+    });
+
+    expect(getFirebaseAdminUnavailableMessage()).toBe(
+      "Firebase Admin indisponivel. Configure FIREBASE_SERVICE_ACCOUNT_JSON ou FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL e FIREBASE_PRIVATE_KEY.",
+    );
+  });
+
+  it("explains when FIREBASE_SERVICE_ACCOUNT_JSON is invalid", async () => {
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = "mountrack-app";
+    process.env.FIREBASE_PROJECT_ID = "";
+    process.env.FIREBASE_CLIENT_EMAIL = "";
+    process.env.FIREBASE_PRIVATE_KEY = "";
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON = "{\"project_id\":\"mountrack-app\"}";
+
+    let getFirebaseAdminUnavailableMessage!: typeof import("@/lib/firebase-admin").getFirebaseAdminUnavailableMessage;
+    await jest.isolateModulesAsync(async () => {
+      ({ getFirebaseAdminUnavailableMessage } = await import("@/lib/firebase-admin"));
+    });
+
+    expect(getFirebaseAdminUnavailableMessage()).toBe(
+      "Firebase Admin indisponivel. FIREBASE_SERVICE_ACCOUNT_JSON esta invalida.",
+    );
+  });
+});
+
 describe("searchFirebaseUsers", () => {
   const originalProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   const originalServerProjectId = process.env.FIREBASE_PROJECT_ID;

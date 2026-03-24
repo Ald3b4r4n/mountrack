@@ -92,6 +92,28 @@ NEXT_PUBLIC_FIREBASE_APP_ID=1:00000000:web:0000000
 
 *Dica: não versionar `.env.local` (*gitignore* nativo garantirá isso).*
 
+### Firebase Admin (rotas internas e painel de grants)
+
+As variaveis publicas acima bastam para o login no navegador, mas nao inicializam o Firebase Admin no backend.
+Se voce quiser usar rotas internas como `/api/billing/manual-grants` e `/api/billing/manual-grants/users`,
+adicione tambem uma credencial de service account.
+
+Opcao recomendada:
+
+```env
+FIREBASE_SERVICE_ACCOUNT_JSON={"project_id":"seu-projeto","client_email":"firebase-adminsdk-xxxx@seu-projeto.iam.gserviceaccount.com","private_key":"-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n"}
+```
+
+Ou, se preferir variaveis separadas:
+
+```env
+FIREBASE_PROJECT_ID=seu-projeto
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxx@seu-projeto.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+```
+
+Sem isso, o backend retorna `Firebase Admin unavailable` ao tentar listar ou buscar usuarios no painel de grants.
+
 ### 3. Start Engines
 
 ```bash

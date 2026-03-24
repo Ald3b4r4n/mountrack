@@ -20,6 +20,7 @@ jest.mock("@/modules/billing/manual-grants-server", () => ({
 jest.mock("@/lib/firebase-admin", () => ({
   findFirebaseUserByEmail: jest.fn(),
   findFirebaseUserByUid: jest.fn(),
+  getFirebaseAdminUnavailableMessage: jest.fn(),
 }));
 
 import { NextRequest } from "next/server";
@@ -38,6 +39,7 @@ import { buildBillingManualGrantsPayload } from "@/modules/billing/manual-grants
 import {
   findFirebaseUserByEmail,
   findFirebaseUserByUid,
+  getFirebaseAdminUnavailableMessage,
 } from "@/lib/firebase-admin";
 
 const readServerAppAccessMock = jest.mocked(readServerAppAccess);
@@ -47,6 +49,7 @@ const buildBillingManualGrantsPayloadMock = jest.mocked(buildBillingManualGrants
 const canManageManualGrantsMock = jest.mocked(canManageManualGrants);
 const findFirebaseUserByEmailMock = jest.mocked(findFirebaseUserByEmail);
 const findFirebaseUserByUidMock = jest.mocked(findFirebaseUserByUid);
+const getFirebaseAdminUnavailableMessageMock = jest.mocked(getFirebaseAdminUnavailableMessage);
 
 const operatorAccess: ServerAppAccessContext = {
   user: {
@@ -89,6 +92,9 @@ describe("billing manual grants routes", () => {
     readServerAppAccessMock.mockResolvedValue(operatorAccess);
     canManageManualGrantsMock.mockReturnValue(true);
     getBillingStorageResponseMock.mockReturnValue("database");
+    getFirebaseAdminUnavailableMessageMock.mockReturnValue(
+      "Firebase Admin indisponivel. Configure FIREBASE_SERVICE_ACCOUNT_JSON ou FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL e FIREBASE_PRIVATE_KEY.",
+    );
   });
 
   it("returns 400 when searching without a target user", async () => {
@@ -203,6 +209,22 @@ describe("billing manual grants routes", () => {
     expect(response.status).toBe(403);
     await expect(response.json()).resolves.toEqual({
       error: "Forbidden",
+    });
+  });
+
+  it("returns an actionable 503 when Firebase Admin is not configured", async () => {
+    findFirebaseUserByEmailMock.mockRejectedValue(new Error("AUTH_UNAVAILABLE"));
+
+    const response = (await GET(
+      new NextRequest(
+        "http://localhost/api/billing/manual-grants?email=target@example.com",
+      ),
+    ))!;
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      error:
+        "Firebase Admin indisponivel. Configure FIREBASE_SERVICE_ACCOUNT_JSON ou FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL e FIREBASE_PRIVATE_KEY.",
     });
   });
 });

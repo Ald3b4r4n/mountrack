@@ -32,6 +32,11 @@ type CachedGoogleCerts = {
   expiresAt: number;
 };
 
+type FirebaseAdminUnavailableIssue =
+  | "missing_credentials"
+  | "invalid_service_account_json"
+  | "initialization_failed";
+
 let googleCertCache: CachedGoogleCerts | null = null;
 
 function readEnvValue(...names: string[]): string | undefined {
@@ -75,13 +80,24 @@ function parseServiceAccountJson(rawValue: string): admin.ServiceAccount | null 
   }
 }
 
-function resolveFirebaseServiceAccount(): admin.ServiceAccount | null {
+function resolveFirebaseServiceAccount(): {
+  serviceAccount: admin.ServiceAccount | null;
+  issue: FirebaseAdminUnavailableIssue | null;
+} {
   const serviceAccountJson = readEnvValue("FIREBASE_SERVICE_ACCOUNT_JSON", "FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON");
   if (serviceAccountJson) {
     const parsedServiceAccount = parseServiceAccountJson(serviceAccountJson);
     if (parsedServiceAccount) {
-      return parsedServiceAccount;
+      return {
+        serviceAccount: parsedServiceAccount,
+        issue: null,
+      };
     }
+
+    return {
+      serviceAccount: null,
+      issue: "invalid_service_account_json",
+    };
   }
 
   const projectId = readEnvValue("FIREBASE_PROJECT_ID", "FIREBASE_ADMIN_PROJECT_ID");
@@ -89,13 +105,19 @@ function resolveFirebaseServiceAccount(): admin.ServiceAccount | null {
   const privateKey = normalizePrivateKey(readEnvValue("FIREBASE_PRIVATE_KEY", "FIREBASE_ADMIN_PRIVATE_KEY"));
 
   if (!projectId || !clientEmail || !privateKey) {
-    return null;
+    return {
+      serviceAccount: null,
+      issue: "missing_credentials",
+    };
   }
 
   return {
-    projectId,
-    clientEmail,
-    privateKey,
+    serviceAccount: {
+      projectId,
+      clientEmail,
+      privateKey,
+    },
+    issue: null,
   };
 }
 
@@ -215,12 +237,18 @@ async function verifyFirebaseTokenWithGoogleCerts(token: string, projectId: stri
   };
 }
 
-const firebaseServiceAccount = resolveFirebaseServiceAccount();
+const firebaseServiceAccountResolution = resolveFirebaseServiceAccount();
+let firebaseAdminUnavailableIssue: FirebaseAdminUnavailableIssue | null =
+  firebaseServiceAccountResolution.issue;
 
-if (!admin.apps.length && firebaseServiceAccount) {
-  admin.initializeApp({
-    credential: admin.credential.cert(firebaseServiceAccount),
-  });
+if (!admin.apps.length && firebaseServiceAccountResolution.serviceAccount) {
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert(firebaseServiceAccountResolution.serviceAccount),
+    });
+  } catch {
+    firebaseAdminUnavailableIssue = "initialization_failed";
+  }
 }
 
 const adminApp = admin.apps[0] ?? null;
@@ -229,6 +257,19 @@ export const adminDb = adminApp ? admin.firestore(adminApp) : null;
 export const adminAuth = adminApp ? admin.auth(adminApp) : null;
 export const hasFirebaseAdmin = Boolean(adminApp);
 export const firebaseProjectId = resolveFirebaseProjectId() ?? null;
+
+export function getFirebaseAdminUnavailableMessage(): string {
+  switch (firebaseAdminUnavailableIssue) {
+    case "invalid_service_account_json":
+      return "Firebase Admin indisponivel. FIREBASE_SERVICE_ACCOUNT_JSON esta invalida.";
+    case "initialization_failed":
+      return "Firebase Admin indisponivel. Revise as credenciais da service account.";
+    case "missing_credentials":
+      return "Firebase Admin indisponivel. Configure FIREBASE_SERVICE_ACCOUNT_JSON ou FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL e FIREBASE_PRIVATE_KEY.";
+    default:
+      return "Firebase Admin indisponivel.";
+  }
+}
 
 export interface FirebaseAdminUserSummary {
   uid: string;

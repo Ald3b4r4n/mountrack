@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { readServerAppAccess } from "@/modules/billing/auth/server-access";
 import { canManageManualGrants } from "@/modules/billing/manual-grants";
 import { getBillingStorageResponse } from "@/modules/billing/repositories/billing-store";
-import { listFirebaseUsers, searchFirebaseUsers } from "@/lib/firebase-admin";
+import {
+  getFirebaseAdminUnavailableMessage,
+  listFirebaseUsers,
+  searchFirebaseUsers,
+} from "@/lib/firebase-admin";
 
 export const runtime = "nodejs";
 
@@ -44,7 +48,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(payload, { status: 200 });
   } catch (error) {
     if (error instanceof Error && error.message === "AUTH_UNAVAILABLE") {
-      return createJsonError("Firebase Admin unavailable", 503);
+      return createJsonError(getFirebaseAdminUnavailableMessage(), 503);
     }
 
     return createJsonError("Failed to list users", 500);

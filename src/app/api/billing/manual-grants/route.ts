@@ -12,6 +12,7 @@ import {
 import {
   findFirebaseUserByEmail,
   findFirebaseUserByUid,
+  getFirebaseAdminUnavailableMessage,
 } from "@/lib/firebase-admin";
 
 export const runtime = "nodejs";
@@ -85,7 +86,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(payload, { status: 200 });
   } catch (error) {
     if (error instanceof Error && error.message === "AUTH_UNAVAILABLE") {
-      return createJsonError("Firebase Admin unavailable", 503);
+      return createJsonError(getFirebaseAdminUnavailableMessage(), 503);
     }
 
     return createJsonError("Failed to load manual grants", 500);
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(payload, { status: 201 });
   } catch (error) {
     if (error instanceof Error && error.message === "AUTH_UNAVAILABLE") {
-      return createJsonError("Firebase Admin unavailable", 503);
+      return createJsonError(getFirebaseAdminUnavailableMessage(), 503);
     }
 
     return createJsonError("Failed to save manual grant", 500);
