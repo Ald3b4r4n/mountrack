@@ -50,7 +50,7 @@ function resolveEffectiveStatusLabel(payload: BillingAccessPayload): string {
     case "active":
       return "Acesso ativo";
     case "grace_period":
-      return "Janela de regularizacao";
+      return "Janela de regularização";
     case "past_due":
       return "Pagamento pendente";
     case "operator_override":
@@ -72,12 +72,12 @@ function resolvePanelCopy(payload: BillingAccessPayload) {
 
   if (subscription.cancelAtPeriodEnd) {
     return {
-      eyebrow: "Renovacao cancelada",
+      eyebrow: "Renovação cancelada",
       title: accessDate
-        ? `Seu acesso segue ate ${accessDate}.`
-        : "Sua renovacao automatica foi cancelada.",
+        ? `Seu acesso segue até ${accessDate}.`
+        : "Sua renovação automática foi cancelada.",
       description:
-        "Nao havera nova cobranca depois do ciclo atual. Seu historico e o acesso pago continuam ativos ate o fim do periodo ja confirmado.",
+        "Não haverá nova cobrança depois do ciclo atual. Seu histórico e o acesso pago continuam ativos até o fim do período já confirmado.",
       primaryAction: null,
       secondaryLabel: "Abrir plano",
     };
@@ -86,11 +86,11 @@ function resolvePanelCopy(payload: BillingAccessPayload) {
   return {
     eyebrow: "Assinatura ativa",
     title: accessDate
-      ? `Acesso liberado ate ${accessDate}.`
-      : "Sua assinatura esta ativa.",
+      ? `Acesso liberado até ${accessDate}.`
+      : "Sua assinatura está ativa.",
     description:
-      "A renovacao continua mensalmente no Mercado Pago. Se quiser encerrar, voce cancela a proxima cobranca aqui e continua usando o app ate o fim do periodo pago.",
-    primaryAction: "Cancelar renovacao",
+      "A renovação continua mensalmente no Mercado Pago. Se quiser encerrar, você cancela a próxima cobrança aqui e continua usando o app até o fim do período pago.",
+    primaryAction: "Cancelar renovação",
     secondaryLabel: "Abrir plano",
   };
 }
@@ -151,7 +151,7 @@ export function BillingSubscriptionPanel({
     }
 
     const confirmed = window.confirm(
-      "Cancelar a renovacao automatica? O acesso continua ativo ate o fim do periodo ja pago.",
+      "Cancelar a renovação automática? O acesso continua ativo até o fim do período já pago.",
     );
 
     if (!confirmed) {
@@ -172,7 +172,7 @@ export function BillingSubscriptionPanel({
         | null;
 
       if (!response.ok) {
-        setError("Nao foi possivel cancelar a renovacao agora.");
+        setError("Não foi possível cancelar a renovação agora.");
         return;
       }
 
@@ -181,11 +181,11 @@ export function BillingSubscriptionPanel({
       }
 
       setMessage(
-        "Renovacao automatica cancelada. O acesso segue ativo ate o fim do periodo atual.",
+        "Renovação automática cancelada. O acesso segue ativo até o fim do período atual.",
       );
     } catch (requestError) {
       console.error("Failed to cancel billing renewal", requestError);
-      setError("Nao foi possivel cancelar a renovacao agora.");
+      setError("Não foi possível cancelar a renovação agora.");
     } finally {
       setIsCancelling(false);
     }
@@ -211,20 +211,20 @@ export function BillingSubscriptionPanel({
           </article>
 
           <article className={styles.metaCard}>
-            <span className={styles.metaLabel}>Situacao</span>
+            <span className={styles.metaLabel}>Situação</span>
             <strong className={styles.metaValue}>{effectiveStatusLabel}</strong>
           </article>
 
           <article className={styles.metaCard}>
             <span className={styles.metaLabel}>Acesso atual</span>
             <strong className={styles.metaValue}>
-              {accessEndsAt ? `Ativo ate ${accessEndsAt}` : "Ativo agora"}
+              {accessEndsAt ? `Ativo até ${accessEndsAt}` : "Ativo agora"}
             </strong>
           </article>
 
           <article className={styles.metaCard}>
-            <span className={styles.metaLabel}>Cobranca</span>
-            <strong className={styles.metaValue}>Mercado Pago · mensal</strong>
+            <span className={styles.metaLabel}>Cobrança</span>
+            <strong className={styles.metaValue}>Mercado Pago | mensal</strong>
           </article>
         </div>
 
@@ -233,39 +233,39 @@ export function BillingSubscriptionPanel({
             <span className={styles.timelineLabel}>Ciclo atual</span>
             <strong className={styles.timelineValue}>
               {cycleStartsAt && renewalDate
-                ? `${cycleStartsAt} ate ${renewalDate}`
+                ? `${cycleStartsAt} até ${renewalDate}`
                 : renewalDate
-                  ? `Renovacao em ${renewalDate}`
+                  ? `Renovação em ${renewalDate}`
                   : "Sem janela registrada"}
             </strong>
             <p className={styles.timelineHint}>
-              Esse periodo define ate quando o acesso segue liberado.
+              Esse período define até quando o acesso segue liberado.
             </p>
           </article>
 
           <article className={styles.timelineCard}>
-            <span className={styles.timelineLabel}>Gestao aqui</span>
+            <span className={styles.timelineLabel}>Gestão aqui</span>
             <strong className={styles.timelineValue}>
               {payload.subscription.cancelAtPeriodEnd
                 ? canceledAt
                   ? `Cancelada em ${canceledAt}`
-                  : "Renovacao encerrada"
-                : "Voce controla a renovacao"}
+                  : "Renovação encerrada"
+                : "Você controla a renovação"}
             </strong>
             <p className={styles.timelineHint}>
-              O MounTrack mostra o status da assinatura e cancela a proxima
-              cobranca quando voce pedir.
+              O MounTrack mostra o status da assinatura e cancela a próxima
+              cobrança quando você pedir.
             </p>
           </article>
         </div>
 
         <div className={styles.providerCard}>
           <span className={styles.providerLabel}>
-            Cobranca processada pelo Mercado Pago
+            Cobrança processada pelo Mercado Pago
           </span>
           <p className={styles.providerText}>
-            O cartao e a recorrencia ficam no ambiente seguro do Mercado Pago.
-            Aqui voce acompanha o ciclo, o acesso e a renovacao.
+            O cartão e a recorrência ficam no ambiente seguro do Mercado Pago.
+            Aqui você acompanha o ciclo, o acesso e a renovação.
           </p>
         </div>
       </div>
@@ -278,7 +278,7 @@ export function BillingSubscriptionPanel({
             onClick={handleCancelRenewal}
             disabled={isCancelling}
           >
-            {isCancelling ? "Cancelando renovacao..." : panelCopy.primaryAction}
+            {isCancelling ? "Cancelando renovação..." : panelCopy.primaryAction}
           </button>
         ) : null}
 
@@ -289,9 +289,9 @@ export function BillingSubscriptionPanel({
         <div className={styles.helpCard}>
           <span className={styles.helpTitle}>O que acontece ao cancelar</span>
           <ul className={styles.helpList}>
-            <li>O acesso continua ate o fim do periodo ja confirmado.</li>
-            <li>Nenhuma nova cobranca e feita depois desse ciclo.</li>
-            <li>Se quiser voltar, voce reabre o plano em poucos toques.</li>
+            <li>O acesso continua até o fim do período já confirmado.</li>
+            <li>Nenhuma nova cobrança é feita depois desse ciclo.</li>
+            <li>Se quiser voltar, você reabre o plano em poucos toques.</li>
           </ul>
         </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { isMobileChromeRoute } from "@/modules/mobile/native-shell";
 
 export function AppFooter() {
   const pathname = usePathname();
@@ -10,7 +11,9 @@ export function AppFooter() {
   }
 
   return (
-    <footer className="mt-12 flex justify-center px-4 pb-6">
+    <footer
+      className={`mt-12 flex justify-center px-4 pb-6 ${isMobileChromeRoute(pathname) ? "mobile-native-footer-hidden" : ""}`}
+    >
       <div
         className="glass-panel inline-flex items-center gap-2 rounded-full px-8 py-4"
         style={{

@@ -12,7 +12,10 @@ import {
   listBillingAuditLogsForUser,
   listManualAccessGrantsForUser,
 } from "@/modules/billing/repositories/billing-store";
-import type { FirebaseAdminUserSummary } from "@/lib/firebase-admin";
+import {
+  findFirebaseUsersByUids,
+  type FirebaseAdminUserSummary,
+} from "@/lib/firebase-admin";
 
 export async function buildBillingManualGrantsPayload(
   targetUser: FirebaseAdminUserSummary,
@@ -24,6 +27,16 @@ export async function buildBillingManualGrantsPayload(
     listManualAccessGrantsForUser(targetUser.uid),
     listBillingAuditLogsForUser(targetUser.uid),
   ]);
+  const operatorUsers = await findFirebaseUsersByUids(
+    Array.from(
+      new Set(
+        [
+          ...grants.map((grant) => grant.grantedBy),
+          ...auditLogs.map((auditLog) => auditLog.actorUserId),
+        ].filter(Boolean),
+      ),
+    ),
+  );
   const decision = resolveAccessDecision({
     entitlementStatus: snapshot.entitlementStatus,
     manualGrant: snapshot.manualGrant,
@@ -58,5 +71,6 @@ export async function buildBillingManualGrantsPayload(
       : null,
     grants,
     auditLogs,
+    operatorUsers,
   };
 }

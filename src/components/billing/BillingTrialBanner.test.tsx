@@ -13,7 +13,7 @@ describe("BillingTrialBanner", () => {
     jest.useRealTimers();
   });
 
-  it("renders the trial countdown and the subscribe CTA", async () => {
+  it("renders the attention-state countdown and CTA during the last two days", async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -32,18 +32,48 @@ describe("BillingTrialBanner", () => {
     await waitFor(() => {
       expect(
         screen.getByRole("heading", {
-          name: /Seu teste esta correndo:/,
+          name: /Seu teste entrou na reta final:/,
         }),
       ).toBeInTheDocument();
     });
     expect(
       screen.getByRole("heading", {
-        name: /Seu teste esta correndo:\s*faltam 2 dias para decidir\./i,
+        name: /Seu teste entrou na reta final:\s*faltam 2 dias para decidir\./i,
       }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", {
-        name: "Ver assinatura",
+        name: "Garantir acesso",
+      }),
+    ).toHaveAttribute("href", "/subscribe");
+  });
+
+  it("renders the urgent-state countdown and CTA in the last 24 hours", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        authenticated: true,
+        accessAllowed: true,
+        effectiveStatus: "trialing",
+        entitlementStartsAt: "2026-03-20T09:00:00.000Z",
+        entitlementEndsAt: "2026-03-20T18:00:00.000Z",
+      }),
+    }) as typeof fetch;
+
+    await act(async () => {
+      render(<BillingTrialBanner />);
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", {
+          name: /Últimas horas do seu teste:/,
+        }),
+      ).toBeInTheDocument();
+    });
+    expect(
+      screen.getByRole("link", {
+        name: "Assinar agora",
       }),
     ).toHaveAttribute("href", "/subscribe");
   });
@@ -69,7 +99,7 @@ describe("BillingTrialBanner", () => {
     });
 
     expect(
-      screen.queryByRole("heading", { name: /Seu teste esta correndo:/ }),
+      screen.queryByRole("heading", { name: /Seu teste está em andamento:/ }),
     ).not.toBeInTheDocument();
   });
 });

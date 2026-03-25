@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SubscribeCheckoutButton } from "@/components/billing/SubscribeCheckoutButton";
 import { useAuth } from "@/contexts/AuthContext";
 import { buildLoginNavigationUrl } from "@/modules/billing/auth/login-navigation";
@@ -20,12 +21,12 @@ const slides = [
   {
     id: "overview",
     title: "Plano",
-    copy: "Veja o que permanece ativo na sua conta.",
+    copy: "Entenda o que permanece disponível na sua conta.",
   },
   {
     id: "trial",
     title: "Teste",
-    copy: "Entenda quando o teste comeca e quando a assinatura entra.",
+    copy: "Veja quando o teste começa e quando a assinatura entra em vigor.",
   },
   {
     id: "checkout",
@@ -42,16 +43,60 @@ export function SubscribeExperience({
   mercadoPagoPublicKey,
   sandboxPayerEmail,
 }: SubscribeExperienceProps) {
-  const { user, signOut } = useAuth();
+  const { user, loading, sessionReady, signOut } = useAuth();
+  const router = useRouter();
   const [activeStep, setActiveStep] = useState(0);
   const [isSwitchingAccount, setIsSwitchingAccount] = useState(false);
+  const [isCheckingAccess, setIsCheckingAccess] = useState(false);
+  const [accessResolved, setAccessResolved] = useState(false);
   const isFirstStep = activeStep === 0;
   const isLastStep = activeStep === slides.length - 1;
   const frameRef = useRef<HTMLDivElement | null>(null);
   const didMountRef = useRef(false);
+  const hasAuthenticatedUser = Boolean(user);
+  const entryButtonLabel = hasAuthenticatedUser
+    ? "Abrir o app"
+    : "Fazer login";
+
+  const accessStatusCopy = useMemo(() => {
+    if (loading || (hasAuthenticatedUser && !sessionReady)) {
+      return "Preparando o acesso da sua conta.";
+    }
+
+    if (isCheckingAccess) {
+      return "Conferindo o status da sua conta.";
+    }
+
+    if (hasAuthenticatedUser) {
+      return "Se a sua conta estiver com teste ativo ou assinatura vigente, o acesso será retomado automaticamente.";
+    }
+
+    return "Se você já usa o MounTrack, faça login para retomar o acompanhamento com a mesma conta e o mesmo histórico.";
+  }, [hasAuthenticatedUser, isCheckingAccess, loading, sessionReady]);
 
   function goToStep(step: number) {
     setActiveStep(Math.max(0, Math.min(step, slides.length - 1)));
+  }
+
+  function navigateToLogin() {
+    if (typeof window === "undefined") {
+      router.push("/login?next=%2Fsubscribe");
+      return;
+    }
+
+    window.location.assign(
+      buildLoginNavigationUrl(window.location, "/subscribe"),
+    );
+  }
+
+  async function handleExistingCustomerEntry() {
+    if (hasAuthenticatedUser) {
+      setIsCheckingAccess(true);
+      setAccessResolved(false);
+      return;
+    }
+
+    navigateToLogin();
   }
 
   async function handleSwitchAccount() {
@@ -78,6 +123,58 @@ export function SubscribeExperience({
   }
 
   useEffect(() => {
+    if (loading || (user && !sessionReady)) {
+      return;
+    }
+
+    if (!user) {
+      setIsCheckingAccess(false);
+      setAccessResolved(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function resolveExistingAccess() {
+      setIsCheckingAccess(true);
+
+      try {
+        const response = await fetch("/api/billing/access", {
+          method: "GET",
+          cache: "no-store",
+          credentials: "include",
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        if (response.status === 200) {
+          router.replace("/");
+          return;
+        }
+
+        setAccessResolved(true);
+      } catch (accessError) {
+        console.error("Failed to resolve subscribe access state", accessError);
+        if (!cancelled) {
+          setAccessResolved(true);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsCheckingAccess(false);
+        }
+      }
+    }
+
+    void resolveExistingAccess();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, router, sessionReady, user]);
+
+  useEffect(() => {
     if (!didMountRef.current) {
       didMountRef.current = true;
       return;
@@ -99,7 +196,13 @@ export function SubscribeExperience({
   return (
     <section className={styles.shell}>
       <header className={styles.header}>
-        <span className={styles.eyebrow}>MounTrack Pro</span>
+        <div className={styles.headerIntro}>
+          <Link href="/" className={styles.backLink}>
+            Voltar
+          </Link>
+          <span className={styles.eyebrow}>MounTrack Pro</span>
+        </div>
+
         <div className={styles.priceTag}>
           <span className={styles.priceLabel}>Plano mensal</span>
           <strong className={styles.priceValue}>{monthlyPrice}</strong>
@@ -135,17 +238,17 @@ export function SubscribeExperience({
               <div className={styles.slideHead}>
                 <span className={styles.slideKicker}>Continue sua rotina</span>
                 <h1 className={styles.slideTitle}>
-                  Seu historico continua com voce.
+                  Seu histórico continua com você.
                 </h1>
                 <p className={styles.slideText}>
-                  O MounTrack Pro mantem peso, doses, metas, nutricao e
+                  O MounTrack Pro mantém peso, doses, metas, nutrição e
                   acompanhamento na mesma conta, sem quebrar a sua rotina.
                 </p>
               </div>
 
               <div className={styles.metrics}>
                 <article className={styles.metricCard}>
-                  <span className={styles.metricLabel}>Teste gratis</span>
+                  <span className={styles.metricLabel}>Teste grátis</span>
                   <strong className={styles.metricValue}>
                     {trialDays} dias
                   </strong>
@@ -153,29 +256,71 @@ export function SubscribeExperience({
                     Use o app completo antes de decidir se quer continuar.
                   </span>
                 </article>
+
                 <article className={styles.metricCard}>
                   <span className={styles.metricLabel}>Valor mensal</span>
                   <strong className={styles.metricValue}>{monthlyPrice}</strong>
                   <span className={styles.metricHelper}>
-                    Um unico plano para manter toda a experiencia liberada.
+                    Um único plano para manter toda a experiência liberada.
                   </span>
                 </article>
+
                 <article className={styles.metricCard}>
                   <span className={styles.metricLabel}>Pagamento</span>
                   <strong className={styles.metricValue}>Mercado Pago</strong>
                   <span className={styles.metricHelper}>
-                    Pagamento seguro para ativar o acesso sem perder o que voce
-                    ja registrou.
+                    Pagamento seguro para ativar o acesso sem perder o que você
+                    já registrou.
                   </span>
                 </article>
               </div>
 
               <div className={styles.panelGrid}>
                 <article className={styles.infoPanel}>
-                  <h2>O que continua liberado.</h2>
+                  <div className={styles.existingCustomerCard}>
+                    <span className={styles.existingCustomerEyebrow}>
+                      Cliente existente
+                    </span>
+                    <h2 className={styles.existingCustomerTitle}>
+                      Acesse a sua conta.
+                    </h2>
+                    <p className={styles.existingCustomerText}>
+                      {accessStatusCopy}
+                    </p>
+                    <div className={styles.existingCustomerActions}>
+                      <button
+                        type="button"
+                        className={styles.existingCustomerButton}
+                        onClick={handleExistingCustomerEntry}
+                        disabled={
+                          loading || isCheckingAccess || isSwitchingAccount
+                        }
+                      >
+                        {loading || (hasAuthenticatedUser && !sessionReady)
+                          ? "Preparando acesso..."
+                          : isCheckingAccess
+                            ? "Conferindo conta..."
+                            : entryButtonLabel}
+                      </button>
+                      {hasAuthenticatedUser && accessResolved ? (
+                        <button
+                          type="button"
+                          className={styles.existingCustomerLink}
+                          onClick={handleSwitchAccount}
+                          disabled={isSwitchingAccount}
+                        >
+                          {isSwitchingAccount
+                            ? "Trocando conta..."
+                            : "Trocar conta"}
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <h2>O que permanece disponível</h2>
                   <p>
-                    A assinatura mantem a experiencia principal do app na mesma
-                    conta, sem separar o que voce acompanha no dia a dia.
+                    A assinatura mantém a experiência principal do app na mesma
+                    conta, sem separar o que você acompanha no dia a dia.
                   </p>
 
                   <ul className={styles.list}>
@@ -183,14 +328,15 @@ export function SubscribeExperience({
                       <span className={styles.listDot} aria-hidden="true" />
                       <div>
                         <strong className={styles.listTitle}>
-                          Historico intacto
+                          Histórico intacto
                         </strong>
                         <p className={styles.listText}>
-                          Peso, doses, metas e nutricao continuam no mesmo
-                          historico.
+                          Peso, doses, metas e nutrição continuam no mesmo
+                          histórico.
                         </p>
                       </div>
                     </li>
+
                     <li className={styles.listItem}>
                       <span className={styles.listDot} aria-hidden="true" />
                       <div>
@@ -198,20 +344,21 @@ export function SubscribeExperience({
                           Acesso completo
                         </strong>
                         <p className={styles.listText}>
-                          Diario, dashboards, metas e relatorios seguem
-                          disponiveis na mesma conta.
+                          Diário, dashboards, metas e relatórios seguem
+                          disponíveis na mesma conta.
                         </p>
                       </div>
                     </li>
+
                     <li className={styles.listItem}>
                       <span className={styles.listDot} aria-hidden="true" />
                       <div>
                         <strong className={styles.listTitle}>
-                          Assinatura sem susto
+                          Continuidade no mesmo plano
                         </strong>
                         <p className={styles.listText}>
-                          Quando o pagamento confirma, o acesso continua sem
-                          perder o que ja estava salvo.
+                          Quando o pagamento for confirmado, o acesso continua
+                          sem perder o que já estava salvo.
                         </p>
                       </div>
                     </li>
@@ -219,11 +366,11 @@ export function SubscribeExperience({
                 </article>
 
                 <aside className={styles.sidePanel}>
-                  <h2>Quando vale continuar</h2>
+                  <h2>Quando a assinatura faz sentido</h2>
                   <p>
-                    Se o MounTrack ja entrou na sua rotina, a assinatura
-                    mantem tudo no mesmo lugar: historico, metas, doses e
-                    nutricao, sem recomecar do zero.
+                    Se o MounTrack já entrou na sua rotina, a assinatura mantém
+                    tudo no mesmo lugar: histórico, metas, doses e nutrição,
+                    sem recomeçar do zero.
                   </p>
                 </aside>
               </div>
@@ -235,21 +382,18 @@ export function SubscribeExperience({
               <div className={styles.slideHead}>
                 <span className={styles.slideKicker}>Primeiro contato</span>
                 <h2 className={styles.slideTitle}>
-                  Os{" "}
-                  <span className={styles.highlight}>
-                    {trialDays} dias gratis
-                  </span>{" "}
-                  comecam no primeiro acesso.
+                  Os <span className={styles.highlight}>{trialDays} dias grátis</span>{" "}
+                  começam no primeiro acesso.
                 </h2>
                 <p className={styles.slideText}>
                   Quem chega agora entra, usa o app completo por {trialDays}{" "}
-                  dias e so depois escolhe se quer continuar.
+                  dias e só depois escolhe se quer continuar.
                 </p>
               </div>
 
               <div className={styles.panelGrid}>
                 <article className={styles.infoPanel}>
-                  <h2>Como funciona na pratica.</h2>
+                  <h2>Como funciona na prática</h2>
                   <ol className={styles.timeline}>
                     <li className={styles.timelineItem}>
                       <span className={styles.timelineNumber}>1</span>
@@ -258,11 +402,12 @@ export function SubscribeExperience({
                           Primeiro acesso
                         </strong>
                         <p className={styles.timelineText}>
-                          Assim que a conta entra no app, o periodo gratis
-                          comeca.
+                          Assim que a conta entra no app, o período grátis
+                          começa.
                         </p>
                       </div>
                     </li>
+
                     <li className={styles.timelineItem}>
                       <span className={styles.timelineNumber}>2</span>
                       <div>
@@ -270,11 +415,12 @@ export function SubscribeExperience({
                           Uso completo por {trialDays} dias
                         </strong>
                         <p className={styles.timelineText}>
-                          Durante esse periodo, as principais areas do MounTrack
+                          Durante esse período, as principais áreas do MounTrack
                           ficam liberadas.
                         </p>
                       </div>
                     </li>
+
                     <li className={styles.timelineItem}>
                       <span className={styles.timelineNumber}>3</span>
                       <div>
@@ -283,19 +429,20 @@ export function SubscribeExperience({
                         </strong>
                         <p className={styles.timelineText}>
                           Antes do teste terminar, o app avisa que a assinatura
-                          sera necessaria para continuar.
+                          será necessária para continuar.
                         </p>
                       </div>
                     </li>
+
                     <li className={styles.timelineItem}>
                       <span className={styles.timelineNumber}>4</span>
                       <div>
                         <strong className={styles.timelineTitle}>
-                          Assinatura so depois do prazo
+                          Assinatura só depois do prazo
                         </strong>
                         <p className={styles.timelineText}>
-                          A tela de assinatura entra quando o periodo gratis
-                          termina ou quando o pagamento ainda nao foi feito.
+                          A tela de assinatura entra quando o período grátis
+                          termina ou quando o pagamento ainda não foi feito.
                         </p>
                       </div>
                     </li>
@@ -305,13 +452,13 @@ export function SubscribeExperience({
                 <aside className={styles.sidePanel}>
                   <h2>Antes do fim do teste</h2>
                   <p>
-                    O app avisa com antecedencia para voce decidir com calma.
-                    Se fizer sentido continuar, basta concluir a assinatura
-                    antes do prazo terminar.
+                    O app avisa com antecedência para você decidir com calma. Se
+                    fizer sentido continuar, basta concluir a assinatura antes
+                    do prazo terminar.
                   </p>
                   <div className={styles.noteBand}>
-                    Primeiro voce usa o app completo. A cobranca so entra
-                    depois do periodo gratis.
+                    Primeiro você usa o app completo. A cobrança só entra depois
+                    do período grátis.
                   </div>
                 </aside>
               </div>
@@ -333,12 +480,14 @@ export function SubscribeExperience({
 
               <div className={styles.checkoutPanel}>
                 <h2>MounTrack Pro Mensal</h2>
-                <p>{monthlyPrice} por mes para manter sua conta liberada.</p>
+                <p>{monthlyPrice} por mês para manter sua conta liberada.</p>
 
                 <ul className={styles.checkoutSummary}>
-                  <li>Seu historico continua salvo na mesma conta.</li>
-                  <li>O acesso volta assim que o pagamento e confirmado.</li>
-                  <li>Se preferir, voce pode abrir o ambiente do Mercado Pago.</li>
+                  <li>Seu histórico continua salvo na mesma conta.</li>
+                  <li>O acesso volta assim que o pagamento é confirmado.</li>
+                  <li>
+                    Se preferir, você pode abrir o ambiente do Mercado Pago.
+                  </li>
                 </ul>
               </div>
 
@@ -358,7 +507,7 @@ export function SubscribeExperience({
                   Voltar
                 </button>
                 <Link href="/" className={styles.textLink}>
-                  Ja paguei
+                  Já paguei
                 </Link>
                 <button
                   type="button"

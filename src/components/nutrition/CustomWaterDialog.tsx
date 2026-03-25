@@ -20,11 +20,30 @@ export function CustomWaterDialog({
   isSaving = false,
   initialMode = "increment",
 }: CustomWaterDialogProps) {
+  if (!open || typeof document === "undefined") {
+    return null;
+  }
+
+  return (
+    <CustomWaterDialogContent
+      key={initialMode}
+      onClose={onClose}
+      onSave={onSave}
+      isSaving={isSaving}
+      initialMode={initialMode}
+    />
+  );
+}
+
+function CustomWaterDialogContent({
+  onClose,
+  onSave,
+  isSaving = false,
+  initialMode = "increment",
+}: Omit<CustomWaterDialogProps, "open">) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [mounted, setMounted] = useState(false);
-
   const [mode, setMode] = useState<"increment" | "absolute">(initialMode);
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -48,25 +67,14 @@ export function CustomWaterDialog({
   }, [value, mode, onSave]);
 
   useEffect(() => {
-    setMounted(true);
+    const timer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    if (open) {
-      setValue("");
-      setError(null);
-      setMode(initialMode);
-      
-      const timer = setTimeout(() => {
-        inputRef.current?.focus();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [open, initialMode]);
-
-  useEffect(() => {
-    if (!open || !mounted) return;
-
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -80,9 +88,7 @@ export function CustomWaterDialog({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, mounted, isSaving, onClose, handleConfirm]);
-
-  if (!open || !mounted) return null;
+  }, [isSaving, onClose, handleConfirm]);
 
   const modal = (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">

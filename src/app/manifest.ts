@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "MounTrack",
     short_name: "MounTrack",
     description:
-      "Acompanhe peso, doses, metas, nutricao e assinatura em uma experiencia mobile-first pronta para instalacao.",
+      "Acompanhe peso, doses, metas, nutrição e assinatura em uma experiência mobile-first pronta para instalação.",
     start_url: "/",
     scope: "/",
     display: "standalone",
@@ -49,9 +49,9 @@ export default function manifest(): MetadataRoute.Manifest {
         url: "/subscription",
       },
       {
-        name: "Diario",
-        short_name: "Diario",
-        description: "Acesse o diario da jornada e acompanhe registros recentes.",
+        name: "Diário",
+        short_name: "Diário",
+        description: "Acesse o diário da jornada e acompanhe registros recentes.",
         url: "/journal",
       },
     ],

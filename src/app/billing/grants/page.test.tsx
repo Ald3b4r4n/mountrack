@@ -33,7 +33,7 @@ describe("BillingManualGrantsPage", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "Painel de gratuidade e concessoes.",
+        name: "Painel de gratuidades e concessões.",
       }),
     ).toBeInTheDocument();
     expect(

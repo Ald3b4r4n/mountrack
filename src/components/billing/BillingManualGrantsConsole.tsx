@@ -8,6 +8,7 @@ import type {
 } from "@/modules/billing/manual-grants";
 import {
   MANUAL_GRANT_DURATION_OPTIONS,
+  MANUAL_GRANT_PRESETS,
   MANUAL_GRANT_TYPE_LABELS,
 } from "@/modules/billing/manual-grants";
 import type {
@@ -48,7 +49,7 @@ function resolveAccessStatusLabel(payload: BillingManualGrantsPayload): string {
     case "active":
       return "Assinatura ativa";
     case "grace_period":
-      return "Janela de regularizacao";
+      return "Janela de regularização";
     case "past_due":
       return "Pagamento pendente";
     case "expired":
@@ -118,6 +119,36 @@ function resolveAuditActionLabel(action: string): string {
   }
 }
 
+function resolveOperatorLabel(
+  operatorId: string,
+  operatorUsers: Record<string, FirebaseAdminUserSummary> | undefined,
+): string {
+  const operator = operatorUsers?.[operatorId];
+
+  if (!operator) {
+    return operatorId;
+  }
+
+  return resolveUserLabel(operator);
+}
+
+function resolveOperatorMeta(
+  operatorId: string,
+  operatorUsers: Record<string, FirebaseAdminUserSummary> | undefined,
+): string {
+  const operator = operatorUsers?.[operatorId];
+  if (!operator) {
+    return operatorId;
+  }
+
+  const primaryLabel = resolveUserLabel(operator);
+  if (operator.email && operator.email !== primaryLabel) {
+    return `${primaryLabel} - ${operator.email}`;
+  }
+
+  return primaryLabel;
+}
+
 function readAuditMetadataValue(
   metadata: Record<string, unknown>,
   key: string,
@@ -152,6 +183,8 @@ export function BillingManualGrantsConsole() {
   const [isSearching, setIsSearching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [revokingGrantId, setRevokingGrantId] = useState<string | null>(null);
+  const [auditActionFilter, setAuditActionFilter] = useState("all");
+  const [auditOperatorFilter, setAuditOperatorFilter] = useState("all");
 
   const filteredDirectoryUsers = useMemo(() => {
     const normalizedFilter = directoryFilter.trim().toLowerCase();
@@ -173,6 +206,55 @@ export function BillingManualGrantsConsole() {
     });
   }, [directoryFilter, directoryUsers]);
 
+  const operatorUsers = payload?.operatorUsers;
+
+  const auditActionOptions = useMemo(() => {
+    if (!payload?.auditLogs.length) {
+      return [];
+    }
+
+    return Array.from(
+      new Set(payload.auditLogs.map((auditLog) => auditLog.action)),
+    ).map((action) => ({
+      value: action,
+      label: resolveAuditActionLabel(action),
+    }));
+  }, [payload]);
+
+  const auditOperatorOptions = useMemo(() => {
+    if (!payload?.auditLogs.length) {
+      return [];
+    }
+
+    return Array.from(
+      new Set(payload.auditLogs.map((auditLog) => auditLog.actorUserId)),
+    ).map((operatorId) => ({
+      value: operatorId,
+      label: resolveOperatorLabel(operatorId, operatorUsers),
+    }));
+  }, [operatorUsers, payload]);
+
+  const filteredAuditLogs = useMemo(() => {
+    if (!payload?.auditLogs.length) {
+      return [];
+    }
+
+    return payload.auditLogs.filter((auditLog) => {
+      if (auditActionFilter !== "all" && auditLog.action !== auditActionFilter) {
+        return false;
+      }
+
+      if (
+        auditOperatorFilter !== "all" &&
+        auditLog.actorUserId !== auditOperatorFilter
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [auditActionFilter, auditOperatorFilter, payload]);
+
   function resetGrantForm() {
     setEditingGrantId(null);
     setGrantType(DEFAULT_GRANT_TYPE);
@@ -180,6 +262,33 @@ export function BillingManualGrantsConsole() {
     setReason("");
     setNotes("");
   }
+
+  function applyPreset(presetId: string) {
+    const preset = MANUAL_GRANT_PRESETS.find((entry) => entry.id === presetId);
+
+    if (!preset) {
+      return;
+    }
+
+    setGrantType(preset.grantType);
+    setDurationValue(preset.durationValue);
+    setReason(preset.reason);
+    setNotes(preset.notes);
+    setLookupError(null);
+    setFeedback(null);
+  }
+
+  const activePresetId = useMemo(() => {
+    const matchedPreset = MANUAL_GRANT_PRESETS.find(
+      (preset) =>
+        preset.grantType === grantType &&
+        preset.durationValue === durationValue &&
+        preset.reason === reason &&
+        preset.notes === notes,
+    );
+
+    return matchedPreset?.id ?? null;
+  }, [durationValue, grantType, notes, reason]);
 
   const loadUserDirectory = useCallback(async (options?: {
     cursor?: string | null;
@@ -219,7 +328,7 @@ export function BillingManualGrantsConsole() {
       if (!response.ok || !data || !("users" in data)) {
         setDirectoryError(
           (data && "error" in data && data.error) ||
-            "Nao foi possivel carregar os usuarios.",
+            "Não foi possível carregar os usuários.",
         );
         return;
       }
@@ -233,7 +342,7 @@ export function BillingManualGrantsConsole() {
       }
     } catch (error) {
       console.error("Failed to load billing manual grants users", error);
-      setDirectoryError("Nao foi possivel carregar os usuarios.");
+      setDirectoryError("Não foi possível carregar os usuários.");
     } finally {
       if (!isLoadingMore) {
         setIsDirectoryLoading(false);
@@ -244,6 +353,11 @@ export function BillingManualGrantsConsole() {
   useEffect(() => {
     void loadUserDirectory();
   }, [loadUserDirectory]);
+
+  useEffect(() => {
+    setAuditActionFilter("all");
+    setAuditOperatorFilter("all");
+  }, [payload?.targetUser.uid]);
 
   async function handleDirectorySearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -258,7 +372,7 @@ export function BillingManualGrantsConsole() {
     const normalizedUid = target.uid?.trim() ?? "";
 
     if (!normalizedEmail && !normalizedUid) {
-      setLookupError("Escolha um usuario ou informe o e-mail da conta.");
+      setLookupError("Escolha um usuário ou informe o e-mail da conta.");
       return;
     }
 
@@ -288,7 +402,7 @@ export function BillingManualGrantsConsole() {
         resetGrantForm();
         setLookupError(
           (data && "error" in data && data.error) ||
-            "Nao foi possivel localizar esse usuario.",
+            "Não foi possível localizar esse usuário.",
         );
         return;
       }
@@ -301,7 +415,7 @@ export function BillingManualGrantsConsole() {
       console.error("Failed to load billing manual grants", error);
       setPayload(null);
       resetGrantForm();
-      setLookupError("Nao foi possivel localizar esse usuario.");
+      setLookupError("Não foi possível localizar esse usuário.");
     } finally {
       setIsSearching(false);
     }
@@ -352,8 +466,8 @@ export function BillingManualGrantsConsole() {
         setLookupError(
           (data && "error" in data && data.error) ||
             (isEditing
-              ? "Nao foi possivel atualizar a gratuidade."
-              : "Nao foi possivel salvar a gratuidade."),
+              ? "Não foi possível atualizar a gratuidade."
+              : "Não foi possível salvar a gratuidade."),
         );
         return;
       }
@@ -369,8 +483,8 @@ export function BillingManualGrantsConsole() {
       console.error("Failed to save billing manual grant", error);
       setLookupError(
         isEditing
-          ? "Nao foi possivel atualizar a gratuidade."
-          : "Nao foi possivel salvar a gratuidade.",
+          ? "Não foi possível atualizar a gratuidade."
+          : "Não foi possível salvar a gratuidade.",
       );
     } finally {
       setIsSaving(false);
@@ -383,7 +497,7 @@ export function BillingManualGrantsConsole() {
     }
 
     const confirmed = window.confirm(
-      "Revogar esta gratuidade agora? O acesso do usuario volta a depender do status normal da assinatura.",
+      "Revogar esta gratuidade agora? O acesso do usuário volta a depender do status normal da assinatura.",
     );
 
     if (!confirmed) {
@@ -404,7 +518,7 @@ export function BillingManualGrantsConsole() {
 
       if (!response.ok) {
         setLookupError(
-          (data && data.error) || "Nao foi possivel revogar a gratuidade.",
+          (data && data.error) || "Não foi possível revogar a gratuidade.",
         );
         return;
       }
@@ -421,7 +535,7 @@ export function BillingManualGrantsConsole() {
       setFeedback("Gratuidade revogada com sucesso.");
     } catch (error) {
       console.error("Failed to revoke billing manual grant", error);
-      setLookupError("Nao foi possivel revogar a gratuidade.");
+      setLookupError("Não foi possível revogar a gratuidade.");
     } finally {
       setRevokingGrantId(null);
     }
@@ -441,10 +555,10 @@ export function BillingManualGrantsConsole() {
     <section className={`glass-panel ${styles.panel}`}>
       <div className={styles.header}>
         <div>
-          <span className={styles.eyebrow}>Concessoes de gratuidade</span>
+          <span className={styles.eyebrow}>Concessões de gratuidade</span>
           <h2 className={styles.title}>Controle manual para owner e admin.</h2>
           <p className={styles.description}>
-            Veja o diretorio de contas, abra o historico de cada usuario e
+            Veja o diretório de contas, abra o histórico de cada usuário e
             conceda, edite ou revogue gratuidades com motivo e auditoria.
           </p>
         </div>
@@ -453,10 +567,10 @@ export function BillingManualGrantsConsole() {
       <section className={styles.directorySection}>
         <div className={styles.formHeader}>
           <div>
-            <h3 className={styles.sectionTitle}>Todos os usuarios</h3>
+            <h3 className={styles.sectionTitle}>Todos os usuários</h3>
             <p className={styles.sectionText}>
-              Abra qualquer conta a partir do diretorio ou use a busca direta
-              por e-mail quando precisar ir mais rapido.
+              Abra qualquer conta a partir do diretório ou use a busca direta
+              por e-mail quando precisar ir mais rápido.
             </p>
           </div>
         </div>
@@ -485,7 +599,7 @@ export function BillingManualGrantsConsole() {
 
           <form className={styles.searchForm} onSubmit={handleDirectorySearch}>
             <label className={styles.field}>
-              <span className={styles.fieldLabel}>Buscar no diretorio</span>
+              <span className={styles.fieldLabel}>Buscar no diretório</span>
               <input
                 type="search"
                 value={directoryQuery}
@@ -500,7 +614,7 @@ export function BillingManualGrantsConsole() {
               className={styles.secondaryButton}
               disabled={isDirectoryLoading}
             >
-              {isDirectoryLoading ? "Carregando..." : "Buscar diretorio"}
+              {isDirectoryLoading ? "Carregando..." : "Buscar diretório"}
             </button>
           </form>
 
@@ -516,7 +630,7 @@ export function BillingManualGrantsConsole() {
           </label>
 
           <p className={styles.directorySummary}>
-            Exibindo {filteredDirectoryUsers.length} de {directoryUsers.length} usuarios carregados.
+            Exibindo {filteredDirectoryUsers.length} de {directoryUsers.length} usuários carregados.
             {activeDirectoryQuery
               ? ` Busca ativa: "${activeDirectoryQuery}".`
               : " Diretório geral carregado."}
@@ -542,20 +656,20 @@ export function BillingManualGrantsConsole() {
               >
                 <strong className={styles.userName}>{resolveUserLabel(user)}</strong>
                 <span className={styles.userMeta}>
-                  {user.email ?? "Sem e-mail"} · UID {user.uid}
-                  {user.disabled ? " · conta desativada" : ""}
+                  {user.email ?? "Sem e-mail"} | UID {user.uid}
+                  {user.disabled ? " | conta desativada" : ""}
                 </span>
               </button>
             );
           })}
 
           {isDirectoryLoading ? (
-            <div className={styles.emptyState}>Carregando usuarios...</div>
+            <div className={styles.emptyState}>Carregando usuários...</div>
           ) : null}
 
           {!isDirectoryLoading && directoryUsers.length === 0 ? (
             <div className={styles.emptyState}>
-              Nenhum usuario retornado pelo Firebase Admin.
+              Nenhum usuário retornado pelo Firebase Admin.
             </div>
           ) : null}
 
@@ -563,7 +677,7 @@ export function BillingManualGrantsConsole() {
           directoryUsers.length > 0 &&
           filteredDirectoryUsers.length === 0 ? (
             <div className={styles.emptyState}>
-              Nenhum usuario carregado corresponde ao filtro atual.
+              Nenhum usuário carregado corresponde ao filtro atual.
             </div>
           ) : null}
         </div>
@@ -579,7 +693,7 @@ export function BillingManualGrantsConsole() {
               })
             }
           >
-            Carregar mais usuarios
+            Carregar mais usuários
           </button>
         ) : null}
       </section>
@@ -609,7 +723,7 @@ export function BillingManualGrantsConsole() {
                 {resolveAccessStatusLabel(payload)}
               </strong>
               <p className={styles.cardMeta}>
-                Inicio: {formatDateTime(payload.access.entitlementStartsAt) ?? "-"}
+                Início: {formatDateTime(payload.access.entitlementStartsAt) ?? "-"}
                 <br />
                 Fim: {formatDateTime(payload.access.entitlementEndsAt) ?? "-"}
               </p>
@@ -638,9 +752,27 @@ export function BillingManualGrantsConsole() {
                   <p className={styles.sectionText}>
                     {editingGrantId
                       ? "Ajuste tipo, motivo e prazo do grant selecionado. A trilha de auditoria continua registrada."
-                      : "Registre o motivo e o prazo para a concessao. O historico fica auditado no billing."}
+                      : "Registre o motivo e o prazo da concessão. O histórico fica registrado para auditoria interna."}
                   </p>
                 </div>
+              </div>
+
+              <div className={styles.presetGrid}>
+                {MANUAL_GRANT_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    className={`${styles.presetButton} ${
+                      activePresetId === preset.id ? styles.presetButtonActive : ""
+                    }`}
+                    onClick={() => applyPreset(preset.id)}
+                  >
+                    <strong>{preset.label}</strong>
+                    <span className={styles.presetDescription}>
+                      {preset.description}
+                    </span>
+                  </button>
+                ))}
               </div>
 
               <div className={styles.formGrid}>
@@ -664,7 +796,7 @@ export function BillingManualGrantsConsole() {
                 </label>
 
                 <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Duracao</span>
+                  <span className={styles.fieldLabel}>Duração</span>
                   <select
                     className={styles.select}
                     value={durationValue}
@@ -695,11 +827,11 @@ export function BillingManualGrantsConsole() {
               </label>
 
               <label className={styles.field}>
-                <span className={styles.fieldLabel}>Observacoes internas</span>
+                <span className={styles.fieldLabel}>Observações internas</span>
                 <textarea
                   value={notes}
                   onChange={(event) => setNotes(event.target.value)}
-                  placeholder="Contexto opcional para operacao futura."
+                  placeholder="Contexto opcional para operação futura."
                   className={styles.textarea}
                   rows={4}
                 />
@@ -716,7 +848,7 @@ export function BillingManualGrantsConsole() {
                       ? "Salvando..."
                       : "Registrando..."
                     : editingGrantId
-                      ? "Salvar edicao"
+                      ? "Salvar edição"
                       : "Conceder gratuidade"}
                 </button>
 
@@ -726,7 +858,7 @@ export function BillingManualGrantsConsole() {
                     className={styles.secondaryButton}
                     onClick={resetGrantForm}
                   >
-                    Cancelar edicao
+                    Cancelar edição
                   </button>
                 ) : null}
               </div>
@@ -735,10 +867,10 @@ export function BillingManualGrantsConsole() {
             <section className={styles.history}>
               <div className={styles.formHeader}>
                 <div>
-                  <h3 className={styles.sectionTitle}>Historico de concessoes</h3>
+                  <h3 className={styles.sectionTitle}>Histórico de concessões</h3>
                   <p className={styles.sectionText}>
                     Abra um grant para editar, ou revogue o que ainda estiver
-                    ativo. O restante continua visivel para consulta.
+                    ativo. O restante continua visível para consulta.
                   </p>
                 </div>
               </div>
@@ -758,7 +890,7 @@ export function BillingManualGrantsConsole() {
                             <p className={styles.historyMeta}>
                               {formatDateTime(grant.startsAt) ?? "-"}{" "}
                               {grant.endsAt
-                                ? `ate ${formatDateTime(grant.endsAt)}`
+                                ? `até ${formatDateTime(grant.endsAt)}`
                                 : "sem prazo"}
                             </p>
                           </div>
@@ -782,7 +914,7 @@ export function BillingManualGrantsConsole() {
 
                         <div className={styles.historyFooter}>
                           <span className={styles.historyMeta}>
-                            Concedida por {grant.grantedBy}
+                            Concedida por {resolveOperatorMeta(grant.grantedBy, operatorUsers)}
                             {grant.revokedAt
                               ? ` · revogada em ${formatDateTime(grant.revokedAt)}`
                               : ""}
@@ -828,14 +960,54 @@ export function BillingManualGrantsConsole() {
                     <h3 className={styles.sectionTitle}>Auditoria recente</h3>
                     <p className={styles.sectionText}>
                       Eventos mais recentes ligados a essa conta para consulta
-                      operacional rapida.
+                      operacional rápida.
                     </p>
                   </div>
                 </div>
 
                 {payload.auditLogs.length ? (
+                  <div className={styles.auditFilters}>
+                    <label className={styles.field}>
+                      <span className={styles.fieldLabel}>Filtrar por ação</span>
+                      <select
+                        className={styles.select}
+                        value={auditActionFilter}
+                        onChange={(event) => setAuditActionFilter(event.target.value)}
+                      >
+                        <option value="all">Todas as ações</option>
+                        {auditActionOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className={styles.field}>
+                      <span className={styles.fieldLabel}>Filtrar por operador</span>
+                      <select
+                        className={styles.select}
+                        value={auditOperatorFilter}
+                        onChange={(event) => setAuditOperatorFilter(event.target.value)}
+                      >
+                        <option value="all">Todos os operadores</option>
+                        {auditOperatorOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                ) : null}
+
+                {payload.auditLogs.length ? (
                   <div className={styles.auditList}>
-                    {payload.auditLogs.map((auditLog) => {
+                    <p className={styles.directorySummary}>
+                      Exibindo {filteredAuditLogs.length} de {payload.auditLogs.length} eventos.
+                    </p>
+
+                    {filteredAuditLogs.map((auditLog) => {
                       const grantType = readAuditMetadataValue(
                         auditLog.metadata,
                         "grantType",
@@ -857,7 +1029,7 @@ export function BillingManualGrantsConsole() {
                           </div>
 
                           <p className={styles.auditMeta}>
-                            Operador: {auditLog.actorUserId}
+                            Operador: {resolveOperatorMeta(auditLog.actorUserId, operatorUsers)}
                             {" · "}
                             Alvo: {auditLog.targetType}
                           </p>
@@ -870,13 +1042,19 @@ export function BillingManualGrantsConsole() {
                                       grantType as ManualAccessGrantType
                                     ] ?? grantType
                                   }`
-                                : "Tipo nao informado"}
+                                : "Tipo não informado"}
                               {reason ? ` · Motivo: ${reason}` : ""}
                             </p>
                           ) : null}
                         </article>
                       );
                     })}
+
+                    {!filteredAuditLogs.length ? (
+                      <div className={styles.emptyState}>
+                        Nenhum evento corresponde aos filtros atuais.
+                      </div>
+                    ) : null}
                   </div>
                 ) : (
                   <div className={styles.emptyState}>

@@ -7,9 +7,20 @@ import {
 
 export const runtime = "nodejs";
 
-function clearSessionCookie(response: NextResponse): NextResponse {
+function shouldUseSecureCookie(request: Request): boolean {
+  try {
+    return new URL(request.url).protocol === "https:";
+  } catch {
+    return process.env.NODE_ENV === "production";
+  }
+}
+
+function clearSessionCookie(
+  request: Request,
+  response: NextResponse,
+): NextResponse {
   response.cookies.set(APP_SESSION_COOKIE_NAME, "", {
-    ...getAppSessionCookieOptions(),
+    ...getAppSessionCookieOptions(shouldUseSecureCookie(request)),
     maxAge: 0,
   });
 
@@ -27,15 +38,23 @@ export async function POST(request: Request) {
   try {
     const decodedToken = await verifyFirebaseIdToken(token);
     const response = NextResponse.json({ ok: true, uid: decodedToken.uid });
-    response.cookies.set(APP_SESSION_COOKIE_NAME, token, getAppSessionCookieOptions());
+    response.cookies.set(
+      APP_SESSION_COOKIE_NAME,
+      token,
+      getAppSessionCookieOptions(shouldUseSecureCookie(request)),
+    );
     return response;
   } catch {
     return clearSessionCookie(
+      request,
       NextResponse.json({ error: "Invalid session token" }, { status: 401 }),
     );
   }
 }
 
-export async function DELETE() {
-  return clearSessionCookie(NextResponse.json({ ok: true }));
+export async function DELETE(request: Request) {
+  return clearSessionCookie(
+    request,
+    NextResponse.json({ ok: true }),
+  );
 }

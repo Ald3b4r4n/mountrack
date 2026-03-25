@@ -622,10 +622,10 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
   const resultState =
     selectedFood && !resultsVisible
       ? {
-          title: "Selecao pronta",
+          title: "Seleção pronta",
           text:
             searchMessage ??
-            "O alimento ja esta separado para registro. Use o compositor ou troque a selecao quando quiser.",
+            "O alimento já está separado para registro. Use o compositor ou troque a seleção quando quiser.",
         }
       : {
           title:

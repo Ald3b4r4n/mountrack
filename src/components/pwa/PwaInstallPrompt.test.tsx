@@ -101,11 +101,11 @@ describe("PwaInstallPrompt", () => {
       screen.getByRole("heading", { name: "Instale o MounTrack no iPhone" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Toque no botao Compartilhar do Safari."),
+      screen.getByText("Toque no botão Compartilhar do Safari."),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Escolha Adicionar a Tela de Inicio e confirme.",
+        "Escolha Adicionar à Tela de Início e confirme.",
       ),
     ).toBeInTheDocument();
   });

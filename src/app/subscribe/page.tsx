@@ -8,6 +8,8 @@ import { SubscribeExperience } from "@/components/billing/SubscribeExperience";
 import { getBillingPlan } from "@/modules/billing/repositories/billing-store";
 import styles from "./subscribe.module.css";
 
+export const dynamic = "force-dynamic";
+
 function formatCurrency(amountCents: number, currency: string): string {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -15,8 +17,17 @@ function formatCurrency(amountCents: number, currency: string): string {
   }).format(amountCents / 100);
 }
 
+async function resolveSubscribePlan() {
+  try {
+    return await getBillingPlan();
+  } catch (error) {
+    console.error("Failed to resolve billing plan for subscribe page", error);
+    return null;
+  }
+}
+
 export default async function SubscribePage() {
-  const plan = await getBillingPlan();
+  const plan = await resolveSubscribePlan();
   const monthlyPrice = formatCurrency(
     plan?.amountCents ?? BILLING_MONTHLY_PRICE_CENTS,
     plan?.currency ?? BILLING_CURRENCY,

@@ -146,10 +146,10 @@ export function PwaInstallPrompt() {
       return {
         title: "Instale o MounTrack no iPhone",
         description:
-          "Abra pela tela inicial para entrar mais rapido e usar o app com cara de app nativo.",
+          "Abra pela tela inicial para entrar mais rápido e usar o app com aparência nativa.",
         steps: [
-          "Toque no botao Compartilhar do Safari.",
-          "Escolha Adicionar a Tela de Inicio e confirme.",
+          "Toque no botão Compartilhar do Safari.",
+          "Escolha Adicionar à Tela de Início e confirme.",
         ],
       };
     }
@@ -157,10 +157,10 @@ export function PwaInstallPrompt() {
     return {
       title: "Instale o MounTrack",
       description:
-        "Se o navegador nao mostrar o botao sozinho, abra o menu e toque em Instalar app ou Adicionar a tela inicial.",
+        "Se o navegador não mostrar o botão sozinho, abra o menu e toque em Instalar app ou Adicionar à tela inicial.",
       steps: [
-        "Abra o menu do navegador nesta pagina.",
-        "Toque em Instalar app ou Adicionar a tela inicial.",
+        "Abra o menu do navegador nesta página.",
+        "Toque em Instalar app ou Adicionar à tela inicial.",
       ],
     };
   }, [mode]);
@@ -204,7 +204,7 @@ export function PwaInstallPrompt() {
 
   return (
     <div className={styles.shell}>
-      <section className={styles.card} aria-label="Instalacao do app">
+      <section className={styles.card} aria-label="Instalação do app">
         <div className={styles.topRow}>
           <div className={styles.copy}>
             <span className={styles.eyebrow}>Instalar app</span>
@@ -222,7 +222,7 @@ export function PwaInstallPrompt() {
             type="button"
             className={styles.dismissButton}
             onClick={dismiss}
-            aria-label="Fechar sugestao de instalacao"
+            aria-label="Fechar sugestão de instalação"
           >
             ×
           </button>
@@ -260,7 +260,7 @@ export function PwaInstallPrompt() {
             className={`btn-outline ${styles.secondaryButton}`}
             onClick={dismiss}
           >
-            Agora nao
+            Agora não
           </button>
         </div>
       </section>

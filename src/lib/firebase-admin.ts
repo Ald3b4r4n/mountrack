@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { createPublicKey, verify as verifySignature } from "node:crypto";
 import admin from "firebase-admin";
 
@@ -54,6 +55,24 @@ function normalizePrivateKey(value?: string): string | undefined {
   return value?.replace(/\\n/g, "\n");
 }
 
+function readServiceAccountJsonFromPath(): string | null {
+  const serviceAccountPath = readEnvValue(
+    "FIREBASE_SERVICE_ACCOUNT_JSON_PATH",
+    "FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON_PATH",
+    "GOOGLE_APPLICATION_CREDENTIALS",
+  );
+
+  if (!serviceAccountPath) {
+    return null;
+  }
+
+  try {
+    return readFileSync(serviceAccountPath, "utf8");
+  } catch {
+    return null;
+  }
+}
+
 function resolveFirebaseProjectId(): string | undefined {
   return readEnvValue(
     "FIREBASE_PROJECT_ID",
@@ -84,7 +103,11 @@ function resolveFirebaseServiceAccount(): {
   serviceAccount: admin.ServiceAccount | null;
   issue: FirebaseAdminUnavailableIssue | null;
 } {
-  const serviceAccountJson = readEnvValue("FIREBASE_SERVICE_ACCOUNT_JSON", "FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON");
+  const serviceAccountJson =
+    readEnvValue(
+      "FIREBASE_SERVICE_ACCOUNT_JSON",
+      "FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON",
+    ) ?? readServiceAccountJsonFromPath();
   if (serviceAccountJson) {
     const parsedServiceAccount = parseServiceAccountJson(serviceAccountJson);
     if (parsedServiceAccount) {
@@ -372,6 +395,45 @@ export async function findFirebaseUserByUid(
       return null;
     }
 
+    throw new Error("AUTH_UNAVAILABLE");
+  }
+}
+
+export async function findFirebaseUsersByUids(
+  uids: readonly string[],
+): Promise<Record<string, FirebaseAdminUserSummary>> {
+  if (!adminAuth) {
+    throw new Error("AUTH_UNAVAILABLE");
+  }
+
+  const normalizedUids = Array.from(
+    new Set(
+      uids
+        .map((uid) => uid.trim())
+        .filter(Boolean),
+    ),
+  );
+
+  if (!normalizedUids.length) {
+    return {};
+  }
+
+  const usersByUid: Record<string, FirebaseAdminUserSummary> = {};
+
+  try {
+    for (let startIndex = 0; startIndex < normalizedUids.length; startIndex += 100) {
+      const batch = normalizedUids.slice(startIndex, startIndex + 100);
+      const result = await adminAuth.getUsers(
+        batch.map((uid) => ({ uid })),
+      );
+
+      for (const userRecord of result.users) {
+        usersByUid[userRecord.uid] = mapFirebaseUserRecord(userRecord);
+      }
+    }
+
+    return usersByUid;
+  } catch {
     throw new Error("AUTH_UNAVAILABLE");
   }
 }

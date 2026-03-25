@@ -58,20 +58,20 @@ describe("BillingSubscriptionPanel", () => {
 
     expect(screen.getByText("Assinatura ativa")).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "Acesso liberado ate 23/04/2026." }),
+      screen.getByRole("heading", { name: "Acesso liberado até 23/04/2026." }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Mercado Pago · mensal")).toBeInTheDocument();
-    expect(screen.getByText("23/03/2026 ate 23/04/2026")).toBeInTheDocument();
+    expect(screen.getByText("Mercado Pago | mensal")).toBeInTheDocument();
+    expect(screen.getByText("23/03/2026 até 23/04/2026")).toBeInTheDocument();
     expect(
-      screen.getByText("Cobranca processada pelo Mercado Pago"),
+      screen.getByText("Cobrança processada pelo Mercado Pago"),
     ).toBeInTheDocument();
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Cancelar renovacao" }),
+      screen.getByRole("button", { name: "Cancelar renovação" }),
     );
 
     expect(window.confirm).toHaveBeenCalledWith(
-      "Cancelar a renovacao automatica? O acesso continua ativo ate o fim do periodo ja pago.",
+      "Cancelar a renovação automática? O acesso continua ativo até o fim do período já pago.",
     );
 
     await waitFor(() => {
@@ -83,12 +83,12 @@ describe("BillingSubscriptionPanel", () => {
 
     expect(
       await screen.findByText(
-        "Renovacao automatica cancelada. O acesso segue ativo ate o fim do periodo atual.",
+        "Renovação automática cancelada. O acesso segue ativo até o fim do período atual.",
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText("Renovacao cancelada")).toBeInTheDocument();
+    expect(screen.getByText("Renovação cancelada")).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "Seu acesso segue ate 23/04/2026." }),
+      screen.getByRole("heading", { name: "Seu acesso segue até 23/04/2026." }),
     ).toBeInTheDocument();
     expect(screen.getByText("Cancelada em 24/03/2026")).toBeInTheDocument();
   });

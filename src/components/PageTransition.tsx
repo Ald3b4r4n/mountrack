@@ -49,8 +49,8 @@ export default function PageTransition({ children }: { children: React.ReactNode
     <div
       style={{
         opacity: isVisible ? 1 : 0,
-        transform: isVisible ? 'translateY(0)' : 'translateY(8px)',
-        transition: 'opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        transform: isVisible ? 'translate3d(0, 0, 0)' : 'translate3d(18px, 0, 0)',
+        transition: 'opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1), transform 0.24s cubic-bezier(0.16, 1, 0.3, 1)',
         willChange: 'opacity, transform',
         minHeight: '100vh',
       }}

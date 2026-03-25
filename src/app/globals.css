@@ -485,6 +485,10 @@ h1, h2, h3, h4 {
   border: 1px solid rgba(244, 63, 94, 0.2);
 }
 
+.home-route-nav {
+  display: flex;
+}
+
 /* ===== SCROLLBAR CUSTOMIZADA ===== */
 ::-webkit-scrollbar {
   width: 6px;
@@ -545,6 +549,14 @@ h1, h2, h3, h4 {
 
   h1.glow-text {
     font-size: 2rem !important;
+  }
+
+  .home-route-nav {
+    display: none !important;
+  }
+
+  .mobile-native-footer-hidden {
+    display: none !important;
   }
 }
 

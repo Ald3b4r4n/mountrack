@@ -37,6 +37,8 @@ const globalBillingState = globalThis as typeof globalThis & {
   __billingSchemaPromise__?: Promise<void>;
 };
 
+type BillingPoolOptions = ConstructorParameters<typeof Pool>[0];
+
 const SCHEMA_SQL = `
 create table if not exists billing_plans (
   id text primary key,
@@ -445,21 +447,62 @@ function requireDatabaseUrl(): string {
   return databaseUrl;
 }
 
+function readPositiveIntegerEnv(name: string, fallbackValue: number): number {
+  const rawValue = process.env[name]?.trim();
+  const parsedValue = rawValue ? Number(rawValue) : Number.NaN;
+
+  if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+    return fallbackValue;
+  }
+
+  return Math.trunc(parsedValue);
+}
+
+export function resolveBillingPoolOptions(): BillingPoolOptions {
+  const productionDefaults =
+    process.env.NODE_ENV === "production"
+      ? {
+          max: 1,
+          idleTimeoutMillis: 5_000,
+          connectionTimeoutMillis: 10_000,
+        }
+      : {
+          max: 10,
+          idleTimeoutMillis: 30_000,
+          connectionTimeoutMillis: 10_000,
+        };
+
+  return {
+    connectionString: requireDatabaseUrl(),
+    max: readPositiveIntegerEnv(
+      "BILLING_DB_POOL_MAX",
+      productionDefaults.max,
+    ),
+    idleTimeoutMillis: readPositiveIntegerEnv(
+      "BILLING_DB_IDLE_TIMEOUT_MS",
+      productionDefaults.idleTimeoutMillis,
+    ),
+    connectionTimeoutMillis: readPositiveIntegerEnv(
+      "BILLING_DB_CONNECTION_TIMEOUT_MS",
+      productionDefaults.connectionTimeoutMillis,
+    ),
+    allowExitOnIdle: true,
+    ssl:
+      process.env.DATABASE_SSL === "false"
+        ? false
+        : process.env.NODE_ENV === "production"
+          ? { rejectUnauthorized: false }
+          : undefined,
+  };
+}
+
 export function getBillingStorageResponse(): BillingStorageResponse {
   return hasDatabaseUrl() ? "database" : "unavailable";
 }
 
 function getPool(): Pool {
   if (!globalBillingState.__billingPool__) {
-    globalBillingState.__billingPool__ = new Pool({
-      connectionString: requireDatabaseUrl(),
-      ssl:
-        process.env.DATABASE_SSL === "false"
-          ? false
-          : process.env.NODE_ENV === "production"
-            ? { rejectUnauthorized: false }
-            : undefined,
-    });
+    globalBillingState.__billingPool__ = new Pool(resolveBillingPoolOptions());
   }
 
   return globalBillingState.__billingPool__;

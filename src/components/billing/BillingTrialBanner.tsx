@@ -17,7 +17,13 @@ interface BillingAccessPayload {
 }
 
 interface TrialSnapshot {
+  urgency: "calm" | "attention" | "urgent";
+  titlePrefix: string;
   remainingCopy: string;
+  bodyCopy: string;
+  actionTitle: string;
+  actionCopy: string;
+  ctaLabel: string;
   endLabel: string;
   progressPercent: number;
 }
@@ -59,9 +65,44 @@ function formatTrialSnapshot(
     minute: "2-digit",
   });
 
+  let urgency: TrialSnapshot["urgency"] = "calm";
+  let titlePrefix = "Seu teste está em andamento:";
+  let bodyCopy =
+    "Tudo continua liberado por enquanto. Antes do prazo acabar, conclua a assinatura para seguir com peso, doses, metas e nutrição na mesma conta, sem pausa na rotina.";
+  let actionTitle = "Garanta o acesso antes do fim.";
+  let actionCopy =
+    "Quando decidir continuar, a assinatura entra na mesma conta e você segue exatamente de onde parou.";
+  let ctaLabel = "Ver assinatura";
+
+  if (remainingMs <= dayMs) {
+    urgency = "urgent";
+    titlePrefix = "Últimas horas do seu teste:";
+    bodyCopy =
+      "O período grátis está quase no fim. Se você quer manter a conta completa, vale concluir a assinatura agora e evitar o bloqueio.";
+    actionTitle = "Não deixe a rotina parar.";
+    actionCopy =
+      "Peso, doses, metas e nutrição continuam na mesma conta assim que a assinatura for concluída.";
+    ctaLabel = "Assinar agora";
+  } else if (remainingMs <= 2 * dayMs) {
+    urgency = "attention";
+    titlePrefix = "Seu teste entrou na reta final:";
+    bodyCopy =
+      "Ainda dá tempo de decidir com calma. Se o app já faz sentido para a sua rotina, prepare a assinatura antes do prazo acabar.";
+    actionTitle = "Deixe o acesso pronto.";
+    actionCopy =
+      "Concluir a assinatura agora evita correria na última hora e mantém o app completo na mesma conta.";
+    ctaLabel = "Garantir acesso";
+  }
+
   if (!startsAt) {
     return {
+      urgency,
+      titlePrefix,
       remainingCopy,
+      bodyCopy,
+      actionTitle,
+      actionCopy,
+      ctaLabel,
       endLabel,
       progressPercent: 50,
     };
@@ -75,7 +116,13 @@ function formatTrialSnapshot(
   );
 
   return {
+    urgency,
+    titlePrefix,
     remainingCopy,
+    bodyCopy,
+    actionTitle,
+    actionCopy,
+    ctaLabel,
     endLabel,
     progressPercent: Math.round((elapsedMs / totalMs) * 100),
   };
@@ -146,21 +193,39 @@ export function BillingTrialBanner() {
   );
 
   return (
-    <section className={`glass-panel anim-enter ${styles.banner}`}>
+    <section
+      className={`glass-panel anim-enter ${styles.banner} ${
+        trialSnapshot.urgency === "attention"
+          ? styles.bannerAttention
+          : trialSnapshot.urgency === "urgent"
+            ? styles.bannerUrgent
+            : ""
+      }`}
+    >
       <div className={styles.content}>
-        <span className={styles.eyebrow}>Teste do MounTrack Pro</span>
+        <span
+          className={`${styles.eyebrow} ${
+            trialSnapshot.urgency === "attention"
+              ? styles.eyebrowAttention
+              : trialSnapshot.urgency === "urgent"
+                ? styles.eyebrowUrgent
+                : ""
+          }`}
+        >
+          {trialSnapshot.urgency === "urgent"
+            ? "Teste acabando"
+            : trialSnapshot.urgency === "attention"
+              ? "Reta final do teste"
+              : "Teste do MounTrack Pro"}
+        </span>
 
         <div>
           <h2 className={styles.title}>
-            Seu teste esta correndo:
+            {trialSnapshot.titlePrefix}
             <br />
             <strong>{trialSnapshot.remainingCopy}</strong> para decidir.
           </h2>
-          <p className={styles.description}>
-            Tudo continua liberado agora. Antes do prazo acabar, conclua a
-            assinatura para seguir com peso, doses, metas e nutricao na mesma
-            conta, sem pausa na rotina.
-          </p>
+          <p className={styles.description}>{trialSnapshot.bodyCopy}</p>
         </div>
 
         <div className={styles.metaRow}>
@@ -170,7 +235,7 @@ export function BillingTrialBanner() {
               {trialSnapshot.endLabel}
             </strong>
             <span className={styles.metaHint}>
-              O app avisa antes do bloqueio para voce decidir com calma.
+              O app avisa antes do bloqueio para você decidir com calma.
             </span>
           </article>
 
@@ -178,12 +243,12 @@ export function BillingTrialBanner() {
             <span className={styles.metaLabel}>Plano mensal</span>
             <strong className={styles.metaValue}>{monthlyPrice}</strong>
             <span className={styles.metaHint}>
-              Um unico plano para manter sua conta completa.
+              Um único plano para manter sua conta completa.
             </span>
           </article>
 
           <article className={styles.metaCard}>
-            <span className={styles.metaLabel}>Periodo gratis</span>
+            <span className={styles.metaLabel}>Período grátis</span>
             <strong className={styles.metaValue}>
               {BILLING_TRIAL_DAYS} dias
             </strong>
@@ -196,29 +261,38 @@ export function BillingTrialBanner() {
         <div className={styles.progressBlock}>
           <div className={styles.progressCopy}>
             <span>Janela do teste em andamento</span>
-            <span>{trialSnapshot.progressPercent}% do periodo usado</span>
+            <span>{trialSnapshot.progressPercent}% do período usado</span>
           </div>
           <div className={styles.progressTrack} aria-hidden="true">
             <div
-              className={styles.progressFill}
+              className={`${styles.progressFill} ${
+                trialSnapshot.urgency === "attention"
+                  ? styles.progressFillAttention
+                  : trialSnapshot.urgency === "urgent"
+                    ? styles.progressFillUrgent
+                    : ""
+              }`}
               style={{ width: `${trialSnapshot.progressPercent}%` }}
             />
           </div>
         </div>
       </div>
 
-      <aside className={styles.actionPanel}>
+      <aside
+        className={`${styles.actionPanel} ${
+          trialSnapshot.urgency === "urgent"
+            ? styles.actionPanelUrgent
+            : ""
+        }`}
+      >
         <div>
-          <h3 className={styles.actionTitle}>Garanta o acesso antes do fim.</h3>
-          <p className={styles.actionText}>
-            Quando decidir continuar, a assinatura entra na mesma conta e voce
-            segue exatamente de onde parou.
-          </p>
+          <h3 className={styles.actionTitle}>{trialSnapshot.actionTitle}</h3>
+          <p className={styles.actionText}>{trialSnapshot.actionCopy}</p>
         </div>
 
         <div>
           <Link href="/subscribe" className={`btn-primary ${styles.cta}`}>
-            Ver assinatura
+            {trialSnapshot.ctaLabel}
           </Link>
           <div style={{ marginTop: "0.8rem" }}>
             <Link href="/subscribe" className={styles.secondaryLink}>

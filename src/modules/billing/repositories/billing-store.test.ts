@@ -19,6 +19,7 @@ import {
   listManualAccessGrantsForUser,
   listBillingPlans,
   recordBillingEventIfNew,
+  resolveBillingPoolOptions,
   updateBillingEventProcessingStatus,
   updateBillingCheckoutSession,
   updateManualAccessGrant,
@@ -43,7 +44,16 @@ function makeQueryMock(resolver: (sql: string, params?: unknown[]) => QueryResul
 }
 
 describe("billing-store", () => {
+  const mutableEnv = process.env as NodeJS.ProcessEnv & {
+    NODE_ENV?: string;
+  };
   const originalDatabaseUrl = process.env.DATABASE_URL;
+  const originalDatabaseSsl = process.env.DATABASE_SSL;
+  const originalNodeEnv = process.env.NODE_ENV;
+  const originalPoolMax = process.env.BILLING_DB_POOL_MAX;
+  const originalPoolIdleTimeout = process.env.BILLING_DB_IDLE_TIMEOUT_MS;
+  const originalPoolConnectionTimeout =
+    process.env.BILLING_DB_CONNECTION_TIMEOUT_MS;
   const originalBootstrapOwnerEmail = process.env.BOOTSTRAP_OWNER_EMAIL;
   const originalBootstrapAdminEmails = process.env.BOOTSTRAP_ADMIN_EMAILS;
   const globalStore = globalThis as typeof globalThis & {
@@ -55,6 +65,11 @@ describe("billing-store", () => {
 
   beforeEach(() => {
     process.env.DATABASE_URL = "postgres://billing:test@localhost:5432/mountrack";
+    process.env.DATABASE_SSL = "";
+    mutableEnv.NODE_ENV = "test";
+    process.env.BILLING_DB_POOL_MAX = "";
+    process.env.BILLING_DB_IDLE_TIMEOUT_MS = "";
+    process.env.BILLING_DB_CONNECTION_TIMEOUT_MS = "";
     process.env.BOOTSTRAP_OWNER_EMAIL = "";
     process.env.BOOTSTRAP_ADMIN_EMAILS = "";
     delete globalStore.__billingPool__;
@@ -63,8 +78,43 @@ describe("billing-store", () => {
 
   afterAll(() => {
     process.env.DATABASE_URL = originalDatabaseUrl;
+    process.env.DATABASE_SSL = originalDatabaseSsl;
+    mutableEnv.NODE_ENV = originalNodeEnv;
+    process.env.BILLING_DB_POOL_MAX = originalPoolMax;
+    process.env.BILLING_DB_IDLE_TIMEOUT_MS = originalPoolIdleTimeout;
+    process.env.BILLING_DB_CONNECTION_TIMEOUT_MS = originalPoolConnectionTimeout;
     process.env.BOOTSTRAP_OWNER_EMAIL = originalBootstrapOwnerEmail;
     process.env.BOOTSTRAP_ADMIN_EMAILS = originalBootstrapAdminEmails;
+  });
+
+  it("uses conservative pool defaults in production to avoid exhausting serverless connections", () => {
+    mutableEnv.NODE_ENV = "production";
+
+    expect(resolveBillingPoolOptions()).toMatchObject({
+      connectionString: "postgres://billing:test@localhost:5432/mountrack",
+      max: 1,
+      idleTimeoutMillis: 5000,
+      connectionTimeoutMillis: 10000,
+      allowExitOnIdle: true,
+      ssl: { rejectUnauthorized: false },
+    });
+  });
+
+  it("allows pool overrides through billing pool env vars", () => {
+    mutableEnv.NODE_ENV = "production";
+    process.env.DATABASE_SSL = "false";
+    process.env.BILLING_DB_POOL_MAX = "2";
+    process.env.BILLING_DB_IDLE_TIMEOUT_MS = "7000";
+    process.env.BILLING_DB_CONNECTION_TIMEOUT_MS = "12000";
+
+    expect(resolveBillingPoolOptions()).toMatchObject({
+      connectionString: "postgres://billing:test@localhost:5432/mountrack",
+      max: 2,
+      idleTimeoutMillis: 7000,
+      connectionTimeoutMillis: 12000,
+      allowExitOnIdle: true,
+      ssl: false,
+    });
   });
 
   it("lists billing plans and preserves the permanent monthly configuration", async () => {

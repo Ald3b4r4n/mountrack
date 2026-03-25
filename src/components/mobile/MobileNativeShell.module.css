@@ -1,0 +1,441 @@
+.shell {
+  min-height: 100vh;
+}
+
+.content {
+  min-height: 100vh;
+}
+
+.contentWithTopBar {
+  padding-top: calc(5.5rem + env(safe-area-inset-top));
+}
+
+.topBar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 46;
+  padding: calc(0.7rem + env(safe-area-inset-top)) 0.9rem 0;
+}
+
+.topBarFrame {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 0.75rem 0.9rem;
+  border-radius: 24px;
+  background: rgba(8, 14, 26, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.backButton {
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(18, 27, 45, 0.9);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition:
+    transform 120ms ease,
+    border-color 120ms ease,
+    background-color 120ms ease;
+}
+
+.backButton:active {
+  transform: scale(0.96);
+  border-color: rgba(52, 211, 153, 0.24);
+  background: rgba(24, 35, 57, 0.96);
+}
+
+.topBarCopy {
+  min-width: 0;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.topBarEyebrow {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.topBarTitle {
+  color: var(--text-primary);
+  font-family: "Outfit", sans-serif;
+  font-size: 1rem;
+  line-height: 1.05;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.68);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 48;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.backdropVisible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 49;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  padding: calc(1rem + env(safe-area-inset-top)) 1rem calc(1rem + env(safe-area-inset-bottom));
+  transform: translateY(calc(100% + 2rem));
+  transition: transform 220ms var(--ease-out-expo);
+  pointer-events: none;
+}
+
+.sheetVisible {
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.sheetCard {
+  width: min(100%, 540px);
+  margin: 0 auto;
+  max-height: min(78dvh, 720px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  border-radius: 28px 28px 16px 16px;
+  background:
+    linear-gradient(180deg, rgba(9, 15, 28, 0.98) 0%, rgba(8, 14, 26, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 20px 64px rgba(0, 0, 0, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  padding: 1rem;
+}
+
+.sheetCard::-webkit-scrollbar {
+  display: none;
+}
+
+.sheetHandle {
+  width: 3.5rem;
+  height: 0.3rem;
+  border-radius: 999px;
+  margin: 0 auto 1rem;
+  background: rgba(124, 141, 181, 0.42);
+}
+
+.sheetHeader {
+  position: sticky;
+  top: -1rem;
+  z-index: 2;
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  margin-inline: -1rem;
+  padding: 0.9rem 1rem 0.85rem;
+  background:
+    linear-gradient(180deg, rgba(9, 15, 28, 0.99) 0%, rgba(8, 14, 26, 0.96) 85%, rgba(8, 14, 26, 0) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.sheetHeaderTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.sheetBackButton,
+.sheetCloseButton {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(18, 27, 45, 0.88);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    border-color 120ms ease,
+    background-color 120ms ease;
+}
+
+.sheetBackButton {
+  min-height: 2.35rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: 999px;
+  gap: 0.45rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.sheetCloseButton {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 16px;
+  flex: 0 0 auto;
+}
+
+.sheetBackButton:active,
+.sheetCloseButton:active {
+  transform: scale(0.97);
+  border-color: rgba(52, 211, 153, 0.24);
+  background: rgba(24, 35, 57, 0.96);
+}
+
+.sheetEyebrow {
+  color: var(--accent-secondary);
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  font-weight: 700;
+}
+
+.sheetTitle {
+  font-family: "Outfit", sans-serif;
+  font-size: 1.4rem;
+  line-height: 1.05;
+}
+
+.sheetDescription {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.actionsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.actionCard {
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(18, 27, 45, 0.88);
+  color: var(--text-primary);
+  text-decoration: none;
+  padding: 1rem;
+  display: grid;
+  gap: 0.45rem;
+  min-height: 112px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+.actionCard:active {
+  transform: scale(0.98);
+  border-color: rgba(52, 211, 153, 0.3);
+  background: rgba(22, 32, 51, 0.95);
+}
+
+.actionIcon {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 15px;
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--accent-primary);
+}
+
+.actionLabel {
+  font-family: "Outfit", sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.actionHint {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.tabBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 47;
+  padding: 0 0.9rem calc(0.7rem + env(safe-area-inset-bottom));
+}
+
+.tabBarFrame {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.35rem;
+  align-items: end;
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 0.6rem 0.7rem 0.55rem;
+  border-radius: 28px;
+  background: rgba(8, 14, 26, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 18px 46px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.tabButton,
+.tabLink {
+  min-height: 58px;
+  border-radius: 18px;
+  text-decoration: none;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  display: grid;
+  place-items: center;
+  gap: 0.2rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.5rem 0.35rem;
+  transition:
+    transform 120ms ease,
+    color 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.tabButton:active,
+.tabLink:active {
+  transform: scale(0.97);
+}
+
+.tabActive {
+  color: var(--text-primary);
+  background: rgba(52, 211, 153, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.tabLabel {
+  white-space: nowrap;
+}
+
+.fabSlot {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.fabButton {
+  width: 64px;
+  height: 64px;
+  margin-top: -1.5rem;
+  border-radius: 22px;
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    linear-gradient(160deg, rgba(52, 211, 153, 1) 0%, rgba(5, 150, 105, 1) 100%);
+  color: white;
+  box-shadow:
+    0 16px 32px rgba(4, 120, 87, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+.fabButton:active {
+  transform: scale(0.95);
+  box-shadow:
+    0 12px 22px rgba(4, 120, 87, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.fabMeta {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (min-width: 861px) {
+  .backdrop,
+  .sheet,
+  .tabBar,
+  .topBar {
+    display: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .content {
+    padding-bottom: calc(7.5rem + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 420px) {
+  .actionsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .tabBar {
+    padding-inline: 0.65rem;
+  }
+
+  .topBar {
+    padding-inline: 0.65rem;
+  }
+
+  .tabBarFrame {
+    gap: 0.2rem;
+    padding-inline: 0.45rem;
+  }
+
+  .topBarFrame {
+    padding-inline: 0.7rem;
+    gap: 0.65rem;
+  }
+
+  .tabButton,
+  .tabLink {
+    font-size: 0.64rem;
+    min-height: 54px;
+  }
+
+  .fabButton {
+    width: 60px;
+    height: 60px;
+    border-radius: 20px;
+  }
+
+  .backButton {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 15px;
+  }
+}

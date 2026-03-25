@@ -106,7 +106,7 @@ describe("SubscribeCheckoutButton", () => {
 
     expect(
       screen.getByText(
-        "Voce sera redirecionado para o ambiente do Mercado Pago para concluir o pagamento.",
+        "Você será redirecionado para o ambiente do Mercado Pago para concluir o pagamento.",
       ),
     ).toBeInTheDocument();
 
@@ -157,12 +157,12 @@ describe("SubscribeCheckoutButton", () => {
       screen.getByRole("button", { name: "Pagar no Mercado Pago" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Digitar cartao aqui" }),
+      screen.getByRole("button", { name: "Digitar cartão aqui" }),
     ).toBeInTheDocument();
     expect(loadMercadoPagoMock).not.toHaveBeenCalled();
     expect(mercadoPagoConstructorMock).not.toHaveBeenCalled();
 
-    await userEvent.click(screen.getByRole("button", { name: "Digitar cartao aqui" }));
+    await userEvent.click(screen.getByRole("button", { name: "Digitar cartão aqui" }));
 
     await waitFor(() => {
       expect(loadMercadoPagoMock).toHaveBeenCalled();
@@ -174,7 +174,7 @@ describe("SubscribeCheckoutButton", () => {
     expect(await screen.findByRole("button", { name: "Autorizar assinatura" })).toBeInTheDocument();
 
     await userEvent.type(screen.getByLabelText("Nome do titular"), "APRO");
-    await userEvent.type(screen.getByLabelText("Numero do documento"), "12345678909");
+    await userEvent.type(screen.getByLabelText("Número do documento"), "12345678909");
     await userEvent.click(screen.getByRole("button", { name: "Autorizar assinatura" }));
 
     await waitFor(() => {
@@ -191,7 +191,7 @@ describe("SubscribeCheckoutButton", () => {
     });
     expect(
       await screen.findByText(
-        "Assinatura autorizada. Aguarde a confirmacao do primeiro pagamento.",
+        "Assinatura autorizada. Aguarde a confirmação do primeiro pagamento.",
       ),
     ).toBeInTheDocument();
     expect(assignMock).not.toHaveBeenCalled();
@@ -232,7 +232,7 @@ describe("SubscribeCheckoutButton", () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Digitar cartao aqui" }));
+    await userEvent.click(screen.getByRole("button", { name: "Digitar cartão aqui" }));
 
     await waitFor(() => {
       expect(cardFormMock).toHaveBeenCalled();

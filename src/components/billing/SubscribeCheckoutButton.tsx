@@ -98,14 +98,14 @@ async function waitForCardFormTargets(
 
 function resolveSuccessMessage(status?: string): string {
   if (status === "authorized") {
-    return "Assinatura autorizada. Aguarde a confirmacao do primeiro pagamento.";
+    return "Assinatura autorizada. Aguarde a confirmação do primeiro pagamento.";
   }
 
   if (status === "pending" || status === "in_process") {
-    return "Assinatura criada. Aguarde a confirmacao do pagamento para liberar o acesso.";
+    return "Assinatura criada. Aguarde a confirmação do pagamento para liberar o acesso.";
   }
 
-  return "Pedido criado. Se a confirmacao nao chegar em instantes, tente novamente.";
+  return "Pedido criado. Se a confirmação não chegar em instantes, tente novamente.";
 }
 
 function resolveCardholderEmail(
@@ -124,26 +124,26 @@ function resolveDisplayError(errorMessage?: string | null): string {
   const normalized = errorMessage?.trim().toLowerCase() ?? "";
 
   if (!normalized) {
-    return "Nao foi possivel iniciar o pagamento agora. Tente novamente em instantes.";
+    return "Não foi possível iniciar o pagamento agora. Tente novamente em instantes.";
   }
 
   if (normalized.includes("missing authenticated session")) {
-    return "Sua sessao expirou. Faca login novamente para continuar.";
+    return "Sua sessão expirou. Faça login novamente para continuar.";
   }
 
   if (normalized.includes("test buyer email missing")) {
-    return "O pagamento nao esta disponivel agora. Tente novamente em instantes.";
+    return "O pagamento não está disponível agora. Tente novamente em instantes.";
   }
 
   if (normalized.includes("public key")) {
-    return "O pagamento por cartao ainda nao esta disponivel no momento.";
+    return "O pagamento por cartão ainda não está disponível no momento.";
   }
 
   if (normalized.includes("service unavailable")) {
-    return "O checkout nao esta disponivel agora. Tente novamente em instantes.";
+    return "O checkout não está disponível agora. Tente novamente em instantes.";
   }
 
-  return "Nao foi possivel iniciar o pagamento agora. Tente novamente em instantes.";
+  return "Não foi possível iniciar o pagamento agora. Tente novamente em instantes.";
 }
 
 export function SubscribeCheckoutButton({
@@ -217,7 +217,7 @@ export function SubscribeCheckoutButton({
     }
 
     if (!sessionReady) {
-      setError("Sua sessao nao esta pronta. Faca login novamente para continuar.");
+      setError("Sua sessão não está pronta. Faça login novamente para continuar.");
       return;
     }
 
@@ -231,7 +231,7 @@ export function SubscribeCheckoutButton({
         requestError,
       );
       setError(
-        "Nao foi possivel iniciar o pagamento agora. Tente novamente em instantes.",
+        "Não foi possível iniciar o pagamento agora. Tente novamente em instantes.",
       );
     } finally {
       setIsSubmitting(false);
@@ -245,14 +245,14 @@ export function SubscribeCheckoutButton({
 
     if (!cardFormRef.current) {
       setError(
-        "O formulario de pagamento ainda esta carregando. Tente novamente em alguns segundos.",
+        "O formulário de pagamento ainda está carregando. Tente novamente em alguns segundos.",
       );
       return;
     }
 
     const cardTokenId = cardFormRef.current.getCardFormData().token?.trim();
     if (!cardTokenId) {
-      setError("Revise os dados do cartao e tente novamente.");
+      setError("Revise os dados do cartão e tente novamente.");
       return;
     }
 
@@ -265,7 +265,7 @@ export function SubscribeCheckoutButton({
         "Failed to create direct billing checkout session",
         requestError,
       );
-      setError("Nao foi possivel autorizar a assinatura agora.");
+      setError("Não foi possível autorizar a assinatura agora.");
     } finally {
       setIsSubmitting(false);
     }
@@ -292,7 +292,7 @@ export function SubscribeCheckoutButton({
       cardFormRef.current = null;
       setIsFormLoading(false);
       setIsDirectFormReady(false);
-      setSdkError("O pagamento por cartao ainda nao esta disponivel no momento.");
+      setSdkError("O pagamento por cartão ainda não está disponível no momento.");
       return;
     }
 
@@ -300,7 +300,7 @@ export function SubscribeCheckoutButton({
       cardFormRef.current = null;
       setIsFormLoading(false);
       setIsDirectFormReady(false);
-      setSdkError("Nao foi possivel preparar o pagamento agora.");
+      setSdkError("Não foi possível preparar o pagamento agora.");
       return;
     }
 
@@ -339,7 +339,7 @@ export function SubscribeCheckoutButton({
             id: `${formPrefix}__form`,
             cardNumber: {
               id: `${formPrefix}__card-number`,
-              placeholder: "Numero do cartao",
+              placeholder: "Número do cartão",
             },
             expirationDate: {
               id: `${formPrefix}__expiration-date`,
@@ -351,7 +351,7 @@ export function SubscribeCheckoutButton({
             },
             cardholderName: {
               id: `${formPrefix}__cardholder-name`,
-              placeholder: "Nome como impresso no cartao",
+              placeholder: "Nome como impresso no cartão",
             },
             issuer: {
               id: `${formPrefix}__issuer`,
@@ -382,7 +382,7 @@ export function SubscribeCheckoutButton({
                   "Failed to mount Mercado Pago card form",
                   mountError,
                 );
-                setSdkError("Nao foi possivel carregar o formulario de pagamento.");
+                setSdkError("Não foi possível carregar o formulário de pagamento.");
                 setIsFormLoading(false);
                 return;
               }
@@ -417,7 +417,7 @@ export function SubscribeCheckoutButton({
           return;
         }
 
-        setSdkError("Nao foi possivel iniciar o formulario de pagamento.");
+        setSdkError("Não foi possível iniciar o formulário de pagamento.");
         setIsFormLoading(false);
       }
     })();
@@ -495,8 +495,8 @@ export function SubscribeCheckoutButton({
             aria-expanded={showDirectForm}
           >
             {showDirectForm
-              ? "Fechar formulario de cartao"
-              : "Digitar cartao aqui"}
+              ? "Fechar formulário de cartão"
+              : "Digitar cartão aqui"}
           </button>
         ) : null}
       </div>
@@ -508,9 +508,9 @@ export function SubscribeCheckoutButton({
           className={styles.form}
         >
           <div className={styles.directIntro}>
-            <strong>Formulario seguro do Mercado Pago</strong>
+            <strong>Formulário seguro do Mercado Pago</strong>
             <p>
-              Os dados do cartao sao tokenizados pelo Mercado Pago e nao ficam
+              Os dados do cartão são tokenizados pelo Mercado Pago e não ficam
               armazenados no MounTrack.
             </p>
           </div>
@@ -520,7 +520,7 @@ export function SubscribeCheckoutButton({
               htmlFor={`${formPrefix}__card-number`}
               className={styles.label}
             >
-              Numero do cartao
+              Número do cartão
             </label>
             <div
               id={`${formPrefix}__card-number`}
@@ -547,7 +547,7 @@ export function SubscribeCheckoutButton({
                 htmlFor={`${formPrefix}__security-code`}
                 className={styles.label}
               >
-                Codigo de seguranca
+                Código de segurança
               </label>
               <div
                 id={`${formPrefix}__security-code`}
@@ -561,7 +561,7 @@ export function SubscribeCheckoutButton({
             <input
               id={`${formPrefix}__cardholder-name`}
               type="text"
-              placeholder="Nome como impresso no cartao"
+              placeholder="Nome como impresso no cartão"
               required
               autoComplete="cc-name"
               className={styles.input}
@@ -581,7 +581,7 @@ export function SubscribeCheckoutButton({
             </label>
 
             <label className={styles.fieldGroup}>
-              <span className={styles.label}>Numero do documento</span>
+              <span className={styles.label}>Número do documento</span>
               <input
                 id={`${formPrefix}__identification-number`}
                 type="text"
@@ -651,10 +651,10 @@ export function SubscribeCheckoutButton({
       ) : null}
 
       {shouldRenderDirectForm ? (
-        <p className={styles.footerNote}>Pagamento seguro via Mercado Pago.</p>
+          <p className={styles.footerNote}>Pagamento seguro via Mercado Pago.</p>
       ) : (
         <p className={styles.footerNote}>
-          Voce sera redirecionado para o ambiente do Mercado Pago para concluir
+          Você será redirecionado para o ambiente do Mercado Pago para concluir
           o pagamento.
         </p>
       )}

@@ -55,12 +55,12 @@ describe("SubscriptionPage", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "Seu acesso, seu ciclo e sua renovacao.",
+        name: "Seu acesso, seu ciclo e sua renovação.",
       }),
     ).toBeInTheDocument();
     expect(screen.getByText("23/04/2026")).toBeInTheDocument();
     expect(
-      screen.getByText("Onde a cobranca acontece"),
+      screen.getByText("Onde a cobrança acontece"),
     ).toBeInTheDocument();
     expect(screen.getByTestId("billing-subscription-panel")).toHaveTextContent(
       "MounTrack Pro Mensal",

@@ -25,10 +25,10 @@ function resolveSummaryCard(payload: BillingAccessPayload) {
 
     return {
       label: "Teste gratuito",
-      value: trialEndsAt ? `ate ${trialEndsAt}` : "em andamento",
+      value: trialEndsAt ? `até ${trialEndsAt}` : "em andamento",
       hint: trialEndsAt
-        ? `Seu acesso segue livre ate ${trialEndsAt}. Depois disso, voce decide se quer manter a assinatura.`
-        : "Seu acesso continua livre enquanto o periodo de teste estiver ativo.",
+        ? `Seu acesso segue livre até ${trialEndsAt}. Depois disso, você decide se quer manter a assinatura.`
+        : "Seu acesso continua livre enquanto o período de teste estiver ativo.",
     };
   }
 
@@ -39,8 +39,8 @@ function resolveSummaryCard(payload: BillingAccessPayload) {
 
     return {
       label: "Acesso garantido",
-      value: accessEndsAt ? `ate ${accessEndsAt}` : "ciclo atual",
-      hint: "A renovacao automatica ja foi encerrada. Seu acesso continua ativo ate o fim do periodo confirmado.",
+      value: accessEndsAt ? `até ${accessEndsAt}` : "ciclo atual",
+      hint: "A renovação automática já foi encerrada. Seu acesso continua ativo até o fim do período confirmado.",
     };
   }
 
@@ -49,18 +49,18 @@ function resolveSummaryCard(payload: BillingAccessPayload) {
   );
 
   return {
-    label: "Proxima renovacao",
+    label: "Próxima renovação",
     value: renewalDate ?? "mensal",
-    hint: "A cobranca recorrente e processada pelo Mercado Pago. Aqui voce acompanha o ciclo e controla a renovacao.",
+    hint: "A cobrança recorrente é processada pelo Mercado Pago. Aqui você acompanha o ciclo e controla a renovação.",
   };
 }
 
 function resolveDescription(payload: BillingAccessPayload) {
   if (payload.effectiveStatus === "trialing") {
-    return "Aqui voce acompanha o seu periodo gratuito, entende quando a assinatura entra em cena e sabe exatamente onde voltar para concluir o plano quando fizer sentido.";
+    return "Aqui você acompanha o período gratuito, entende quando a assinatura entra em cena e sabe exatamente onde voltar para concluir o plano quando fizer sentido.";
   }
 
-  return "Esta tela concentra o estado da sua assinatura, o proximo ciclo e a opcao de encerrar a renovacao automatica sem perder o periodo ja pago.";
+  return "Esta tela concentra o estado da sua assinatura, o próximo ciclo e a opção de encerrar a renovação automática sem perder o período já pago.";
 }
 
 export default async function SubscriptionPage() {
@@ -81,7 +81,7 @@ export default async function SubscriptionPage() {
       <section className={`glass-panel anim-enter ${styles.hero}`}>
         <div className={styles.heroCopy}>
           <span className={styles.eyebrow}>Minha assinatura</span>
-          <h1 className={styles.title}>Seu acesso, seu ciclo e sua renovacao.</h1>
+          <h1 className={styles.title}>Seu acesso, seu ciclo e sua renovação.</h1>
           <p className={styles.description}>
             {resolveDescription(initialPayload)}
           </p>
@@ -95,7 +95,7 @@ export default async function SubscriptionPage() {
             </Link>
             {canManageGrants ? (
               <Link href="/billing/grants" className="btn-outline">
-                Painel de gratuidade
+                Painel de gratuidades
               </Link>
             ) : null}
           </div>
@@ -112,25 +112,25 @@ export default async function SubscriptionPage() {
 
       <section className={styles.detailsGrid}>
         <article className={`glass-panel ${styles.detailCard}`}>
-          <h2 className={styles.detailTitle}>O que voce gerencia aqui</h2>
+          <h2 className={styles.detailTitle}>O que você gerencia aqui</h2>
           <p className={styles.detailText}>
             O MounTrack mostra o estado da assinatura e controla o fim da
-            renovacao automatica, sem apagar seus dados e sem cortar o acesso
+            renovação automática, sem apagar seus dados e sem cortar o acesso
             antes do ciclo acabar.
           </p>
           <ul className={styles.detailList}>
-            <li>Ver ate quando o acesso atual continua liberado.</li>
-            <li>Cancelar a proxima renovacao quando fizer sentido.</li>
+            <li>Ver até quando o acesso atual continua liberado.</li>
+            <li>Cancelar a próxima renovação quando fizer sentido.</li>
             <li>Voltar ao plano para reativar a assinatura depois.</li>
           </ul>
         </article>
 
         <article className={`glass-panel ${styles.detailCard}`}>
-          <h2 className={styles.detailTitle}>Onde a cobranca acontece</h2>
+          <h2 className={styles.detailTitle}>Onde a cobrança acontece</h2>
           <p className={styles.detailText}>
-            A cobranca recorrente, o cartao e a confirmacao do pagamento ficam
+            A cobrança recorrente, o cartão e a confirmação do pagamento ficam
             com o Mercado Pago. O MounTrack recebe o status e libera o acesso
-            da sua conta depois da confirmacao.
+            da sua conta depois da confirmação.
           </p>
           <div className={styles.supportCard}>
             <p>

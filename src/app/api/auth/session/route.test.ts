@@ -30,6 +30,23 @@ describe("POST /api/auth/session", () => {
     expect(verifyFirebaseIdTokenMock).toHaveBeenCalledWith("valid-firebase-token");
     expect(response.headers.get("set-cookie")).toContain("mt_session=valid-firebase-token");
     expect(response.headers.get("set-cookie")).toContain("HttpOnly");
+    expect(response.headers.get("set-cookie")).not.toContain("Secure");
+  });
+
+  it("sets a secure cookie for https requests", async () => {
+    verifyFirebaseIdTokenMock.mockResolvedValue({ uid: "user-123" });
+
+    const response = await POST(
+      new Request("https://mountrack.vercel.app/api/auth/session", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer valid-firebase-token",
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toContain("Secure");
   });
 
   it("clears the cookie when the token is invalid", async () => {
@@ -63,10 +80,15 @@ describe("POST /api/auth/session", () => {
 
 describe("DELETE /api/auth/session", () => {
   it("clears the current session cookie", async () => {
-    const response = await DELETE();
+    const response = await DELETE(
+      new Request("http://localhost/api/auth/session", {
+        method: "DELETE",
+      }),
+    );
 
     expect(response.status).toBe(200);
     expect(response.headers.get("set-cookie")).toContain("mt_session=");
     expect(response.headers.get("set-cookie")).toContain("Max-Age=0");
+    expect(response.headers.get("set-cookie")).not.toContain("Secure");
   });
 });

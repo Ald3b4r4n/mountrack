@@ -3,6 +3,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import PageTransition from "@/components/PageTransition";
 import { AppFooter } from "@/components/AppFooter";
+import { MobileNativeShell } from "@/components/mobile/MobileNativeShell";
 import { PwaInstallPrompt } from "@/components/pwa/PwaInstallPrompt";
 import { PwaRegistrar } from "@/components/pwa/PwaRegistrar";
 
@@ -53,10 +54,12 @@ export default function RootLayout({
         <AuthProvider>
           <PwaRegistrar />
           <PwaInstallPrompt />
-          <PageTransition>
-            {children}
-            <AppFooter />
-          </PageTransition>
+          <MobileNativeShell>
+            <PageTransition>
+              {children}
+              <AppFooter />
+            </PageTransition>
+          </MobileNativeShell>
         </AuthProvider>
       </body>
     </html>

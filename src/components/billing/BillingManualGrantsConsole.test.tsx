@@ -69,6 +69,20 @@ describe("BillingManualGrantsConsole", () => {
         createdAt: "2026-03-23T12:00:00.000Z",
       },
     ],
+    operatorUsers: {
+      "owner-1": {
+        uid: "owner-1",
+        email: "owner@example.com",
+        displayName: "Owner User",
+        disabled: false,
+      },
+      "admin-1": {
+        uid: "admin-1",
+        email: "admin@example.com",
+        displayName: "Admin User",
+        disabled: false,
+      },
+    },
   } as const;
 
   beforeEach(() => {
@@ -112,9 +126,7 @@ describe("BillingManualGrantsConsole", () => {
     );
 
     expect(await screen.findByText("Acesso promocional")).toBeInTheDocument();
-    expect(
-      screen.getByText("Gratuidade concedida"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Exibindo 1 de 1 eventos.")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Conceder gratuidade" }),
     ).toBeInTheDocument();
@@ -177,9 +189,9 @@ describe("BillingManualGrantsConsole", () => {
 
     expect(await screen.findByText("Target User")).toBeInTheDocument();
 
-    await userEvent.type(screen.getByLabelText("Buscar no diretorio"), "other");
+    await userEvent.type(screen.getByLabelText("Buscar no diretório"), "other");
     await userEvent.click(
-      screen.getByRole("button", { name: "Buscar diretorio" }),
+      screen.getByRole("button", { name: "Buscar diretório" }),
     );
 
     await waitFor(() => {
@@ -191,7 +203,7 @@ describe("BillingManualGrantsConsole", () => {
     expect(screen.queryByText("Target User")).not.toBeInTheDocument();
     expect(screen.getByText("Other User")).toBeInTheDocument();
     expect(
-      screen.getByText('Exibindo 1 de 1 usuarios carregados. Busca ativa: "other".'),
+      screen.getByText('Exibindo 1 de 1 usuários carregados. Busca ativa: "other".'),
     ).toBeInTheDocument();
   });
 
@@ -253,14 +265,14 @@ describe("BillingManualGrantsConsole", () => {
     await userEvent.selectOptions(screen.getByLabelText("Tipo"), "partner");
     await userEvent.clear(screen.getByLabelText("Motivo"));
     await userEvent.type(screen.getByLabelText("Motivo"), "Parceria ampliada");
-    await userEvent.clear(screen.getByLabelText("Observacoes internas"));
+    await userEvent.clear(screen.getByLabelText("Observações internas"));
     await userEvent.type(
-      screen.getByLabelText("Observacoes internas"),
+      screen.getByLabelText("Observações internas"),
       "Novo ciclo",
     );
-    await userEvent.selectOptions(screen.getByLabelText("Duracao"), "90");
+    await userEvent.selectOptions(screen.getByLabelText("Duração"), "90");
     await userEvent.click(
-      screen.getByRole("button", { name: "Salvar edicao" }),
+      screen.getByRole("button", { name: "Salvar edição" }),
     );
 
     await waitFor(() => {
@@ -273,6 +285,116 @@ describe("BillingManualGrantsConsole", () => {
     });
     expect(
       await screen.findByText("Gratuidade atualizada com sucesso."),
+    ).toBeInTheDocument();
+  });
+
+  it("applies operational presets to the grant form", async () => {
+    jest.mocked(global.fetch).mockImplementation(async (input) => {
+      const url = String(input);
+
+      if (url === "/api/billing/manual-grants/users") {
+        return {
+          ok: true,
+          json: async () => usersPayload,
+        } as Response;
+      }
+
+      if (url === "/api/billing/manual-grants?uid=target-1") {
+        return {
+          ok: true,
+          json: async () => payload,
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch URL: ${url}`);
+    });
+
+    render(<BillingManualGrantsConsole />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Target User/i }),
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /7 dias de onboarding/i }),
+    );
+
+    expect(screen.getByLabelText("Tipo")).toHaveValue("courtesy");
+    expect(screen.getByLabelText("Duração")).toHaveValue("7");
+    expect(screen.getByLabelText("Motivo")).toHaveValue(
+      "Extensão manual de onboarding por 7 dias.",
+    );
+    expect(screen.getByLabelText("Observações internas")).toHaveValue(
+      "Concessão operacional curta para usuário em onboarding.",
+    );
+  });
+
+  it("filters audit logs by action and operator", async () => {
+    const payloadWithExtraAudit = {
+      ...payload,
+      auditLogs: [
+        payload.auditLogs[0],
+        {
+          id: "audit-2",
+          actorUserId: "admin-1",
+          action: "billing.manual_grant_revoked",
+          targetType: "manual_access_grant",
+          targetId: "grant-1",
+          metadata: {
+            userId: "target-1",
+            reason: "Encerramento operacional",
+          },
+          createdAt: "2026-03-24T12:00:00.000Z",
+        },
+      ],
+    };
+
+    jest.mocked(global.fetch).mockImplementation(async (input) => {
+      const url = String(input);
+
+      if (url === "/api/billing/manual-grants/users") {
+        return {
+          ok: true,
+          json: async () => usersPayload,
+        } as Response;
+      }
+
+      if (url === "/api/billing/manual-grants?uid=target-1") {
+        return {
+          ok: true,
+          json: async () => payloadWithExtraAudit,
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch URL: ${url}`);
+    });
+
+    render(<BillingManualGrantsConsole />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Target User/i }),
+    );
+
+    await userEvent.selectOptions(
+      screen.getByLabelText("Filtrar por ação"),
+      "billing.manual_grant_revoked",
+    );
+
+    expect(screen.getByText("Exibindo 1 de 2 eventos.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Operador: Admin User - admin@example.com · Alvo: manual_access_grant",
+      ),
+    ).toBeInTheDocument();
+
+    await userEvent.selectOptions(
+      screen.getByLabelText("Filtrar por operador"),
+      "owner-1",
+    );
+
+    expect(screen.getByText("Exibindo 0 de 2 eventos.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Nenhum evento corresponde aos filtros atuais."),
     ).toBeInTheDocument();
   });
 

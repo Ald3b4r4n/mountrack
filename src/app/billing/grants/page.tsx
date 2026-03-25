@@ -16,8 +16,8 @@ export default async function BillingManualGrantsPage() {
     <main className={`container ${styles.page}`}>
       <section className={`glass-panel anim-enter ${styles.hero}`}>
         <div className={styles.heroCopy}>
-          <span className={styles.eyebrow}>Operacao interna</span>
-          <h1 className={styles.title}>Painel de gratuidade e concessoes.</h1>
+          <span className={styles.eyebrow}>Operação interna</span>
+          <h1 className={styles.title}>Painel de gratuidades e concessões.</h1>
           <p className={styles.description}>
             Use este painel para liberar acesso manual a influenciadores,
             parceiros, equipe e cortesias planejadas, sempre com motivo e

@@ -1,6 +1,11 @@
 /** @jest-environment node */
 
 import { generateKeyPairSync, sign } from "node:crypto";
+import { readFileSync } from "node:fs";
+
+jest.mock("node:fs", () => ({
+  readFileSync: jest.fn(),
+}));
 
 function encodeBase64Url(value: string): string {
   return Buffer.from(value).toString("base64url");
@@ -27,20 +32,28 @@ function buildFirebaseToken(privateKey: ReturnType<typeof generateKeyPairSync>["
 }
 
 describe("verifyFirebaseIdToken", () => {
+  const readFileSyncMock = jest.mocked(readFileSync);
   const originalProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   const originalServerProjectId = process.env.FIREBASE_PROJECT_ID;
   const originalClientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const originalPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
   const originalServiceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  const originalServiceAccountJsonPath =
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON_PATH;
+  const originalGoogleApplicationCredentials =
+    process.env.GOOGLE_APPLICATION_CREDENTIALS;
   const originalFetch = global.fetch;
 
   afterEach(() => {
     jest.resetModules();
+    jest.clearAllMocks();
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = originalProjectId;
     process.env.FIREBASE_PROJECT_ID = originalServerProjectId;
     process.env.FIREBASE_CLIENT_EMAIL = originalClientEmail;
     process.env.FIREBASE_PRIVATE_KEY = originalPrivateKey;
     process.env.FIREBASE_SERVICE_ACCOUNT_JSON = originalServiceAccountJson;
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON_PATH = originalServiceAccountJsonPath;
+    process.env.GOOGLE_APPLICATION_CREDENTIALS = originalGoogleApplicationCredentials;
     global.fetch = originalFetch;
   });
 
@@ -84,6 +97,7 @@ describe("verifyFirebaseIdToken", () => {
 
     await expect(verifyFirebaseIdToken("invalid-token")).rejects.toThrow("AUTH_UNAVAILABLE");
   });
+
 });
 
 describe("getFirebaseAdminUnavailableMessage", () => {
@@ -232,5 +246,89 @@ describe("searchFirebaseUsers", () => {
     });
     expect(listUsersMock).toHaveBeenCalledWith(50, undefined);
     expect(listUsersMock).toHaveBeenCalledWith(50, "cursor-2");
+  });
+});
+
+describe("findFirebaseUsersByUids", () => {
+  const originalProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const originalServerProjectId = process.env.FIREBASE_PROJECT_ID;
+  const originalClientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const originalPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
+  const originalServiceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+
+  afterEach(() => {
+    jest.resetModules();
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = originalProjectId;
+    process.env.FIREBASE_PROJECT_ID = originalServerProjectId;
+    process.env.FIREBASE_CLIENT_EMAIL = originalClientEmail;
+    process.env.FIREBASE_PRIVATE_KEY = originalPrivateKey;
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON = originalServiceAccountJson;
+    jest.unmock("firebase-admin");
+  });
+
+  it("resolves Firebase users in batches and maps them by uid", async () => {
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = "";
+    process.env.FIREBASE_PROJECT_ID = "mountrack-app";
+    process.env.FIREBASE_CLIENT_EMAIL = "admin@mountrack.app";
+    process.env.FIREBASE_PRIVATE_KEY =
+      "-----BEGIN PRIVATE KEY-----\\nabc\\n-----END PRIVATE KEY-----";
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON = "";
+
+    const getUsersMock = jest.fn().mockResolvedValue({
+      users: [
+        {
+          uid: "owner-1",
+          email: "owner@example.com",
+          displayName: "Owner User",
+          disabled: false,
+        },
+        {
+          uid: "admin-1",
+          email: "admin@example.com",
+          displayName: "Admin User",
+          disabled: false,
+        },
+      ],
+      notFound: [],
+    });
+
+    jest.doMock("firebase-admin", () => ({
+      __esModule: true,
+      default: {
+        apps: [{}],
+        initializeApp: jest.fn(),
+        credential: { cert: jest.fn(() => ({})) },
+        auth: jest.fn(() => ({
+          getUsers: getUsersMock,
+        })),
+        firestore: jest.fn(),
+      },
+    }));
+
+    let findFirebaseUsersByUids!: typeof import("@/lib/firebase-admin").findFirebaseUsersByUids;
+    await jest.isolateModulesAsync(async () => {
+      ({ findFirebaseUsersByUids } = await import("@/lib/firebase-admin"));
+    });
+
+    await expect(
+      findFirebaseUsersByUids(["owner-1", "admin-1", "owner-1"]),
+    ).resolves.toEqual({
+      "owner-1": {
+        uid: "owner-1",
+        email: "owner@example.com",
+        displayName: "Owner User",
+        disabled: false,
+      },
+      "admin-1": {
+        uid: "admin-1",
+        email: "admin@example.com",
+        displayName: "Admin User",
+        disabled: false,
+      },
+    });
+    expect(getUsersMock).toHaveBeenCalledWith([
+      { uid: "owner-1" },
+      { uid: "admin-1" },
+    ]);
   });
 });

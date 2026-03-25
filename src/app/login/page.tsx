@@ -114,7 +114,7 @@ function LoginContent() {
         >
           Acompanhe sua jornada com
           <br />
-          seguranca e privacidade.
+          segurança e privacidade.
         </p>
 
         <button
@@ -167,8 +167,8 @@ function LoginContent() {
             lineHeight: "1.5",
           }}
         >
-          Seus registros ficam vinculados a sua conta
-          <br />e protegidos pela autenticacao.
+          Seus registros ficam vinculados à sua conta
+          <br />e protegidos pela autenticação.
         </p>
 
         <div

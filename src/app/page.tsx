@@ -507,7 +507,7 @@ export default function Home() {
         </header>
 
         <nav
-          className="anim-enter anim-delay-1"
+          className="anim-enter anim-delay-1 home-route-nav"
           style={{
             marginBottom: "2.5rem",
             display: "flex",
