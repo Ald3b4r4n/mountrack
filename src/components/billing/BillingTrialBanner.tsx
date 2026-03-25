@@ -7,6 +7,7 @@ import {
   BILLING_MONTHLY_PRICE_CENTS,
   BILLING_TRIAL_DAYS,
 } from "@/modules/billing/domain/types";
+import { buildSubscribePath } from "@/modules/billing/subscribe-navigation";
 import styles from "./BillingTrialBanner.module.css";
 
 interface BillingAccessPayload {
@@ -291,11 +292,17 @@ export function BillingTrialBanner() {
         </div>
 
         <div>
-          <Link href="/subscribe" className={`btn-primary ${styles.cta}`}>
+          <Link
+            href={buildSubscribePath("checkout")}
+            className={`btn-primary ${styles.cta}`}
+          >
             {trialSnapshot.ctaLabel}
           </Link>
           <div style={{ marginTop: "0.8rem" }}>
-            <Link href="/subscribe" className={styles.secondaryLink}>
+            <Link
+              href={buildSubscribePath("plan")}
+              className={styles.secondaryLink}
+            >
               Ver detalhes do plano
             </Link>
           </div>

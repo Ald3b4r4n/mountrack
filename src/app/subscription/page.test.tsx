@@ -70,6 +70,6 @@ describe("SubscriptionPage", () => {
     ).toHaveAttribute("href", "/");
     expect(
       screen.getByRole("link", { name: "Ver plano e pagamento" }),
-    ).toHaveAttribute("href", "/subscribe");
+    ).toHaveAttribute("href", "/subscribe?entry=checkout");
   });
 });

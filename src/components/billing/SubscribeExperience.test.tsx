@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 jest.mock("next/navigation", () => ({
   useRouter: jest.fn(),
+  useSearchParams: jest.fn(),
 }));
 
 jest.mock("@/components/billing/SubscribeCheckoutButton", () => ({
@@ -16,8 +17,9 @@ jest.mock("@/contexts/AuthContext", () => ({
 }));
 
 const useAuthMock = jest.mocked(useAuth);
-const { useRouter } = jest.requireMock("next/navigation") as {
+const { useRouter, useSearchParams } = jest.requireMock("next/navigation") as {
   useRouter: jest.Mock;
+  useSearchParams: jest.Mock;
 };
 
 describe("SubscribeExperience", () => {
@@ -44,6 +46,9 @@ describe("SubscribeExperience", () => {
     }));
     Element.prototype.scrollIntoView = jest.fn();
     useRouter.mockReturnValue({ replace, push: jest.fn() });
+    useSearchParams.mockReturnValue({
+      get: () => null,
+    });
     global.fetch = jest.fn();
   });
 
@@ -134,5 +139,71 @@ describe("SubscribeExperience", () => {
     await waitFor(() => {
       expect(replace).toHaveBeenCalledWith("/");
     });
+  });
+
+  it("keeps authenticated users on the subscribe page when entry=plan", async () => {
+    useAuthMock.mockReturnValue({
+      user: { uid: "user-1", email: "user@example.com" },
+      loading: false,
+      sessionReady: true,
+      signInWithGoogle: jest.fn(),
+      signOut: jest.fn(),
+    } as never);
+    useSearchParams.mockReturnValue({
+      get: (key: string) => (key === "entry" ? "plan" : null),
+    });
+    (global.fetch as jest.Mock).mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: async () => ({ accessAllowed: true }),
+    });
+
+    render(
+      <SubscribeExperience
+        planCode="pro_monthly"
+        amountCents={1499}
+        monthlyPrice="R$ 14,99"
+        trialDays={7}
+        mercadoPagoPublicKey=""
+      />,
+    );
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith("/api/billing/access", {
+        method: "GET",
+        cache: "no-store",
+        credentials: "include",
+      });
+    });
+
+    expect(replace).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("heading", {
+        name: /Seu histórico continua com você\./i,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens directly on the checkout step when entry=checkout", () => {
+    useSearchParams.mockReturnValue({
+      get: (key: string) => (key === "entry" ? "checkout" : null),
+    });
+
+    render(
+      <SubscribeExperience
+        planCode="pro_monthly"
+        amountCents={1499}
+        monthlyPrice="R$ 14,99"
+        trialDays={7}
+        mercadoPagoPublicKey=""
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Assine sem sair da sua rotina.",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Etapa 3 de 3")).toBeInTheDocument();
   });
 });

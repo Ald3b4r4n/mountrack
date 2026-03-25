@@ -91,6 +91,10 @@ describe("BillingSubscriptionPanel", () => {
       screen.getByRole("heading", { name: "Seu acesso segue até 23/04/2026." }),
     ).toBeInTheDocument();
     expect(screen.getByText("Cancelada em 24/03/2026")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Abrir plano" })).toHaveAttribute(
+      "href",
+      "/subscribe?entry=checkout",
+    );
   });
 
   it("stays hidden while the user is still in the trial window", () => {

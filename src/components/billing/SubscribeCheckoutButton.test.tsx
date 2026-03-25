@@ -74,7 +74,9 @@ describe("SubscribeCheckoutButton", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Entrar para pagar" }));
 
-    expect(assignMock).toHaveBeenCalledWith("/login?next=%2Fsubscribe");
+    expect(assignMock).toHaveBeenCalledWith(
+      "/login?next=%2Fsubscribe%3Fentry%3Dcheckout",
+    );
     expect(global.fetch).not.toHaveBeenCalled();
   });
 

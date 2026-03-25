@@ -45,7 +45,12 @@ describe("BillingTrialBanner", () => {
       screen.getByRole("link", {
         name: "Garantir acesso",
       }),
-    ).toHaveAttribute("href", "/subscribe");
+    ).toHaveAttribute("href", "/subscribe?entry=checkout");
+    expect(
+      screen.getByRole("link", {
+        name: "Ver detalhes do plano",
+      }),
+    ).toHaveAttribute("href", "/subscribe?entry=plan");
   });
 
   it("renders the urgent-state countdown and CTA in the last 24 hours", async () => {
@@ -75,7 +80,7 @@ describe("BillingTrialBanner", () => {
       screen.getByRole("link", {
         name: "Assinar agora",
       }),
-    ).toHaveAttribute("href", "/subscribe");
+    ).toHaveAttribute("href", "/subscribe?entry=checkout");
   });
 
   it("stays hidden when the user is not in trial", async () => {

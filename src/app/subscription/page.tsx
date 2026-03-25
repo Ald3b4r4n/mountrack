@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { canManageManualGrants } from "@/modules/billing/manual-grants";
+import { buildSubscribePath } from "@/modules/billing/subscribe-navigation";
 import {
   BillingSubscriptionPanel,
   type BillingAccessPayload,
@@ -90,7 +91,10 @@ export default async function SubscriptionPage() {
             <Link href="/" className="btn-outline">
               Voltar para o painel
             </Link>
-            <Link href="/subscribe" className="btn-primary">
+            <Link
+              href={buildSubscribePath("checkout")}
+              className="btn-primary"
+            >
               Ver plano e pagamento
             </Link>
             {canManageGrants ? (
@@ -135,8 +139,8 @@ export default async function SubscriptionPage() {
           <div className={styles.supportCard}>
             <p>
               Quando precisar iniciar ou retomar a assinatura, abra
-              <Link href="/subscribe"> o plano</Link> e siga para o ambiente do
-              Mercado Pago.
+              <Link href={buildSubscribePath("checkout")}> o plano</Link> e
+              siga para o ambiente do Mercado Pago.
             </p>
           </div>
         </article>

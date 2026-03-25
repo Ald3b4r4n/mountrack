@@ -1,11 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SubscribeCheckoutButton } from "@/components/billing/SubscribeCheckoutButton";
 import { useAuth } from "@/contexts/AuthContext";
 import { buildLoginNavigationUrl } from "@/modules/billing/auth/login-navigation";
+import {
+  buildSubscribePath,
+  resolveSubscribeEntry,
+  resolveSubscribeStep,
+  shouldStayOnSubscribe,
+} from "@/modules/billing/subscribe-navigation";
 import styles from "./SubscribeExperience.module.css";
 
 interface SubscribeExperienceProps {
@@ -45,7 +51,10 @@ export function SubscribeExperience({
 }: SubscribeExperienceProps) {
   const { user, loading, sessionReady, signOut } = useAuth();
   const router = useRouter();
-  const [activeStep, setActiveStep] = useState(0);
+  const searchParams = useSearchParams();
+  const subscribeEntry = resolveSubscribeEntry(searchParams.get("entry"));
+  const keepUserOnSubscribe = shouldStayOnSubscribe(subscribeEntry);
+  const [activeStep, setActiveStep] = useState(resolveSubscribeStep(subscribeEntry));
   const [isSwitchingAccount, setIsSwitchingAccount] = useState(false);
   const [isCheckingAccess, setIsCheckingAccess] = useState(false);
   const [accessResolved, setAccessResolved] = useState(false);
@@ -80,19 +89,18 @@ export function SubscribeExperience({
 
   function navigateToLogin() {
     if (typeof window === "undefined") {
-      router.push("/login?next=%2Fsubscribe");
+      router.push(`/login?next=${encodeURIComponent(buildSubscribePath())}`);
       return;
     }
 
     window.location.assign(
-      buildLoginNavigationUrl(window.location, "/subscribe"),
+      buildLoginNavigationUrl(window.location, buildSubscribePath()),
     );
   }
 
   async function handleExistingCustomerEntry() {
     if (hasAuthenticatedUser) {
-      setIsCheckingAccess(true);
-      setAccessResolved(false);
+      router.push("/");
       return;
     }
 
@@ -104,7 +112,8 @@ export function SubscribeExperience({
       return;
     }
 
-    const target = buildLoginNavigationUrl(window.location, "/subscribe");
+    const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const target = buildLoginNavigationUrl(window.location, currentPath);
     setIsSwitchingAccount(true);
 
     try {
@@ -121,6 +130,10 @@ export function SubscribeExperience({
       setIsSwitchingAccount(false);
     }
   }
+
+  useEffect(() => {
+    setActiveStep(resolveSubscribeStep(subscribeEntry));
+  }, [subscribeEntry]);
 
   useEffect(() => {
     if (loading || (user && !sessionReady)) {
@@ -149,7 +162,7 @@ export function SubscribeExperience({
           return;
         }
 
-        if (response.status === 200) {
+        if (response.status === 200 && !keepUserOnSubscribe) {
           router.replace("/");
           return;
         }
@@ -172,7 +185,7 @@ export function SubscribeExperience({
     return () => {
       cancelled = true;
     };
-  }, [loading, router, sessionReady, user]);
+  }, [keepUserOnSubscribe, loading, router, sessionReady, user]);
 
   useEffect(() => {
     if (!didMountRef.current) {

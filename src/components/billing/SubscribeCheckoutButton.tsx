@@ -5,6 +5,7 @@ import type { FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { buildLoginNavigationUrl } from "@/modules/billing/auth/login-navigation";
+import { buildSubscribePath } from "@/modules/billing/subscribe-navigation";
 import styles from "./SubscribeCheckoutButton.module.css";
 
 interface SubscribeCheckoutButtonProps {
@@ -171,12 +172,16 @@ export function SubscribeCheckoutButton({
 
   function navigateToLogin() {
     if (typeof window === "undefined") {
-      navigate("/login");
+      navigate(`/login?next=${encodeURIComponent(buildSubscribePath("checkout"))}`);
       return;
     }
 
-    const nextPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-    navigate(buildLoginNavigationUrl(window.location, nextPath));
+    navigate(
+      buildLoginNavigationUrl(
+        window.location,
+        buildSubscribePath("checkout"),
+      ),
+    );
   }
 
   async function requestCheckout(cardTokenId?: string): Promise<void> {

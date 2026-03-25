@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { buildSubscribePath } from "@/modules/billing/subscribe-navigation";
 import styles from "./BillingSubscriptionPanel.module.css";
 
 export interface BillingAccessPayload {
@@ -282,7 +283,10 @@ export function BillingSubscriptionPanel({
           </button>
         ) : null}
 
-        <Link href="/subscribe" className={styles.linkButton}>
+        <Link
+          href={buildSubscribePath("checkout")}
+          className={styles.linkButton}
+        >
           {panelCopy.secondaryLabel}
         </Link>
 
