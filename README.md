@@ -1,362 +1,398 @@
-<div align="center">
+# MounTrack
 
-# 🧬 MounTrack
+Plataforma mobile-first para acompanhamento de tratamento, peso, doses, rotina alimentar, metas e assinatura recorrente em uma única conta.
 
-_O estado da arte na engenharia de monitoramento de tratamento, aliando UI/UX minimalista ("Glassmorphism") e predições baseadas em dados estruturados._
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Firebase](https://img.shields.io/badge/Firebase-Auth%20%26%20Admin-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-Postgres-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+[![Mercado Pago](https://img.shields.io/badge/Mercado%20Pago-Subscriptions-00B1EA?style=for-the-badge&logo=mercadopago&logoColor=white)](https://www.mercadopago.com.br/developers/pt)
+[![Vercel](https://img.shields.io/badge/Vercel-Deploy-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com/)
 
-[![Next.js 15](https://img.shields.io/badge/Next.js_15-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
-[![React 19](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tailwind CSS V3](https://img.shields.io/badge/Tailwind_V3-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
-[![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com/)
-
-[**🖥️ Desenvolvido por A&R Software Development**](https://antoniorafael.com.br)
-
-</div>
+Desenvolvido por **A&R Software Development**.
 
 ---
 
-## 🎯 Por Trás do MounTrack
+## Visão Geral
 
-O **MounTrack** transcende o conceito de uma simples prancheta de controle. Desenvolvido para usuários submetidos a tratamentos delicados de longo termo (como Mounjaro/Ozempic), exigia-se uma interface que diminuísse a carga cognitiva do tratamento, ao mesmo tempo em que consolidasse, no lado da engenharia, um ambiente extremamente robusto e responsivo.
+O MounTrack foi desenhado para pessoas em acompanhamento terapêutico de médio e longo prazo, com foco em adesão, clareza operacional e continuidade do histórico. O produto concentra:
 
-O resultado é uma plataforma "Mobile First", alimentada por rotinas avançadas de predição analítica (sem custos exagerados de LLMs de consumo), processamento em nuvem rigoroso e uma filosofia visual inteiramente baseada em _Glassmorphism_.
+- acompanhamento de peso e evolução;
+- controle de doses, ciclos e ampolas;
+- diário de jornada;
+- nutrição com metas, água e busca de alimentos;
+- assinatura recorrente com trial, cobrança, cancelamento e concessões manuais;
+- experiência mobile-first com possibilidade de instalação como PWA.
 
----
-
-## ⚡ Engineering Deep Dive
-
-O MounTrack não utiliza IA apenas por _buzzword_; a arquitetura alavanca capacidades de **Machine Learning (Regressão) e PNL** local/híbrida para extrair significado matemático a partir de entradas biológicas do usuário.
-
-### 🧠 1. Predição de Meta Híbrida (IA & Estatística)
-
-- **Engenharia de Regressão Linear:** Para calcular a "Data Efetiva da Vitória" (quando você alcançará o peso alvo), aplicamos de forma limpa algoritmos de regressão e cálculos logarítmicos ao longo do delta de tempo x pesagens históricas.
-- **NLP (Natural Language Processing):** O backend incorpora um motor em vanilla JavaScript que processa o léxico (texto) de observações e efeitos colaterais relatados, classificando-os semanticamente para categorizar os sintomas. Zero chamadas onerosas na API; performance ultra-alta de análise de strings em _client e edge_.
-
-### 💎 2. UI/UX "Glassmorphic" (Premium Standards)
-
-- **Framework:** Desenvolvido puramente em cima do Next.js 15 (React 19).
-- **Styling Engine:** Construído com o poder do **Tailwind CSS v3**, abstraindo e modernizando temas por meio de componentes como Shadcn UI e DaisyUI.
-- **Componentes Vivos:** Forte apelo de micro-interações via **Framer Motion**, desenhado minuciosamente seguindo padrões CSS Nativos V2 flexíveis e Design Systems que evocam Aceternity e MagicUI. O resultado é responsivo, não obstrutivo (zero scroll horizontal forçado) e cristalino em celulares.
-
-### 🏥 3. Motor de Laudos Médicos Nativos
-
-- Em vez de incorrer em custos pesados gerando o PDF em servidores paralelos corporativos, implementamos **media CSS `@print` nativa altamente otimizada**. Com um clique, os mesmos dados belos renderizados no front-end "degradam elegantemente" para um design puramente tabular pronto para impressoras físicas – ideal para discussões com endocrinologistas.
-
-### 🎮 4. Gamificação Dinâmica e Infraestrutura Cloud
-
-- **Streak System:** O banco audita datas de tomadas e engajamento. Regras rígidas atualizam _streaks_ (semanas sem falhas na tomada do medicamento).
-- **Automação de API (.ICS):** Motores orgânicos produzem arquivos para Apple Calendar e Google Calendar sob demanda.
-- **Backend Inquebrável:** Arquitetura _Serverless_ provendo Firebase Auth (integração via Google Identity) assíncrona, e um modelo NoSQL persistente pelo Cloud Firestore.
+O objetivo é reduzir fricção para o usuário final e, ao mesmo tempo, entregar uma base confiável para uso em contextos clínicos, acompanhamento individual e monitoramento recorrente.
 
 ---
 
-## 🚀 Guia de Quick Start
+## Para Quem o Produto Serve
 
-## 🧪 Nutrition UX Updates (2026-03-17)
+- **Clientes finais** que precisam registrar rotina, peso, doses e alimentação no mesmo app.
+- **Médicos e equipes clínicas** que precisam de um histórico organizado para consulta.
+- **Nutricionistas** que dependem de diário alimentar, metas e consistência de registro.
+- **Operação interna** que precisa conceder, editar e revogar acessos manuais com rastreabilidade.
 
-- **Meal switch flow (mobile):** o seletor de refeição agora abre via modal dedicado e substitui o uso do bloco "Refeições do dia" no fluxo mobile.
-- **Hydration quick actions:** os botões de água no mobile foram refinados com ícones Lucide e o CTA `Personalizado` foi alinhado visualmente com `250` e `500`, mantendo proteção contra overflow em telas estreitas.
+---
 
-Para rodar essa obra de arte arquitetural na sua máquina localmente para contribuição:
+## Principais Recursos
+
+### Jornada do usuário
+
+- onboarding mobile-first;
+- autenticação com Google via Firebase;
+- teste gratuito com contagem regressiva;
+- paywall com fluxo de assinatura mensal;
+- retorno automático de acesso após confirmação do pagamento.
+
+### Acompanhamento e rotina
+
+- dashboard com indicadores principais;
+- registro rápido de peso, dose e notas;
+- histórico e relatórios;
+- metas e ritmo semanal;
+- controle de abertura, uso e fechamento de ampola.
+
+### Nutrição
+
+- diário alimentar;
+- metas de calorias, proteína, carboidratos e gordura;
+- controle de água;
+- busca e cadastro de alimentos;
+- integração com catálogo nutricional e atribuição compatível com FatSecret.
+
+### Billing e operação
+
+- trial configurável;
+- assinatura recorrente com Mercado Pago;
+- webhook e reconciliação de pagamentos;
+- cancelamento da renovação pelo próprio usuário;
+- painel interno de concessões manuais para `owner/admin`.
+
+---
+
+## Capturas do Produto
+
+### Assinatura e continuidade do histórico
+
+![Tela de assinatura](docs/readme/subscribe-mobile.jpg)
+
+### Nutrição, metas e busca de alimentos
+
+![Galeria de nutrição](docs/readme/nutrition-gallery.jpg)
+
+### Registro no diário e fluxo alimentar
+
+![Galeria de diário e registro](docs/readme/journal-gallery.jpg)
+
+### Tela dedicada de assinatura
+
+![Tela de assinatura do usuário](docs/readme/subscription-mobile.jpg)
+
+---
+
+## Diferenciais de Produto
+
+- **Conta única, histórico contínuo:** o usuário não perde contexto ao sair do trial e entrar na assinatura.
+- **Operação interna pronta:** concessões de gratuidade, auditoria e controles administrativos já fazem parte do app.
+- **Cobrança integrada:** trial, assinatura, cancelamento e reconciliação já foram estruturados no backend.
+- **Foco em uso real no celular:** telas, navegação e fluxos foram pensados para interação rápida e recorrente.
+- **PWA instalável:** o app pode ser adicionado à tela inicial e usado com comportamento próximo de aplicativo.
+
+---
+
+## Stack Técnica
+
+### Frontend
+
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS
+- Framer Motion
+
+### Autenticação e identidade
+
+- Firebase Authentication
+- Firebase Admin SDK para rotas protegidas e operação interna
+
+### Dados e backend
+
+- Supabase Postgres
+- API routes do App Router
+- `pg` para acesso server-side ao banco
+
+### Billing
+
+- Mercado Pago
+- assinatura recorrente (`preapproval`)
+- webhook de reconciliação
+
+### Deploy
+
+- Vercel
+
+---
+
+## Arquitetura em Alto Nível
+
+```mermaid
+flowchart LR
+    U["Usuário"] --> W["App Web / PWA"]
+    W --> A["Firebase Auth"]
+    W --> N["Next.js App Router"]
+    N --> P["Supabase Postgres"]
+    N --> M["Mercado Pago"]
+    N --> F["Firebase Admin"]
+    N --> C["Catálogo Nutricional"]
+```
+
+### Responsabilidades principais
+
+- **Firebase Auth**: login do usuário no cliente.
+- **Firebase Admin**: lookup e diretório de usuários para operação interna.
+- **Supabase Postgres**: billing, grants, checkout sessions, subscriptions, payments e dados server-side.
+- **Mercado Pago**: assinatura recorrente, checkout e notificações.
+- **Next.js**: camada de UI, rotas, SSR, APIs e shell instalável.
+
+---
+
+## Execução Local
 
 ### Pré-requisitos
 
-- Node.js (Versão recomendada > 20.x)
-- Uma conta e projeto ativo com variáveis do Firebase e Firestore.
+- Node.js 20+
+- npm
+- projeto Firebase configurado
+- banco Supabase/Postgres disponível para o ambiente
 
-### 1. Instalação Padrão
+### Instalação
 
 ```bash
-# Clone o repositório orgânico
-git clone https://github.com/SeuUsuario/mountrack.git
+git clone https://github.com/Ald3b4r4n/mountrack.git
 cd mountrack
-
-# Instale todas as dependências do ecossistema Next.js
 npm install
 ```
 
-### 2. Configurando o Ambiente
+### Ambiente local
 
-Crie um arquivo seguro e local chamado `.env.local` na raiz do projeto com as chaves obrigatórias descritas abaixo:
+Crie um arquivo `.env.local` na raiz com base no `.env.example`.
 
-```env
-NEXT_PUBLIC_FIREBASE_WEB_API=SuaConfigPublicaFireb4seAqU1
-NEXT_PUBLIC_FIREBASE_AUTH_HOST=seu-projeto.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=seu-projeto
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=seu-projeto.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=00000000000
-NEXT_PUBLIC_FIREBASE_APP_ID=1:00000000:web:0000000
-```
-
-*Dica: não versionar `.env.local` (*gitignore* nativo garantirá isso).*
-
-### Firebase Admin (rotas internas e painel de grants)
-
-As variaveis publicas acima bastam para o login no navegador, mas nao inicializam o Firebase Admin no backend.
-Se voce quiser usar rotas internas como `/api/billing/manual-grants` e `/api/billing/manual-grants/users`,
-adicione tambem uma credencial de service account.
-
-Opcao recomendada:
+Exemplo mínimo:
 
 ```env
-FIREBASE_SERVICE_ACCOUNT_JSON={"project_id":"seu-projeto","client_email":"firebase-adminsdk-xxxx@seu-projeto.iam.gserviceaccount.com","private_key":"-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n"}
+NEXT_PUBLIC_FIREBASE_WEB_API=your-firebase-api-key
+NEXT_PUBLIC_FIREBASE_AUTH_HOST=your-project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-messaging-sender-id
+NEXT_PUBLIC_FIREBASE_APP_ID=your-firebase-app-id
+
+FIREBASE_SERVICE_ACCOUNT_JSON={"project_id":"your-project-id","client_email":"firebase-adminsdk-xxxx@your-project-id.iam.gserviceaccount.com","private_key":"-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n"}
+
+BOOTSTRAP_OWNER_EMAIL=owner@example.com
+BOOTSTRAP_ADMIN_EMAILS=owner@example.com
+
+APP_BASE_URL=http://localhost:3000
+
+MERCADO_PAGO_ACCESS_TOKEN=TEST-your-mercado-pago-access-token
+NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY=TEST-your-mercado-pago-public-key
+MERCADO_PAGO_TEST_PAYER_EMAIL=test_user_123456@testuser.com
+NEXT_PUBLIC_MERCADO_PAGO_TEST_PAYER_EMAIL=test_user_123456@testuser.com
+MERCADO_PAGO_NOTIFICATION_URL=https://your-app.example.com/api/billing/webhooks/mercado-pago
+MERCADO_PAGO_WEBHOOK_SECRET=your-mercado-pago-webhook-secret
+
+CRON_SECRET=generate-a-long-random-token
+NUTRITION_INGEST_TOKEN=generate-a-long-random-token
+NUTRITION_BASE_URL=http://localhost:3000
 ```
 
-Ou, se preferir variaveis separadas:
-
-```env
-FIREBASE_PROJECT_ID=seu-projeto
-FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxx@seu-projeto.iam.gserviceaccount.com
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-```
-
-Sem isso, o backend retorna `Firebase Admin unavailable` ao tentar listar ou buscar usuarios no painel de grants.
-
-### 3. Start Engines
+### Rodando
 
 ```bash
 npm run dev
-# Acesse o server local de UI na porta: http://localhost:3000
 ```
+
+A aplicação ficará disponível em [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## ☁️ Deploy via Vercel (Produção Total)
+## Variáveis de Ambiente
 
-O código possui um pipeline transparente pronto para ser acionado sob o guarda-chuva Vercel.
+### Públicas do cliente
 
-**Ao ligar o repositório na lista Vercel (Import Project), não modifique o Workflow Build**, o padrão fará a mágica ser executada. O único aspecto vital em Produção: **As Variáveis de Ambiente e CronJobs:**
+- `NEXT_PUBLIC_FIREBASE_WEB_API`
+- `NEXT_PUBLIC_FIREBASE_AUTH_HOST`
+- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
+- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+- `NEXT_PUBLIC_FIREBASE_APP_ID`
+- `NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY`
+- `NEXT_PUBLIC_MERCADO_PAGO_TEST_PAYER_EMAIL`
 
-#### Variáveis Exclusivas do Backend (Nutrição e Segurança de Jobs)
+### Backend e operação
 
-Dentro da aba de "Environment Variables" da Vercel para a Produção, cole as variáveis do Firebase usadas no `.env.local`, mas acrescente também os tokens relativos ao enriquecimento automatizado do banco.
+- `FIREBASE_SERVICE_ACCOUNT_JSON`
+- `BOOTSTRAP_OWNER_EMAIL`
+- `BOOTSTRAP_ADMIN_EMAILS`
+- `APP_BASE_URL`
+- `CRON_SECRET`
+- `NUTRITION_INGEST_TOKEN`
+- `NUTRITION_BASE_URL`
 
-```env
-CRON_SECRET=gere-um-token-longo-e-aleatorio
-NUTRITION_INGEST_TOKEN=gere-um-token-longo-e-aleatorio
-```
+### Billing
 
-**O que elas fazem?**
+- `MERCADO_PAGO_ACCESS_TOKEN`
+- `MERCADO_PAGO_TEST_PAYER_EMAIL`
+- `MERCADO_PAGO_NOTIFICATION_URL`
+- `MERCADO_PAGO_WEBHOOK_SECRET`
 
-- `CRON_SECRET`: Abstrai a autenticação do Cron Job (via ambiente Vercel) responsável pela constante alimentação orgânica/fresca do catálogo em background.
-- `NUTRITION_INGEST_TOKEN`: Autoriza o mesmo canal no gatilho síncrono da API manualmente por um administrador que detenha o segredo.
+---
 
-#### Enriquecimento Manual (Scripting Ops)
+## Scripts Úteis
 
-Para engatilhar essa persistência dos alimentos via console caso os jobs não cubram:
+### Desenvolvimento
 
 ```bash
-# Se o terminal local rodando dev() aponta para localhost
-npm run nutrition:enrich -- --limit 5
-
-# Para acionar em um deploy remoto / produção a partir do desktop de engenharia
-npm run nutrition:enrich -- --base-url https://seu-app-final.vercel.app --limit 10
+npm run dev
+npm run build
+npm run start
+npm test
 ```
 
-#### Validação Operacional da Persistência
-
-Para confirmar localmente que a nutrição está realmente em `database`, com escrita/leitura privada e isolamento por usuário:
+### Nutrição e catálogo
 
 ```bash
-# Valida storage, metas, água no diário e isolamento de custom foods
+npm run nutrition:enrich
+npm run nutrition:test-mobile-add
 npm run nutrition:validate-persistence
-
-# Inclui também a checagem autenticada da rota interna de enrichment
-npm run nutrition:validate-persistence -- --token <NUTRITION_INGEST_TOKEN>
+npm run nutrition:catalog:build
+npm run nutrition:catalog:refresh-missing
 ```
 
-Se nenhum token for informado, o script ainda valida a rota de `enrichment` sem autenticação, mas marca a etapa autenticada como `skipped`.
+### Verificações
 
-Com estas chaves e procedimentos de ingestão definidos no Vercel, clique em **Deploy**. Espere a compilação paralela da Vercel otimizar os fluxos; agora seu App Premium estará ao vivo!
+```bash
+npx eslint src --ext .ts,.tsx
+npx tsc --noEmit --pretty false
+npm audit --audit-level=high
+```
 
 ---
 
-## 🍽️ Nutrition API Integration & FatSecret Proxy Infrastructure
+## Billing e Assinatura
 
-### FatSecret Attribution Compliance (Required)
+O modelo atual do produto é de **assinatura mensal recorrente** com:
 
-To stay compliant with the FatSecret Platform API Terms of Use, attribution must be present in 3 places:
+- período de teste gratuito;
+- checkout no Mercado Pago;
+- webhook de reconciliação;
+- cancelamento da renovação pelo próprio usuário;
+- concessões manuais para operação interna.
 
-1. Inside the application where nutrition content is displayed.
-2. In at least one screen accessible without login when authentication is required.
-3. In the Apple App Store and Google Play description with this exact phrase: `Powered by fatsecret nutrition API` ([www.fatsecret.com](https://www.fatsecret.com)).
+### Fluxos já previstos
 
-Current implementation in this repository:
-
-- In-app attribution is rendered in the nutrition flow.
-- A public attribution entry is rendered on the login page.
-- Website attribution is rendered via the same badge/snippet component.
-
-Reference snippet (do not modify if used directly):
-
-```html
-<!-- Begin fatsecret Platform API HTML Attribution Snippet -->
-<a href="https://platform.fatsecret.com">Powered by fatsecret Platform API</a>
-<!-- End fatsecret Platform API HTML Attribution Snippet -->
-```
-
-### Problema Original
-
-O FatSecret API bloqueia requisições baseado em IP whitelist. Como **Vercel usa IPs dinâmicos** (múltiplos data centers, ~5 IPs diferentes), e o FatSecret Policy rejeita IPs não-whitelistados, o app não conseguia fazer lookup de alimentos via API.
-
-**Erro observado:**
-
-```
-[FatSecret] API error: { code: 21, message: "Invalid IP address detected: '3.214.217.15'" }
-```
-
-### Solução Arquitetônica
-
-Implementamos um **FatSecret Proxy Microserviço** rodando em **Oracle Cloud Free Tier VM** (IP fixo: `163.176.57.129`) que:
-
-1. **Gerencia credenciais de forma centralizada** – OAuth 2.0 token + refresh automático
-2. **Fornece um endpoint único e fixo (`/fatsecret/call`)** – Vercel chama o proxy (IP fixo whitelistado) ao invés de chamar FatSecret direto
-3. **Ignora a dinâmica de IP do Vercel** – Proxy é o intermediário com IP estático
-4. **Mantém um cache de tokens** – Reduz latência (token reutilizado por 1h)
-
-```
-┌──────────────────┐
-│  MounTrack App   │
-│  (Vercel, IP    │
-│  dinâmico)       │
-└────────┬─────────┘
-         │
-         │ HTTP POST /fatsecret/call
-         │ (163.176.57.129:8080)
-         ▼
-┌──────────────────────────────┐
-│ FatSecret Proxy              │
-│ (Oracle Cloud VM)            │
-│ IP: 163.176.57.129           │
-│ - OAuth token cache/renewal  │
-│ - Credential isolation       │
-│ - Latency logging            │
-└────────┬─────────────────────┘
-         │
-         │ HTTPS
-         │ (FatSecret whitelistado)
-         ▼
-┌──────────────────┐
-│  FatSecret API   │
-│  (foods.search,  │
-│  food.get, etc)  │
-└──────────────────┘
-```
-
-### Configuração do Proxy
-
-#### 1. Variáveis na Vercel
-
-```env
-FATSECRET_PROXY_BASE_URL=http://163.176.57.129:8080
-FATSECRET_PROXY_SHARED_SECRET=<seu-secret-de-128-chars>
-```
-
-#### 2. Credenciais FatSecret (direto ou via Vercel)
-
-```env
-FATSECRET_CLIENT_ID=<seu-client-id>
-FATSECRET_CLIENT_SECRET=<seu-client-secret>
-# Scope deve ser "premier" para barcode scanning + autocomplete search
-```
-
-#### 3. Whitelist de IP no FatSecret Platform
-
-Acesse [platform.fatsecret.com/my-account/ip-restrictions](https://platform.fatsecret.com/my-account/ip-restrictions) e adicione:
-
-```
-163.176.57.129
-```
-
-#### 4. Deployment do Proxy (Oracle Cloud Free Tier)
-
-O proxy roda em `/home/ubuntu/fatsecret-proxy/` via PM2 com ambiente carregado:
-
-```bash
-# Via PM2 com variáveis de ambiente
-pm2 start /home/ubuntu/fatsecret-proxy/server.mjs \
-  --name fatsecret-proxy \
-  --env PORT=8080 \
-  --env FATSECRET_CLIENT_ID=<seu-id> \
-  --env FATSECRET_CLIENT_SECRET=<seu-secret> \
-  --env FATSECRET_SCOPE=premier \
-  --env PROXY_SHARED_SECRET=<seu-secret>
-
-# Salvar configuração PM2
-pm2 save
-pm2 startup systemd -u ubuntu --hp /home/ubuntu
-```
-
-### Performance & Latency
-
-**Tempo típico por requisição:**
-
-- FatSecret v3 (premium search): **400-600ms**
-- Open Food Facts (fallback): **3-4s** (timeout agressivo)
-- USDA FoodData Central: **1.8s**
-- **Total (paralelo):** ~4s máximo (vs 15s+ sequencial)
-
-**Observado nos logs:**
-
-```
-[FatSecret] Proxy response for foods.search.v3 in 655ms
-[FatSecret] Proxy response for foods.search in 423ms
-[FatSecret] No direct match, searching by barcode number
-[OpenFoodFacts] Barcode lookup: 7896311777204
-```
-
-### Troubleshooting
-
-#### Proxy retorna 500 Error
-
-```
-[FatSecret] Proxy request failed for foods.search.v3: 500
-```
-
-**Solução:**
-
-1. Conecte via SSH: `ssh -i <chave> ubuntu@163.176.57.129`
-2. Verifique logs: `pm2 logs fatsecret-proxy`
-3. Cheque credenciais: `cat ~/fatsecret-proxy/.env`
-4. Restart: `pm2 restart fatsecret-proxy`
-
-#### Health check do proxy
-
-```bash
-# Local (via SSH)
-curl http://127.0.0.1:8080/health
-
-# Esperado:
-{"ok":true,"uptimeSec":123,"tokenCached":true}
-```
-
-#### FatSecret IP still blocked
-
-Se mesmo com proxy configurado ainda vê `code: 21, "Invalid IP address" '3.x.x.x'`, significa:
-
-- App **não está usando proxy** → Verifique `FATSECRET_PROXY_BASE_URL` na Vercel
-- Proxy **está falhando** → Redirecionando para fallback direto (Vercel IP bloqueado)
-
-**Última garantia:** Remova fallback direto no código – se proxy falha, retorne erro (não caia para IP dinâmico):
-
-```typescript
-// src/modules/nutrition/providers/fatsecret.ts
-if (proxyConfig && !proxyResponse?.ok) {
-  console.error(`Proxy failed for ${method}. Not falling back to direct call.`);
-  return null; // Bloqueia fallback perigoso
-}
-```
-
-#### Certificado de Search Premium
-
-Para confirmar que FatSecret está usando scope **premier** (barcode scanning + autocomplete):
-
-- Verifique logs do proxy: `[Proxy] New token in 893ms (scope=premier)`
-- Se disser `scope=basic`, force restart com `--update-env`
+- trial inicial automático;
+- expiração do trial com redirecionamento para assinatura;
+- retorno ao app após pagamento;
+- cancelamento da renovação sem perda imediata do período já pago;
+- painel administrativo de grants em `/billing/grants`.
 
 ---
 
-> _"Great software feels like an invisible extension of the hands, eyes, and process."_  
-> – MounTrack Philosophy
+## Painel de Concessões
+
+O MounTrack já inclui um console administrativo para `owner/admin` com:
+
+- listagem de usuários;
+- busca por e-mail, nome ou UID;
+- concessão manual de gratuidade;
+- edição e revogação de grants;
+- auditoria recente por usuário.
+
+Esse fluxo depende de **Firebase Admin configurado corretamente** no backend.
+
+---
+
+## PWA
+
+O app já possui base de Progressive Web App:
+
+- `manifest.webmanifest`
+- service worker
+- ícones dedicados
+- instalação sugerida em navegadores compatíveis
+- fallback offline básico
+
+Objetivo: reduzir fricção de acesso recorrente e aproximar o uso da experiência de aplicativo.
+
+---
+
+## Deploy em Produção
+
+### Plataforma
+
+- Vercel para frontend e rotas server-side
+- Firebase para autenticação
+- Supabase/Postgres para dados e billing
+- Mercado Pago para assinatura
+
+### Recomendação de publicação
+
+Antes de abrir para usuários finais:
+
+1. validar login e sessão;
+2. validar trial e expiração;
+3. validar assinatura no Mercado Pago;
+4. validar cancelamento;
+5. validar webhook e reconciliação;
+6. validar o painel de grants com conta `owner/admin`.
+
+---
+
+## Integrações e Compliance
+
+### FatSecret
+
+O projeto possui integração nutricional com atribuição obrigatória. Para canais públicos e lojas, a frase exigida pela política é:
+
+`Powered by fatsecret nutrition API`
+
+### Mercado Pago
+
+As credenciais de produção e o secret de webhook devem ser configurados na Vercel antes do uso real da cobrança.
+
+### Firebase Admin
+
+O diretório de usuários, grants e rotas operacionais internas exigem `FIREBASE_SERVICE_ACCOUNT_JSON` ou o trio:
+
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_CLIENT_EMAIL`
+- `FIREBASE_PRIVATE_KEY`
+
+---
+
+## Estado Atual do Projeto
+
+O produto já cobre os principais fluxos operacionais:
+
+- autenticação;
+- dashboard;
+- nutrição;
+- billing recorrente;
+- trial;
+- grants;
+- cancelamento;
+- PWA.
+
+Na prática, o projeto está em estágio de **lançamento controlado**, com base suficiente para demonstração comercial, pilotos e uso interno assistido.
+
+---
+
+## Licença e Uso
+
+Repositório privado de produto. Uso, distribuição e operação sujeitos às regras definidas pela A&R Software Development e pelos provedores integrados.
+
