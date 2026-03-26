@@ -108,19 +108,19 @@ export function formatSearchSourceLabel(
 }
 
 export function getMealFocusForHour(hour: number): MealType {
-  if (hour >= 5 && hour < 11) {
-    return "breakfast";
-  }
-
-  if (hour >= 11 && hour < 15) {
+  if (hour >= 12 && hour < 14) {
     return "lunch";
   }
 
-  if (hour >= 15 && hour < 19) {
+  if (hour >= 14 && hour < 18) {
     return "snack";
   }
 
-  return "dinner";
+  if (hour >= 18 && hour <= 23) {
+    return "dinner";
+  }
+
+  return "breakfast";
 }
 
 export function getDefaultFocusedMeal(now: Date = new Date()): MealType {
