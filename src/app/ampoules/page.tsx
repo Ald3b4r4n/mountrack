@@ -11,6 +11,7 @@ import {
   DEFAULT_DOSES_PER_AMPOULE,
   calculateJourneyDoseStats,
 } from '@/modules/dashboard/utils';
+import { buildAmpouleActivationState } from '@/modules/dashboard/ampoule-activation';
 import {
   closeAmpouleHistoryEntry,
   loadAmpouleHistory,
@@ -71,38 +72,6 @@ function formatAmpouleAgeLabel(daysOpen: number | null) {
   }
 
   return `aberta há ${daysOpen} dias`;
-}
-
-function buildAmpouleActivationState(totalDoseApplications: number, dosesPerAmpoule: number) {
-  const safeDosesPerAmpoule = Math.max(1, Math.round(dosesPerAmpoule || DEFAULT_DOSES_PER_AMPOULE));
-  const safeTotalDoseApplications = Math.max(0, Math.round(totalDoseApplications || 0));
-
-  if (safeTotalDoseApplications === 0) {
-    return {
-      actionLabel: 'Iniciar ampola atual',
-      helperText: 'A ampola atual começa zerada a partir da data escolhida.',
-      completedAmpoulesCount: 0,
-      activeAmpouleStartDoseApplications: 0,
-    };
-  }
-
-  const remainder = safeTotalDoseApplications % safeDosesPerAmpoule;
-
-  if (remainder === 0) {
-    return {
-      actionLabel: 'Iniciar ampola atual',
-      helperText: 'As aplicações anteriores já fecharam ampolas completas. A próxima ampola começa zerada.',
-      completedAmpoulesCount: safeTotalDoseApplications / safeDosesPerAmpoule,
-      activeAmpouleStartDoseApplications: safeTotalDoseApplications,
-    };
-  }
-
-  return {
-    actionLabel: 'Assumir ampola atual',
-    helperText: 'O sistema preserva o progresso já em andamento da ampola atual quando você iniciar o controle manual.',
-    completedAmpoulesCount: Math.floor(safeTotalDoseApplications / safeDosesPerAmpoule),
-    activeAmpouleStartDoseApplications: safeTotalDoseApplications - remainder,
-  };
 }
 
 export default function AmpoulesPage() {
@@ -188,7 +157,14 @@ export default function AmpoulesPage() {
     ],
   );
 
-  const activationState = buildAmpouleActivationState(stats.totalDoseApplications, dosesPerAmpoule);
+  const representedClosedAmpoules = historyEntries.filter((entry) => entry.status === 'closed').length;
+  const trackedCompletedAmpoulesCount = Math.max(completedAmpoulesCount, representedClosedAmpoules);
+  const activationState = buildAmpouleActivationState({
+    totalDoseApplications: stats.totalDoseApplications,
+    dosesPerAmpoule,
+    trackedCompletedAmpoulesCount,
+    hasTrackedHistory: historyEntries.length > 0,
+  });
   const hasActiveAmpoule = Boolean(activeAmpouleOpenedOn && activeAmpouleStartDoseApplications !== null);
   const activeAmpouleOpenedLabel = formatAmpouleDate(activeAmpouleOpenedOn);
   const activeAmpouleOpenDays = getDateOnlyDifferenceInDays(activeAmpouleOpenedOn);
@@ -196,7 +172,6 @@ export default function AmpoulesPage() {
   const currentAmpouleSequence = hasActiveAmpoule ? completedAmpoulesCount + 1 : null;
   const currentAmpouleProgress =
     dosesPerAmpoule > 0 ? Math.min((stats.dosesUsedFromCurrentAmpoule / dosesPerAmpoule) * 100, 100) : 0;
-  const representedClosedAmpoules = historyEntries.filter((entry) => entry.status === 'closed').length;
   const legacyHistoryGap = Math.max(0, completedAmpoulesCount - representedClosedAmpoules);
 
   async function refreshHistory(nextActiveRecordId?: string | null) {
