@@ -11,7 +11,12 @@ import {
   DEFAULT_DOSES_PER_AMPOULE,
   calculateJourneyDoseStats,
 } from '@/modules/dashboard/utils';
-import { buildAmpouleActivationState } from '@/modules/dashboard/ampoule-activation';
+import {
+  buildAmpouleActivationState,
+  requiresSameDayAmpouleDecision,
+  type SameDayAmpouleIntent,
+  shouldStartFreshAmpoule,
+} from '@/modules/dashboard/ampoule-activation';
 import {
   closeAmpouleHistoryEntry,
   loadAmpouleHistory,
@@ -92,6 +97,7 @@ export default function AmpoulesPage() {
   const [editingHistoryId, setEditingHistoryId] = useState<string | null>(null);
   const [editingOpenedOn, setEditingOpenedOn] = useState('');
   const [editingClosedOn, setEditingClosedOn] = useState('');
+  const [sameDayOpeningIntent, setSameDayOpeningIntent] = useState<SameDayAmpouleIntent | null>(null);
 
   useEffect(() => {
     async function loadSettings() {
@@ -133,6 +139,13 @@ export default function AmpoulesPage() {
   const loggedDoseApplications = logSummaries.filter(
     (log) => Boolean(log.dose) || log.type === 'dose',
   ).length;
+  const latestLoggedDoseDate = useMemo(() => {
+    const latestDoseLog = logSummaries.find(
+      (log) => Boolean(log.dose) || log.type === 'dose',
+    );
+
+    return latestDoseLog?.date.split('T')[0] ?? null;
+  }, [logSummaries]);
 
   const stats = useMemo(
     () =>
@@ -159,20 +172,59 @@ export default function AmpoulesPage() {
 
   const representedClosedAmpoules = historyEntries.filter((entry) => entry.status === 'closed').length;
   const trackedCompletedAmpoulesCount = Math.max(completedAmpoulesCount, representedClosedAmpoules);
+  const hasExplicitAmpouleTracking = historyEntries.length > 0 || trackedCompletedAmpoulesCount > 0;
+  const hasActiveAmpoule = Boolean(activeAmpouleOpenedOn && activeAmpouleStartDoseApplications !== null);
+  const sameDayAmpouleDecisionRequired = requiresSameDayAmpouleDecision({
+    requestedOpenedOn: ampouleOpenedOnInput,
+    latestDoseApplicationDate: latestLoggedDoseDate,
+  });
+  const shouldShowSameDayAmpouleChoice =
+    sameDayAmpouleDecisionRequired && (hasActiveAmpoule || !hasExplicitAmpouleTracking);
   const activationState = buildAmpouleActivationState({
     totalDoseApplications: stats.totalDoseApplications,
     dosesPerAmpoule,
     trackedCompletedAmpoulesCount,
     hasTrackedHistory: historyEntries.length > 0,
+    requestedOpenedOn: ampouleOpenedOnInput,
+    latestDoseApplicationDate: latestLoggedDoseDate,
+    sameDayIntent: sameDayOpeningIntent,
   });
-  const hasActiveAmpoule = Boolean(activeAmpouleOpenedOn && activeAmpouleStartDoseApplications !== null);
   const activeAmpouleOpenedLabel = formatAmpouleDate(activeAmpouleOpenedOn);
   const activeAmpouleOpenDays = getDateOnlyDifferenceInDays(activeAmpouleOpenedOn);
   const activeAmpouleAgeLabel = formatAmpouleAgeLabel(activeAmpouleOpenDays);
-  const currentAmpouleSequence = hasActiveAmpoule ? completedAmpoulesCount + 1 : null;
+  const currentAmpouleSequence = hasActiveAmpoule ? trackedCompletedAmpoulesCount + 1 : null;
+  const effectiveAmpoulesUsed = hasActiveAmpoule
+    ? trackedCompletedAmpoulesCount + 1
+    : Math.max(stats.ampoulesUsed, trackedCompletedAmpoulesCount);
   const currentAmpouleProgress =
     dosesPerAmpoule > 0 ? Math.min((stats.dosesUsedFromCurrentAmpoule / dosesPerAmpoule) * 100, 100) : 0;
-  const legacyHistoryGap = Math.max(0, completedAmpoulesCount - representedClosedAmpoules);
+  const legacyHistoryGap = Math.max(0, trackedCompletedAmpoulesCount - representedClosedAmpoules);
+
+  useEffect(() => {
+    if (!shouldShowSameDayAmpouleChoice) {
+      setSameDayOpeningIntent(null);
+      return;
+    }
+
+    setSameDayOpeningIntent((currentValue) => {
+      if (currentValue) {
+        return currentValue;
+      }
+
+      if (hasActiveAmpoule) {
+        return activeAmpouleStartDoseApplications === stats.totalDoseApplications
+          ? 'new-ampoule'
+          : 'existing-ampoule';
+      }
+
+      return 'existing-ampoule';
+    });
+  }, [
+    activeAmpouleStartDoseApplications,
+    hasActiveAmpoule,
+    shouldShowSameDayAmpouleChoice,
+    stats.totalDoseApplications,
+  ]);
 
   async function refreshHistory(nextActiveRecordId?: string | null) {
     if (!user) return;
@@ -209,6 +261,18 @@ export default function AmpoulesPage() {
       0,
       Math.round(previousDoseApplications || 0),
     );
+    const shouldResetActiveAmpouleProgress =
+      hasActiveAmpoule &&
+      shouldStartFreshAmpoule({
+        requestedOpenedOn: ampouleOpenedOnInput,
+        latestDoseApplicationDate: latestLoggedDoseDate,
+        sameDayIntent: sameDayOpeningIntent,
+      });
+    const nextActiveAmpouleStartDoseApplications = hasActiveAmpoule
+      ? shouldResetActiveAmpouleProgress
+        ? stats.totalDoseApplications
+        : activeAmpouleStartDoseApplications
+      : null;
 
     setSaving(true);
     setFeedback(null);
@@ -217,9 +281,9 @@ export default function AmpoulesPage() {
         dosesPerAmpoule: normalizedDosesPerAmpoule,
         previousDoseApplications: normalizedPreviousDoseApplications,
         activeAmpouleOpenedOn: hasActiveAmpoule ? ampouleOpenedOnInput : null,
-        activeAmpouleStartDoseApplications,
+        activeAmpouleStartDoseApplications: nextActiveAmpouleStartDoseApplications,
         activeAmpouleRecordId,
-        completedAmpoulesCount,
+        completedAmpoulesCount: trackedCompletedAmpoulesCount,
       });
 
       setDosesPerAmpoule(savedSettings.dosesPerAmpoule);
@@ -294,7 +358,7 @@ export default function AmpoulesPage() {
         activeAmpouleOpenedOn: null,
         activeAmpouleStartDoseApplications: null,
         activeAmpouleRecordId: null,
-        completedAmpoulesCount: stats.ampoulesUsed,
+        completedAmpoulesCount: trackedCompletedAmpoulesCount + 1,
       });
 
       setDosesPerAmpoule(savedSettings.dosesPerAmpoule);
@@ -473,6 +537,39 @@ export default function AmpoulesPage() {
                 />
               </label>
 
+              {shouldShowSameDayAmpouleChoice ? (
+                <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(8, 14, 26, 0.55)' }}>
+                  <p className="stat-label" style={{ marginBottom: '0.45rem' }}>Abertura no mesmo dia da ultima dose</p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', lineHeight: 1.55 }}>
+                    Escolha se a aplicacao de hoje ainda pertence a ampola anterior ou se a nova ampola comecou depois dela.
+                  </p>
+                  <div style={{ display: 'grid', gap: '0.75rem', marginTop: '0.85rem' }}>
+                    <label style={{ display: 'flex', gap: '0.65rem', alignItems: 'flex-start', color: 'var(--text-primary)' }}>
+                      <input
+                        type="radio"
+                        name="same-day-ampoule-intent"
+                        value="new-ampoule"
+                        checked={sameDayOpeningIntent === 'new-ampoule'}
+                        onChange={() => setSameDayOpeningIntent('new-ampoule')}
+                        disabled={loading || saving}
+                      />
+                      <span>A dose de hoje ja pertence a nova ampola.</span>
+                    </label>
+                    <label style={{ display: 'flex', gap: '0.65rem', alignItems: 'flex-start', color: 'var(--text-primary)' }}>
+                      <input
+                        type="radio"
+                        name="same-day-ampoule-intent"
+                        value="existing-ampoule"
+                        checked={sameDayOpeningIntent === 'existing-ampoule'}
+                        onChange={() => setSameDayOpeningIntent('existing-ampoule')}
+                        disabled={loading || saving}
+                      />
+                      <span>A dose de hoje ainda conta para a ampola em andamento.</span>
+                    </label>
+                  </div>
+                </div>
+              ) : null}
+
               <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(8, 14, 26, 0.55)' }}>
                 <p className="stat-label" style={{ marginBottom: '0.45rem' }}>Status da ampola</p>
                 <strong style={{ display: 'block', fontSize: '1rem', color: 'var(--text-primary)' }}>
@@ -544,9 +641,9 @@ export default function AmpoulesPage() {
               <div style={{ display: 'grid', gap: '0.85rem' }}>
                 <div>
                   <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>Ampolas contabilizadas</span>
-                  <strong style={{ fontSize: '1.7rem', color: 'var(--text-primary)' }}>{stats.ampoulesUsed}</strong>
+                  <strong style={{ fontSize: '1.7rem', color: 'var(--text-primary)' }}>{effectiveAmpoulesUsed}</strong>
                   <p style={{ marginTop: '0.35rem', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
-                    {completedAmpoulesCount} fechada(s){hasActiveAmpoule && currentAmpouleSequence ? ` + ampola #${currentAmpouleSequence} ativa` : ''}.
+                    {trackedCompletedAmpoulesCount} fechada(s){hasActiveAmpoule && currentAmpouleSequence ? ` + ampola #${currentAmpouleSequence} ativa` : ''}.
                   </p>
                 </div>
                 <div>
@@ -596,6 +693,8 @@ export default function AmpoulesPage() {
                   {historyEntries.map((entry) => {
                     const isActiveEntry = entry.status === 'active' && entry.id === activeAmpouleRecordId;
                     const isEditingEntry = editingHistoryId === entry.id;
+                    const displaySequenceNumber =
+                      isActiveEntry && currentAmpouleSequence ? currentAmpouleSequence : entry.sequenceNumber;
                     const isLatestClosedEntry =
                       entry.status === 'closed' && historyEntries[0]?.id === entry.id;
                     const usedLabel = isActiveEntry
@@ -612,7 +711,7 @@ export default function AmpoulesPage() {
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
                           <strong style={{ color: 'var(--text-primary)', fontSize: '0.96rem' }}>
-                            Ampola #{entry.sequenceNumber}
+                            Ampola #{displaySequenceNumber}
                           </strong>
                           <span className={entry.status === 'active' ? 'badge badge-success' : 'badge badge-warning'}>
                             {entry.status === 'active' ? 'Ativa' : 'Fechada'}

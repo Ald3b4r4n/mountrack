@@ -71,5 +71,25 @@ describe("SubscriptionPage", () => {
     expect(
       screen.getByRole("link", { name: "Ver plano e pagamento" }),
     ).toHaveAttribute("href", "/subscribe?entry=checkout");
+    expect(
+      screen.getByRole("link", {
+        name: "Email: rafasouzacruz@gmail.com",
+      }),
+    ).toHaveAttribute("href", "mailto:rafasouzacruz@gmail.com");
+    expect(
+      screen.getByRole("link", {
+        name: "Telefone: (61) 98288-7294",
+      }),
+    ).toHaveAttribute("href", "tel:+5561982887294");
+    expect(
+      screen.getByRole("link", {
+        name: "WhatsApp: (61) 98288-7294",
+      }),
+    ).toHaveAttribute("href", "https://wa.me/5561982887294");
+    expect(
+      screen.getByRole("link", {
+        name: "Site: antoniorafael.com.br",
+      }),
+    ).toHaveAttribute("href", "https://antoniorafael.com.br");
   });
 });

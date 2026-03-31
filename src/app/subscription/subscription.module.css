@@ -144,6 +144,20 @@
   text-decoration: underline;
 }
 
+.supportContacts {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.supportContactsTitle {
+  color: var(--text-primary);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 @media (max-width: 900px) {
   .hero,
   .detailsGrid {

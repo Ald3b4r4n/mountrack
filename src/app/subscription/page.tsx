@@ -8,6 +8,15 @@ import {
 import { requireServerAppAccess } from "@/modules/billing/auth/server-access";
 import styles from "./subscription.module.css";
 
+const USER_SUPPORT_CONTACT = {
+  email: "rafasouzacruz@gmail.com",
+  phoneDisplay: "(61) 98288-7294",
+  phoneHref: "tel:+5561982887294",
+  whatsappHref: "https://wa.me/5561982887294",
+  websiteHref: "https://antoniorafael.com.br",
+  websiteLabel: "antoniorafael.com.br",
+} as const;
+
 function formatDate(value: string | null): string | null {
   if (!value) {
     return null;
@@ -142,6 +151,29 @@ export default async function SubscriptionPage() {
               <Link href={buildSubscribePath("checkout")}> o plano</Link> e
               siga para o ambiente do Mercado Pago.
             </p>
+            <div className={styles.supportContacts}>
+              <span className={styles.supportContactsTitle}>Suporte ao usuario</span>
+              <a href={`mailto:${USER_SUPPORT_CONTACT.email}`}>
+                Email: {USER_SUPPORT_CONTACT.email}
+              </a>
+              <a href={USER_SUPPORT_CONTACT.phoneHref}>
+                Telefone: {USER_SUPPORT_CONTACT.phoneDisplay}
+              </a>
+              <a
+                href={USER_SUPPORT_CONTACT.whatsappHref}
+                target="_blank"
+                rel="noreferrer"
+              >
+                WhatsApp: {USER_SUPPORT_CONTACT.phoneDisplay}
+              </a>
+              <a
+                href={USER_SUPPORT_CONTACT.websiteHref}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Site: {USER_SUPPORT_CONTACT.websiteLabel}
+              </a>
+            </div>
           </div>
         </article>
       </section>
