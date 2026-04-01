@@ -1,6 +1,7 @@
 import {
   clearNutritionMealPlanFromBrowser,
   removeNutritionDiaryItemFromBrowser,
+  replaceNutritionDiaryItemInBrowser,
   saveNutritionDiaryItemToBrowser,
   saveNutritionGoalToBrowser,
   saveNutritionMealPlanToBrowser,
@@ -48,6 +49,7 @@ interface NutritionScreenActionsDeps {
   canUseBrowserPersistence: boolean;
   historyPage: number;
   summary: DailySummary;
+  diaryItems: ReturnType<typeof createDiaryItemSnapshot>[];
   goal: NutritionGoal;
   goalInputs: GoalInputState;
   goalObjectiveDraft: NutritionObjective;
@@ -98,6 +100,7 @@ export function useNutritionScreenActions({
   canUseBrowserPersistence,
   historyPage,
   summary,
+  diaryItems,
   goal,
   goalInputs,
   goalObjectiveDraft,
@@ -140,6 +143,30 @@ export function useNutritionScreenActions({
   loadHistory,
   resolveRequestError,
 }: NutritionScreenActionsDeps) {
+  function scaleDiaryItemSnapshotQuantity(
+    currentItem: ReturnType<typeof createDiaryItemSnapshot>,
+    nextQuantity: number,
+    nextMealType: MealType,
+    nextMealLabel: string,
+  ) {
+    const currentQuantity = currentItem.quantity > 0 ? currentItem.quantity : 1;
+    const ratio = nextQuantity / currentQuantity;
+    const scaleValue = (value: number) => Number((value * ratio).toFixed(2));
+
+    return {
+      ...currentItem,
+      quantity: nextQuantity,
+      mealType: nextMealType,
+      mealLabel: nextMealLabel,
+      calories: scaleValue(currentItem.calories),
+      protein: scaleValue(currentItem.protein),
+      carbs: scaleValue(currentItem.carbs),
+      fat: scaleValue(currentItem.fat),
+      fiber: scaleValue(currentItem.fiber),
+      sodium: scaleValue(currentItem.sodium),
+    };
+  }
+
   function resolveGoalFromInputs(): NutritionGoal | null {
     const targetCalories = parseNonNegativeInputNumber(goalInputs.targetCalories);
     const targetWaterMl = parseNonNegativeInputNumber(goalInputs.targetWaterMl);
@@ -266,6 +293,75 @@ export function useNutritionScreenActions({
       await Promise.all([loadDashboard(), loadHistory(historyPage)]);
     } catch {
       setMessage((current) => current ?? "Não foi possível remover esse item do diário.");
+    }
+  }
+
+  async function handleUpdateDiaryItem({
+    itemId,
+    quantity: nextQuantity,
+    mealType: nextMealType,
+  }: {
+    itemId: string;
+    quantity: number;
+    mealType: MealType;
+  }) {
+    if (!activeUser) return;
+
+    const currentItem = diaryItems.find((item) => item.id === itemId);
+    if (!currentItem) {
+      setMessage("Nao foi possivel localizar esse item do diario.");
+      return;
+    }
+
+    const nextMealDefinition = getActiveMealDefinition(nextMealType);
+
+    try {
+      if (storageMode === "volatile" && canUseBrowserPersistence) {
+        replaceNutritionDiaryItemInBrowser(
+          activeUser.uid,
+          itemId,
+          scaleDiaryItemSnapshotQuantity(
+            currentItem,
+            nextQuantity,
+            nextMealType,
+            nextMealDefinition.label,
+          ),
+        );
+        const browserDashboard = loadBrowserDashboard();
+        const browserHistory = loadBrowserHistory(historyPage);
+        if (browserDashboard) hydrateDashboard(browserDashboard);
+        if (browserHistory) hydrateHistory(browserHistory);
+        setActiveDiaryMeal(nextMealType);
+        setMessage("Item da refeicao atualizado.");
+        return;
+      }
+
+      const response = await authorizedNutritionFetch(
+        activeUser,
+        `/api/nutrition/diary-items/${itemId}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            date: today,
+            foodId: currentItem.foodId,
+            quantity: nextQuantity,
+            unit: currentItem.unit,
+            mealType: nextMealType,
+            mealLabel: nextMealDefinition.label,
+            consumedAt: currentItem.consumedAt,
+          }),
+        },
+      );
+      if (!response.ok) {
+        await resolveRequestError(response, "Nao foi possivel atualizar esse item do diario.");
+        return;
+      }
+
+      setActiveDiaryMeal(nextMealType);
+      setMessage("Item da refeicao atualizado.");
+      await Promise.all([loadDashboard(), loadHistory(historyPage)]);
+    } catch {
+      setMessage((current) => current ?? "Nao foi possivel atualizar esse item do diario.");
     }
   }
 
@@ -619,6 +715,7 @@ export function useNutritionScreenActions({
 
   return {
     handleAddDiaryItem,
+    handleUpdateDiaryItem,
     handleDeleteDiaryItem,
     handleSaveGoal,
     handleSaveWater,

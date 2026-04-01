@@ -276,6 +276,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
 
   const {
     handleAddDiaryItem,
+    handleUpdateDiaryItem,
     handleDeleteDiaryItem,
     handleSaveGoal,
     handleSaveCustomWater,
@@ -291,6 +292,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     canUseBrowserPersistence,
     historyPage,
     summary,
+    diaryItems,
     goal,
     goalInputs,
     goalObjectiveDraft,
@@ -691,6 +693,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     diaryTotalPages,
     isLoading,
     pagedDiaryItems,
+    onUpdateDiaryItem: handleUpdateDiaryItem,
     onDeleteDiaryItem: handleDeleteDiaryItem,
     isHistoryLoading,
     historyEntries,

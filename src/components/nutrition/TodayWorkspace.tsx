@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Plus, Settings2 } from "lucide-react";
+import { MealHistoryDialog } from "@/components/nutrition/MealHistoryDialog";
 import type {
   DiaryItemSnapshot,
   MealDefinition,
@@ -22,6 +23,12 @@ interface TodayWorkspaceProps {
   mealsSectionRef?: React.Ref<HTMLElement>;
   onOpenMeal: (meal: MealType) => void;
   onOpenSearchForMeal: (meal: MealType) => void;
+  onUpdateDiaryItem?: (input: {
+    itemId: string;
+    quantity: number;
+    mealType: MealType;
+  }) => Promise<void> | void;
+  onDeleteDiaryItem?: (itemId: string) => Promise<void> | void;
   onManageMeal?: (meal: MealDefinition) => void;
   onAddMeal: () => void;
   children: ReactNode;
@@ -168,10 +175,26 @@ export function TodayWorkspace({
   mealsSectionRef,
   onOpenMeal,
   onOpenSearchForMeal,
+  onUpdateDiaryItem,
+  onDeleteDiaryItem,
   onManageMeal,
   onAddMeal,
   children,
 }: TodayWorkspaceProps) {
+  const [inspectedMealKey, setInspectedMealKey] = useState<MealType | null>(null);
+  const inspectedMealDefinition = useMemo(
+    () =>
+      inspectedMealKey
+        ? mealDefinitions.find((meal) => meal.key === inspectedMealKey) ?? null
+        : null,
+    [inspectedMealKey, mealDefinitions],
+  );
+  const inspectedMealItems = inspectedMealKey
+    ? groupedDiaryItems[inspectedMealKey] ?? []
+    : [];
+  const inspectedMealCalories =
+    inspectedMealKey != null ? mealSummary[inspectedMealKey] ?? 0 : 0;
+
   if (isMobileLayout) {
     return <section className="grid gap-4">{children}</section>;
   }
@@ -200,7 +223,10 @@ export function TodayWorkspace({
                 label={meal.label}
                 calories={mealSummary[meal.key] ?? 0}
                 count={groupedDiaryItems[meal.key]?.length ?? 0}
-                onSelect={() => onOpenMeal(meal.key)}
+                onSelect={() => {
+                  onOpenMeal(meal.key);
+                  setInspectedMealKey(meal.key);
+                }}
                 onAdd={() => onOpenSearchForMeal(meal.key)}
                 onManage={
                   meal.isDefault === false
@@ -222,7 +248,10 @@ export function TodayWorkspace({
                 label={meal.label}
                 calories={mealSummary[meal.key] ?? 0}
                 count={groupedDiaryItems[meal.key]?.length ?? 0}
-                onSelect={() => onOpenMeal(meal.key)}
+                onSelect={() => {
+                  onOpenMeal(meal.key);
+                  setInspectedMealKey(meal.key);
+                }}
                 onAdd={() => onOpenSearchForMeal(meal.key)}
                 onManage={
                   meal.isDefault === false
@@ -237,6 +266,18 @@ export function TodayWorkspace({
       </CollapsibleSection>
 
       {children}
+
+      <MealHistoryDialog
+        open={Boolean(inspectedMealDefinition)}
+        meal={inspectedMealDefinition}
+        calories={inspectedMealCalories}
+        items={inspectedMealItems}
+        mealDefinitions={mealDefinitions}
+        onClose={() => setInspectedMealKey(null)}
+        onOpenSearchForMeal={onOpenSearchForMeal}
+        onUpdateDiaryItem={onUpdateDiaryItem}
+        onDeleteDiaryItem={onDeleteDiaryItem}
+      />
     </section>
   );
 }

@@ -38,6 +38,11 @@ interface NutritionTodayWorkspaceSectionProps {
   diaryTotalPages: number;
   isLoading: boolean;
   pagedDiaryItems: DiaryItemSnapshot[];
+  onUpdateDiaryItem: (input: {
+    itemId: string;
+    quantity: number;
+    mealType: MealType;
+  }) => Promise<void> | void;
   onDeleteDiaryItem: (id: string) => void;
   isHistoryLoading: boolean;
   historyEntries: DiaryHistoryEntry[];
@@ -77,6 +82,7 @@ export function NutritionTodayWorkspaceSection({
   diaryTotalPages,
   isLoading,
   pagedDiaryItems,
+  onUpdateDiaryItem,
   onDeleteDiaryItem,
   isHistoryLoading,
   historyEntries,
@@ -108,6 +114,8 @@ export function NutritionTodayWorkspaceSection({
       mealsSectionRef={isMobileLayout ? mealsSectionRef : undefined}
       onOpenMeal={onOpenMeal}
       onOpenSearchForMeal={onOpenSearchForMeal}
+      onUpdateDiaryItem={onUpdateDiaryItem}
+      onDeleteDiaryItem={onDeleteDiaryItem}
       onManageMeal={onManageMeal}
       onAddMeal={onAddMeal}
     >

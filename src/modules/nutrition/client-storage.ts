@@ -320,6 +320,38 @@ export function removeNutritionDiaryItemFromBrowser(userId: string, itemId: stri
   writeRawState(userId, state);
 }
 
+export function replaceNutritionDiaryItemInBrowser(
+  userId: string,
+  itemId: string,
+  nextItem: DiaryItemSnapshot,
+): void {
+  const state = readRawState(userId);
+
+  for (const diary of Object.values(ensureDiaries(state))) {
+    const targetIndex = diary.items.findIndex((item) => item.id === itemId);
+    if (targetIndex === -1) {
+      continue;
+    }
+
+    if (!diary.mealDefinitions.some((definition) => definition.key === nextItem.mealType)) {
+      diary.mealDefinitions = [
+        ...diary.mealDefinitions,
+        {
+          key: nextItem.mealType,
+          label: getMealLabel(nextItem.mealType, nextItem.mealLabel),
+        },
+      ];
+    }
+
+    const nextItems = [...diary.items];
+    nextItems[targetIndex] = nextItem;
+    diary.items = sortDiaryItems(nextItems);
+    break;
+  }
+
+  writeRawState(userId, state);
+}
+
 export function saveNutritionMealPlanToBrowser(userId: string, mealPlan: MealPlan): void {
   const state = readRawState(userId);
   state.mealPlan = mealPlan;

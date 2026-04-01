@@ -191,6 +191,7 @@ describe("NutritionScreen", () => {
     } as unknown as ReturnType<typeof useHydration>);
     mockedUseNutritionScreenActions.mockReturnValue({
       handleAddDiaryItem: jest.fn(async () => {}),
+      handleUpdateDiaryItem: jest.fn(async () => {}),
       handleDeleteDiaryItem: jest.fn(async () => {}),
       handleSaveGoal: jest.fn(async () => {}),
       handleSaveWater: jest.fn(async () => {}),

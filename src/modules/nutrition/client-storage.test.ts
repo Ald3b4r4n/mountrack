@@ -5,6 +5,7 @@ import {
   loadNutritionDashboardFromBrowser,
   loadNutritionFocusedMealFromBrowser,
   loadNutritionHistoryFromBrowser,
+  replaceNutritionDiaryItemInBrowser,
   saveNutritionDiaryItemToBrowser,
   saveNutritionFocusedMealToBrowser,
   saveNutritionGoalToBrowser,
@@ -107,6 +108,40 @@ describe("nutrition client storage", () => {
     clearNutritionMealPlanFromBrowser(userId);
 
     expect(loadNutritionDashboardFromBrowser(userId, date, defaultGoal).mealPlan).toBeNull();
+  });
+
+  it("replaces an existing diary item in browser storage", () => {
+    const item = createDiaryItemSnapshot({
+      diaryId: `${userId}:${date}`,
+      food: wheyFood,
+      quantity: 1,
+      unit: "serving",
+      mealType: "breakfast",
+      consumedAt: "2026-03-07T08:30:00.000Z",
+    });
+
+    saveNutritionDiaryItemToBrowser(userId, date, defaultGoal, item);
+
+    replaceNutritionDiaryItemInBrowser(userId, item.id, {
+      ...item,
+      quantity: 2,
+      mealType: "lunch",
+      mealLabel: "Almoço",
+      calories: Number((item.calories * 2).toFixed(2)),
+      protein: Number((item.protein * 2).toFixed(2)),
+      carbs: Number((item.carbs * 2).toFixed(2)),
+      fat: Number((item.fat * 2).toFixed(2)),
+      fiber: Number((item.fiber * 2).toFixed(2)),
+      sodium: Number((item.sodium * 2).toFixed(2)),
+    });
+
+    const dashboard = loadNutritionDashboardFromBrowser(userId, date, defaultGoal);
+
+    expect(dashboard.diary.items).toHaveLength(1);
+    expect(dashboard.diary.items[0]?.quantity).toBe(2);
+    expect(dashboard.diary.items[0]?.mealType).toBe("lunch");
+    expect(dashboard.summary.meals.lunch).toBeGreaterThan(0);
+    expect(dashboard.summary.meals.breakfast).toBe(0);
   });
 
   it("excludes the current day from browser history snapshots", () => {
