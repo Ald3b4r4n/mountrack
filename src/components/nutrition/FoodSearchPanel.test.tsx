@@ -311,28 +311,24 @@ describe("FoodSearchPanel", () => {
   });
 
   it("renders the mobile composer as a full dialog for the selected food", () => {
-    const { container } = render(<OpenComposerPanel />);
+    render(<OpenComposerPanel />);
 
-    expect(screen.getByRole("dialog", { name: /Registrar no diário/i })).toBeInTheDocument();
-    expect(screen.getByText(/Barra de Proteína - Sabor Trufa/i)).toBeInTheDocument();
-    expect(screen.getByText(/Refeição Café da manhã/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Adicionar ao diário em Café da manhã/i })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /Barra de Proteína/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/Barra de Proteína - Sabor Trufa/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole("button", { name: /Salvar/i })).toBeInTheDocument();
     expect(screen.queryByText(/Pronto para registrar/i)).not.toBeInTheDocument();
-    expect(within(container).queryByRole("dialog", { name: /Registrar no diário/i })).not.toBeInTheDocument();
   });
 
   it("keeps the selected item as a ready card until the user opens the composer", async () => {
     const user = userEvent.setup();
     render(<ClosedComposerPanel />);
 
-    expect(screen.queryByRole("dialog", { name: /Registrar no diário/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/Refeição de destino/i)).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: /Barra de Proteína/i })).not.toBeInTheDocument();
     expect(screen.getByText(/Pronto para registrar/i)).toBeInTheDocument();
-    expect(screen.getByText(/confirmar café da manhã/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Registrar em Café da manhã/i }));
 
-    expect(screen.getByRole("dialog", { name: /Registrar no diário/i })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /Barra de Proteína/i })).toBeInTheDocument();
   });
 
   it("falls back to the ready card after closing the mobile composer", async () => {
@@ -342,7 +338,7 @@ describe("FoodSearchPanel", () => {
     await user.click(screen.getByRole("button", { name: /^Voltar$/i }));
 
     await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: /Registrar no diário/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog", { name: /Barra de Proteína/i })).not.toBeInTheDocument();
     });
 
     expect(screen.getByText(/Pronto para registrar/i)).toBeInTheDocument();
@@ -354,7 +350,7 @@ describe("FoodSearchPanel", () => {
     const onAddDiaryItem = jest.fn();
     render(<OpenComposerPanel onAddDiaryItem={onAddDiaryItem} />);
 
-    await user.click(screen.getByRole("button", { name: /Adicionar ao diário/i }));
+    await user.click(screen.getByRole("button", { name: /^Salvar$/i }));
 
     expect(onAddDiaryItem).toHaveBeenCalledTimes(1);
   });
@@ -372,10 +368,10 @@ describe("FoodSearchPanel", () => {
       expect(scrollArea.scrollTop).toBe(0);
     });
 
-    expect(screen.getByText(/Pão de Forma Artesano Integral - Pullman/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Pão de Forma Artesano Integral - Pullman/i).length).toBeGreaterThanOrEqual(1);
   });
 
-  it("keeps mobile result selection in the ready card flow until the user confirms registration", async () => {
+  it("opens the composer directly when a food is selected on mobile", async () => {
     const user = userEvent.setup();
     const onApplyFoodSelection = jest.fn();
     render(<SearchResultSelectionPanel onApplyFoodSelection={onApplyFoodSelection} />);
@@ -383,15 +379,10 @@ describe("FoodSearchPanel", () => {
     await user.click(screen.getByRole("button", { name: /Barra de Proteína - Sabor Trufa/i }));
 
     expect(onApplyFoodSelection).toHaveBeenCalledWith(selectedFood, {
-      openComposer: false,
+      openComposer: true,
       hideResults: true,
     });
-    expect(screen.queryByRole("dialog", { name: /Registrar no diário/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/Pronto para registrar/i)).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: /Registrar em Café da manhã/i }));
-
-    expect(screen.getByRole("dialog", { name: /Registrar no diário/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Pronto para registrar/i)).not.toBeInTheDocument();
   });
 
   it("clears the mobile selection when the user chooses to swap foods", async () => {
@@ -400,14 +391,13 @@ describe("FoodSearchPanel", () => {
     render(<SearchResultSelectionPanel onSwapFoodSelection={onSwapFoodSelection} />);
 
     await user.click(screen.getByRole("button", { name: /Barra de Proteína - Sabor Trufa/i }));
-    expect(screen.getByText(/Pronto para registrar/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Trocar alimento/i }));
+    // Composer opens directly on mobile now - find swap via dialog
+    const swapButton = screen.getByRole("button", { name: /Trocar/i });
+    await user.click(swapButton);
 
     expect(onSwapFoodSelection).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText(/Pronto para registrar/i)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Barra de Proteína - Sabor Trufa/i })).toBeInTheDocument();
-    expect(screen.queryByRole("dialog", { name: /Registrar no diário/i })).not.toBeInTheDocument();
   });
 
   it("keeps desktop result selection opening the composer directly", async () => {

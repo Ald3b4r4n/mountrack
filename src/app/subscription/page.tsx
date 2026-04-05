@@ -6,16 +6,8 @@ import {
   type BillingAccessPayload,
 } from "@/components/billing/BillingSubscriptionPanel";
 import { requireServerAppAccess } from "@/modules/billing/auth/server-access";
+import { USER_SUPPORT_CONTACT } from "@/modules/support-contact";
 import styles from "./subscription.module.css";
-
-const USER_SUPPORT_CONTACT = {
-  email: "rafasouzacruz@gmail.com",
-  phoneDisplay: "(61) 98288-7294",
-  phoneHref: "tel:+5561982887294",
-  whatsappHref: "https://wa.me/5561982887294",
-  websiteHref: "https://antoniorafael.com.br",
-  websiteLabel: "antoniorafael.com.br",
-} as const;
 
 function formatDate(value: string | null): string | null {
   if (!value) {

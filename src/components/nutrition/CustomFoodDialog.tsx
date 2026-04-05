@@ -13,6 +13,7 @@ interface CustomFoodDialogProps {
   open: boolean;
   onClose: () => void;
   onCreated: (food: FoodItem) => void;
+  editingFood?: FoodItem | null;
 }
 
 export function CustomFoodDialog({
@@ -20,7 +21,9 @@ export function CustomFoodDialog({
   open,
   onClose,
   onCreated,
+  editingFood,
 }: CustomFoodDialogProps) {
+  const isEditing = Boolean(editingFood);
   const titleId = useId();
   const descriptionId = useId();
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -47,15 +50,27 @@ export function CustomFoodDialog({
       return;
     }
 
-    setName("");
-    setBrand("");
-    setCalories("");
-    setProtein("");
-    setCarbs("");
-    setFat("");
-    setServing("100");
+    if (editingFood) {
+      const base = editingFood.servingGrams ?? 100;
+      const toServing = base / 100;
+      setName(editingFood.displayName ?? editingFood.name);
+      setBrand(editingFood.brand ?? "");
+      setCalories(editingFood.caloriesPer100 ? String(Number((editingFood.caloriesPer100 * toServing).toFixed(2))) : "");
+      setProtein(editingFood.proteinPer100 ? String(Number((editingFood.proteinPer100 * toServing).toFixed(2))) : "");
+      setCarbs(editingFood.carbsPer100 ? String(Number((editingFood.carbsPer100 * toServing).toFixed(2))) : "");
+      setFat(editingFood.fatPer100 ? String(Number((editingFood.fatPer100 * toServing).toFixed(2))) : "");
+      setServing(editingFood.servingGrams ? String(editingFood.servingGrams) : "100");
+    } else {
+      setName("");
+      setBrand("");
+      setCalories("");
+      setProtein("");
+      setCarbs("");
+      setFat("");
+      setServing("100");
+    }
     setError(null);
-  }, [open]);
+  }, [open, editingFood]);
 
   useEffect(() => {
     if (!open || !mounted) {
@@ -114,8 +129,13 @@ export function CustomFoodDialog({
         servingGrams: Number(serving.replace(",", ".")) || undefined,
       };
 
-      const response = await authorizedNutritionFetch(authUser, "/api/nutrition/foods/custom", {
-        method: "POST",
+      const url = editingFood
+        ? `/api/nutrition/foods/custom/${encodeURIComponent(editingFood.id)}`
+        : "/api/nutrition/foods/custom";
+      const method = editingFood ? "PUT" : "POST";
+
+      const response = await authorizedNutritionFetch(authUser, url, {
+        method,
         body: JSON.stringify(payload),
       });
 
@@ -187,10 +207,12 @@ export function CustomFoodDialog({
       >
         <div className="mb-4">
           <h3 id={titleId} style={{ fontSize: "1.1rem", fontWeight: 600 }}>
-            Criar alimento manual
+            {isEditing ? "Editar alimento" : "Criar alimento manual"}
           </h3>
           <p id={descriptionId} style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-            Salve um alimento próprio para reencontrar depois na busca e registrar no diário com mais rapidez.
+            {isEditing
+              ? "Atualize os dados nutricionais do alimento que você criou."
+              : "Salve um alimento próprio para reencontrar depois na busca e registrar no diário com mais rapidez."}
           </p>
         </div>
 
@@ -250,7 +272,7 @@ export function CustomFoodDialog({
                   marginBottom: "0.25rem",
                 }}
               >
-                Calorias (kcal)
+                Calorias na porção (kcal)
               </span>
               <input
                 inputMode="decimal"
@@ -292,7 +314,7 @@ export function CustomFoodDialog({
                   marginBottom: "0.25rem",
                 }}
               >
-                Carboidratos (g)
+                Carboidratos na porção (g)
               </span>
               <input
                 inputMode="decimal"
@@ -313,7 +335,7 @@ export function CustomFoodDialog({
                   marginBottom: "0.25rem",
                 }}
               >
-                Proteínas (g)
+                Proteínas na porção (g)
               </span>
               <input
                 inputMode="decimal"
@@ -334,7 +356,7 @@ export function CustomFoodDialog({
                   marginBottom: "0.25rem",
                 }}
               >
-                Gorduras (g)
+                Gorduras na porção (g)
               </span>
               <input
                 inputMode="decimal"
@@ -353,7 +375,7 @@ export function CustomFoodDialog({
             Cancelar
           </button>
           <button onClick={() => void handleSave()} className="btn-primary" disabled={isSaving}>
-            {isSaving ? "Salvando..." : "Criar alimento"}
+            {isSaving ? "Salvando..." : isEditing ? "Salvar alterações" : "Criar alimento"}
           </button>
         </div>
       </div>

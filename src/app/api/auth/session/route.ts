@@ -44,7 +44,8 @@ export async function POST(request: Request) {
       getAppSessionCookieOptions(shouldUseSecureCookie(request)),
     );
     return response;
-  } catch {
+  } catch (error) {
+    console.error("[session] verifyFirebaseIdToken failed:", error instanceof Error ? error.message : error);
     return clearSessionCookie(
       request,
       NextResponse.json({ error: "Invalid session token" }, { status: 401 }),

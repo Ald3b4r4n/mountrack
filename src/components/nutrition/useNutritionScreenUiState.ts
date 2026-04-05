@@ -4,6 +4,7 @@ import { getDefaultFocusedMeal } from "@/components/nutrition/nutrition-screen-h
 import type { NutritionArea } from "@/components/nutrition/NutritionWorkspaceNav";
 import type { PlanningTabKey } from "@/modules/nutrition/constants";
 import type {
+  FoodItem,
   MealDefinition,
   MealPlan,
   MealType,
@@ -61,6 +62,7 @@ export interface NutritionScreenUiState {
   customWaterOpen: boolean;
   isUpdatingWater: boolean;
   mealChooserOpen: boolean;
+  editingCustomFood: FoodItem | null;
 }
 
 type NutritionScreenUiAction =
@@ -125,6 +127,7 @@ function createInitialNutritionScreenUiState(): NutritionScreenUiState {
     customWaterOpen: false,
     isUpdatingWater: false,
     mealChooserOpen: false,
+    editingCustomFood: null,
   };
 }
 
@@ -287,5 +290,8 @@ export function useNutritionScreenUiState() {
       setUiStateField("isUpdatingWater", value),
     setMealChooserOpen: (value: boolean | ((current: boolean) => boolean)) =>
       setUiStateField("mealChooserOpen", value),
+    setEditingCustomFood: (
+      value: FoodItem | null | ((current: FoodItem | null) => FoodItem | null),
+    ) => setUiStateField("editingCustomFood", value),
   };
 }

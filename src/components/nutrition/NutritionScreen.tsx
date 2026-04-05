@@ -87,6 +87,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     setCustomWaterOpen,
     setIsUpdatingWater,
     setMealChooserOpen,
+    setEditingCustomFood,
   } = useNutritionScreenUiState();
   const canUseBrowserPersistence = Boolean(
     activeUser && !("devBypass" in activeUser && activeUser.devBypass),
@@ -192,6 +193,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     planningPanelMinHeight,
     customWaterOpen,
     mealChooserOpen,
+    editingCustomFood,
   } = uiState;
 
   const activeWorkspaceRef = useRef<HTMLDivElement | null>(null);
@@ -732,7 +734,14 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     searchResults,
     resultState,
     onApplyFoodSelection: applyFoodSelection,
-    onCustomFoodOpen: () => setCustomFoodOpen(true),
+    onCustomFoodOpen: () => {
+      setEditingCustomFood(null);
+      setCustomFoodOpen(true);
+    },
+    onEditCustomFood: (food: import("@/modules/nutrition/domain/types").FoodItem) => {
+      setEditingCustomFood(food);
+      setCustomFoodOpen(true);
+    },
     onClearSearch: () => {
       resetSearchComposer();
       setMessage(null);
@@ -892,11 +901,17 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
       customFoodDialogProps={{
         authUser: activeUser,
         open: customFoodOpen,
-        onClose: () => setCustomFoodOpen(false),
-        onCreated: (food) => {
+        onClose: () => {
           setCustomFoodOpen(false);
+          setEditingCustomFood(null);
+        },
+        editingFood: editingCustomFood,
+        onCreated: (food) => {
+          const wasEditing = Boolean(editingCustomFood);
+          setCustomFoodOpen(false);
+          setEditingCustomFood(null);
           setDiarySuccessFeedback(null);
-          setMessage(`Alimento ${food.name} cadastrado.`);
+          setMessage(wasEditing ? `Alimento ${food.name} atualizado.` : `Alimento ${food.name} cadastrado.`);
           applyFoodSelection(food);
         },
       }}

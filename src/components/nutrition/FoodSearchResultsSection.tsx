@@ -1,6 +1,6 @@
 import type { ReactNode, RefObject } from "react";
+import { Check, Pencil } from "lucide-react";
 import type { FoodItem } from "@/modules/nutrition/domain/types";
-import { EmptyState } from "./CommonUI";
 import { formatCalories, formatFoodSourceLabel, getFoodLabel } from "@/modules/nutrition/ui-helpers";
 
 interface FoodSearchResultsSectionProps {
@@ -18,6 +18,7 @@ interface FoodSearchResultsSectionProps {
   isEnrichingExternal: boolean;
   searchSourceLabel: string | null;
   onCustomFoodOpen: () => void;
+  onEditCustomFood?: (food: FoodItem) => void;
   onClearSearch: () => void;
   onSelectFood: (food: FoodItem) => void;
   onReopenSearchResults: () => void;
@@ -37,8 +38,8 @@ export function FoodSearchResultsSection({
   searchResults,
   resultEmptyState,
   isEnrichingExternal,
-  searchSourceLabel,
   onCustomFoodOpen,
+  onEditCustomFood,
   onClearSearch,
   onSelectFood,
   onReopenSearchResults,
@@ -50,30 +51,29 @@ export function FoodSearchResultsSection({
 
   return (
     <>
+      {/* Mobile ready card - shown when food selected but composer closed */}
       {isMobileLayout && selectedFood && !isComposerOpen ? (
-        <div className="glass-panel static-panel border-[#34d399]/18 bg-[#06162d]/72 p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <span className="text-[0.78rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                Pronto para registrar
-              </span>
-              <strong className="mt-1 block">{getFoodLabel(selectedFood)}</strong>
-              <p className="mt-1 text-[0.84rem] text-[var(--text-secondary)]">
-                Abra o registro para definir quantidade e confirmar {activeMealLabel.toLowerCase()}.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={onOpenComposer} className="btn-primary min-w-auto px-3 py-2">
-                Registrar em {activeMealLabel}
-              </button>
-              <button
-                type="button"
-                onClick={onSwapFoodSelection}
-                className="btn-outline min-w-auto px-3 py-2"
-              >
-                Trocar alimento
-              </button>
-            </div>
+        <div className="rounded-2xl border border-[#34d399]/20 bg-[#34d399]/[0.06] p-4">
+          <span className="text-[0.72rem] font-medium uppercase tracking-wider text-[#34d399]">
+            Pronto para registrar
+          </span>
+          <strong className="mt-1.5 block text-[0.95rem]">{getFoodLabel(selectedFood)}</strong>
+          {selectedFood.brand ? (
+            <span className="mt-0.5 block text-[0.82rem] text-[var(--text-secondary)]">
+              {selectedFood.brand}
+            </span>
+          ) : null}
+          <div className="mt-3 flex gap-2">
+            <button type="button" onClick={onOpenComposer} className="btn-primary px-4 py-2 text-[0.88rem]">
+              Registrar em {activeMealLabel}
+            </button>
+            <button
+              type="button"
+              onClick={onSwapFoodSelection}
+              className="rounded-lg border border-[var(--border-glass)] px-3 py-2 text-[0.84rem] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+            >
+              Trocar
+            </button>
           </div>
         </div>
       ) : null}
@@ -84,87 +84,113 @@ export function FoodSearchResultsSection({
           isMobileLayout ? "grid-cols-1" : "grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]"
         }`}
       >
-        <div className="glass-panel static-panel p-4">
-          <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <strong className="block font-['Outfit',sans-serif]">Resultados</strong>
-              <span className="text-[0.84rem] text-[var(--text-secondary)]">Selecione um item para abrir o registro.</span>
-            </div>
-
-            <div className="flex flex-wrap justify-end gap-2">
-              {isEnrichingExternal ? <span className="badge badge-success">Complementando</span> : null}
-              {searchSourceLabel ? <span className="badge badge-success">{searchSourceLabel}</span> : null}
-              {hasVisibleResults ? <span className="badge badge-success">{searchResults.length} itens</span> : null}
-              <button type="button" onClick={onCustomFoodOpen} className="btn-outline min-w-auto px-3 py-1.5">
-                Criar alimento
-              </button>
-              {searchResults.length || selectedFood ? (
-                <button type="button" onClick={onClearSearch} className="btn-outline min-w-auto px-3 py-1.5">
+        {/* Results list */}
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-[0.78rem] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              {hasVisibleResults ? `${searchResults.length} resultado${searchResults.length !== 1 ? "s" : ""}` : "Resultados"}
+            </span>
+            <div className="flex gap-2">
+              {isEnrichingExternal ? (
+                <span className="text-[0.75rem] text-[var(--accent-primary)] animate-pulse">Complementando</span>
+              ) : null}
+              {(searchResults.length > 0 || selectedFood) ? (
+                <button
+                  type="button"
+                  onClick={onClearSearch}
+                  className="text-[0.78rem] text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
+                >
                   Limpar
                 </button>
               ) : null}
             </div>
           </div>
 
-          <div className="grid max-h-[min(48vh,420px)] gap-2.5 overflow-y-auto pr-1">
+          <div className="grid max-h-[min(52vh,480px)] gap-1 overflow-y-auto">
             {hasVisibleResults ? (
               searchResults.map((food) => {
-                const caloriesLabel =
-                  food.caloriesPer100 == null ? "--" : `${formatCalories(food.caloriesPer100)} / 100${food.baseUnit}`;
+                const kcalLabel =
+                  food.caloriesPer100 == null
+                    ? "--"
+                    : `${food.caloriesPer100.toFixed(0)} kcal`;
                 const isSelected = selectedFood?.id === food.id;
+                const isCustom = food.source === "custom";
 
                 return (
-                  <button
-                    type="button"
-                    key={food.id}
-                    onClick={() => onSelectFood(food)}
-                    className={`glass-panel static-panel cursor-pointer p-3.5 text-left transition-all ${
-                      isSelected
-                        ? "border-[rgba(52,211,153,0.3)] bg-[#34d399]/10"
-                        : "bg-[#051227]/60 hover:border-[#34d399]/16 hover:bg-[#081b35]/72"
-                    }`}
-                  >
-                    <div className="flex justify-between gap-3">
-                      <div className="min-w-0">
-                        <strong className="mb-0.5 block">{getFoodLabel(food)}</strong>
-                        <span className="block text-[0.82rem] text-[var(--text-secondary)]">
-                          {food.brand ? `${food.brand} - ` : ""}
-                          {caloriesLabel}
+                  <div key={food.id} className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => onSelectFood(food)}
+                      className={`flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors ${
+                        isSelected
+                          ? "bg-[#34d399]/10"
+                          : "hover:bg-[#ffffff]/[0.03]"
+                      }`}
+                    >
+                      {/* Selection indicator */}
+                      <div
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                          isSelected
+                            ? "border-[#34d399] bg-[#34d399] text-white"
+                            : "border-[var(--text-muted)]/40"
+                        }`}
+                      >
+                        {isSelected ? <Check size={14} strokeWidth={3} /> : null}
+                      </div>
+
+                      {/* Food info */}
+                      <div className="min-w-0 flex-1">
+                        <strong className="block truncate text-[0.9rem] leading-tight">
+                          {getFoodLabel(food)}
+                        </strong>
+                        <span className="mt-0.5 block text-[0.78rem] text-[var(--text-secondary)]">
+                          {food.brand ? `${food.brand} · ` : ""}
+                          {formatFoodSourceLabel(food.source, { compact: true })}
                         </span>
                       </div>
-                      <span className="whitespace-nowrap text-xs uppercase text-[var(--text-muted)]">
-                        {formatFoodSourceLabel(food.source, { compact: true })}
+
+                      {/* Kcal */}
+                      <span className="shrink-0 text-[0.82rem] font-medium text-[var(--text-secondary)]">
+                        {kcalLabel}
                       </span>
-                    </div>
-                  </button>
+                    </button>
+
+                    {isCustom && onEditCustomFood ? (
+                      <button
+                        type="button"
+                        onClick={() => onEditCustomFood(food)}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[#ffffff]/[0.06] hover:text-[var(--text-primary)]"
+                        title="Editar alimento"
+                      >
+                        <Pencil size={13} />
+                      </button>
+                    ) : null}
+                  </div>
                 );
               })
             ) : (
-              <EmptyState title={resultEmptyState.title} text={resultEmptyState.text} compact />
+              <div className="py-8 text-center">
+                <p className="text-[0.88rem] text-[var(--text-secondary)]">{resultEmptyState.text}</p>
+              </div>
             )}
           </div>
         </div>
 
+        {/* Desktop composer side panel */}
         {!isMobileLayout ? (
           <div className="glass-panel static-panel bg-[#06162d]/60 p-4">
-            <div className="mb-3 flex flex-wrap justify-between gap-3">
-              <div>
-                <strong className="block">Registro</strong>
-                <span className="text-[0.84rem] text-[var(--text-secondary)]">
-                  Selecione, ajuste e registre sem sair da busca.
-                </span>
-              </div>
+            <div className="mb-3 flex items-center justify-between">
+              <strong className="text-[0.92rem]">Registro</strong>
               {selectedFood ? (
                 <button
                   type="button"
                   onClick={onReopenSearchResults}
-                  className="btn-outline min-w-auto px-3 py-1.5"
+                  className="text-[0.78rem] text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
                 >
                   Trocar alimento
                 </button>
               ) : null}
             </div>
-
             {composerContent}
           </div>
         ) : null}

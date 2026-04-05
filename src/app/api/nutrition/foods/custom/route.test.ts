@@ -36,9 +36,10 @@ describe("POST /api/nutrition/foods/custom", () => {
     randomUuidSpy.mockRestore();
   });
 
-  it("creates a private custom food with normalized payload values", async () => {
+  it("creates a private custom food with per-serving values normalized to per-100g", async () => {
     saveUserCustomFoodMock.mockImplementation(async (_userId, food) => food);
 
+    // User enters values per 90g serving; backend normalizes to per 100g
     const response = await POST(
       new Request("http://localhost/api/nutrition/foods/custom", {
         method: "POST",
@@ -67,10 +68,10 @@ describe("POST /api/nutrition/foods/custom", () => {
       displayName: "Pao de queijo",
       brand: "Padaria Central",
       baseUnit: "g",
-      caloriesPer100: 320,
-      proteinPer100: 8,
-      carbsPer100: 28,
-      fatPer100: 18,
+      caloriesPer100: Number((320 * 100 / 90).toFixed(2)),
+      proteinPer100: Number((8 * 100 / 90).toFixed(2)),
+      carbsPer100: Number((28 * 100 / 90).toFixed(2)),
+      fatPer100: Number((18 * 100 / 90).toFixed(2)),
       fiberPer100: 0,
       sodiumPer100: 0,
       servingGrams: 90,

@@ -7,8 +7,6 @@ import type {
   NutritionUnit,
 } from "@/modules/nutrition/domain/types";
 import {
-  Field,
-  MacroValue,
   EmptyState,
 } from "./CommonUI";
 import {
@@ -48,6 +46,7 @@ interface FoodSearchPanelProps {
   resultState: { title: string; text: string };
   onApplyFoodSelection: (food: FoodItem, options?: FoodSelectionOptions) => void;
   onCustomFoodOpen: () => void;
+  onEditCustomFood?: (food: FoodItem) => void;
   onClearSearch: () => void;
   selectedFood: FoodItem | null;
   isComposerOpen: boolean;
@@ -94,77 +93,41 @@ function ComposerBody({
 }) {
   if (!selectedFood) {
     return (
-        <EmptyState
-          title="Nenhum alimento selecionado"
-          text="Escolha um resultado para ajustar a porção e registrar no diário."
-          compact
-        />
+      <EmptyState
+        title="Nenhum alimento selecionado"
+        text="Escolha um resultado para ajustar a porção e registrar no diário."
+        compact
+      />
     );
   }
 
   return (
-    <div className="grid gap-3.5">
-      <div className="glass-panel static-panel bg-[#040f20]/70 p-3.5">
-        <div className="mb-2.5 flex flex-wrap justify-between gap-3">
-          <div>
-            <strong className="block">{getFoodLabel(selectedFood)}</strong>
-            <span className="block text-[0.82rem] text-[var(--text-secondary)]">
-              {selectedFood.brand ? `${selectedFood.brand} - ` : ""}
-              {formatFoodSourceLabel(selectedFood.source)}
-            </span>
-          </div>
-          <div className="flex flex-col items-start gap-2 sm:items-end">
-            <span className="badge badge-success self-start">
-              {selectedFood.caloriesPer100 != null
-                ? `${formatCalories(selectedFood.caloriesPer100)} / 100${selectedFood.baseUnit}`
-                : "Sem kcal base"}
-            </span>
-            {selectedFoodTotals ? (
-              <span className="rounded-full border border-[#34d399]/18 bg-[#34d399]/10 px-3 py-1 text-[0.78rem] text-[#86efac]">
-                Porção atual {formatCalories(selectedFoodTotals.calories)}
-              </span>
-            ) : null}
-          </div>
-        </div>
-
-        {selectedFoodTotals ? (
-          <div className="grid grid-cols-3 gap-2">
-            <MacroValue
-              label="Proteína"
-              value={formatGrams(selectedFoodTotals.protein)}
-              accent="#34d399"
-              compact
-            />
-            <MacroValue
-              label="Carbo"
-              value={formatGrams(selectedFoodTotals.carbs)}
-              accent="#22d3ee"
-              compact
-            />
-            <MacroValue
-              label="Gordura"
-              value={formatGrams(selectedFoodTotals.fat)}
-              accent="#fb7185"
-              compact
-            />
-          </div>
-        ) : (
-          <p className="text-[0.82rem] text-[var(--text-secondary)]">
-            Ajuste a quantidade para calcular os macros desta porção.
-          </p>
-        )}
+    <div className="grid gap-4">
+      {/* Food identity */}
+      <div>
+        <strong className="block text-[1rem]">{getFoodLabel(selectedFood)}</strong>
+        <span className="mt-0.5 block text-[0.82rem] text-[var(--text-secondary)]">
+          {selectedFood.brand ? `${selectedFood.brand} · ` : ""}
+          {formatFoodSourceLabel(selectedFood.source)}
+          {selectedFood.caloriesPer100 != null
+            ? ` · ${formatCalories(selectedFood.caloriesPer100)} / 100${selectedFood.baseUnit}`
+            : ""}
+        </span>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Field label="Quantidade">
+      {/* Quantity + Unit + Meal row */}
+      <div className="grid grid-cols-3 gap-2.5">
+        <label className="grid gap-1">
+          <span className="text-[0.75rem] font-medium text-[var(--text-muted)]">Quantidade</span>
           <input
-            className="input-field"
+            className="input-field text-center"
             value={quantity}
             onChange={(event) => onQuantityChange(event.target.value)}
             inputMode="decimal"
           />
-        </Field>
-        <Field label="Unidade">
+        </label>
+        <label className="grid gap-1">
+          <span className="text-[0.75rem] font-medium text-[var(--text-muted)]">Unidade</span>
           <select
             className="input-field"
             value={unit}
@@ -175,8 +138,9 @@ function ComposerBody({
             <option value="serving">Porção</option>
             <option value="unit">Unidade</option>
           </select>
-        </Field>
-        <Field label="Refeição">
+        </label>
+        <label className="grid gap-1">
+          <span className="text-[0.75rem] font-medium text-[var(--text-muted)]">Refeição</span>
           <select
             className="input-field"
             value={mealType}
@@ -188,9 +152,49 @@ function ComposerBody({
               </option>
             ))}
           </select>
-        </Field>
+        </label>
       </div>
 
+      {/* Nutrition table - FatSecret style */}
+      {selectedFoodTotals ? (
+        <div className="rounded-xl border border-[var(--border-glass)] bg-[#020b1c]/50">
+          <div className="flex items-center justify-between border-b border-[var(--border-glass)] px-4 py-2.5">
+            <span className="text-[0.82rem] font-medium text-[var(--text-primary)]">Calorias</span>
+            <span className="text-[0.95rem] font-semibold text-[#34d399]">
+              {selectedFoodTotals.calories.toFixed(0)} kcal
+            </span>
+          </div>
+          {selectedFoodTotals ? (
+            <span className="block border-b border-[var(--border-glass)] px-4 py-1.5 text-[0.72rem] text-[var(--text-muted)]">
+              Porção atual {formatCalories(selectedFoodTotals.calories)}
+            </span>
+          ) : null}
+          <div className="flex items-center justify-between border-b border-[var(--border-glass)] px-4 py-2.5">
+            <span className="text-[0.82rem] text-[var(--text-secondary)]">Proteína</span>
+            <span className="text-[0.88rem] font-medium text-[#34d399]">
+              {formatGrams(selectedFoodTotals.protein)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between border-b border-[var(--border-glass)] px-4 py-2.5">
+            <span className="text-[0.82rem] text-[var(--text-secondary)]">Carboidratos</span>
+            <span className="text-[0.88rem] font-medium text-[#22d3ee]">
+              {formatGrams(selectedFoodTotals.carbs)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between px-4 py-2.5">
+            <span className="text-[0.82rem] text-[var(--text-secondary)]">Gorduras</span>
+            <span className="text-[0.88rem] font-medium text-[#fb7185]">
+              {formatGrams(selectedFoodTotals.fat)}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <p className="text-[0.82rem] text-[var(--text-secondary)]">
+          Ajuste a quantidade para calcular os macros desta porção.
+        </p>
+      )}
+
+      {/* CTA */}
       {showActionButton ? (
         <button type="button" onClick={onAddDiaryItem} className="btn-primary w-full">
           Adicionar ao diário
@@ -221,6 +225,7 @@ export function FoodSearchPanel({
   resultState,
   onApplyFoodSelection,
   onCustomFoodOpen,
+  onEditCustomFood,
   onClearSearch,
   selectedFood,
   isComposerOpen,
@@ -344,7 +349,7 @@ export function FoodSearchPanel({
       food,
       isMobileLayout
         ? {
-            openComposer: false,
+            openComposer: true,
             hideResults: true,
           }
         : undefined,
@@ -413,6 +418,7 @@ export function FoodSearchPanel({
           isEnrichingExternal={isEnrichingExternal}
           searchSourceLabel={searchSourceLabel}
           onCustomFoodOpen={onCustomFoodOpen}
+          onEditCustomFood={onEditCustomFood}
           onClearSearch={onClearSearch}
           onSelectFood={handleSelectFood}
           onReopenSearchResults={onReopenSearchResults}

@@ -1,5 +1,4 @@
-import { ScanLine } from "lucide-react";
-import { Field, PanelHeader, SegmentButton } from "./CommonUI";
+import { Search, ScanLine, Plus } from "lucide-react";
 
 interface FoodSearchSetupPanelProps {
   storageSummary: string;
@@ -23,13 +22,9 @@ interface FoodSearchSetupPanelProps {
 }
 
 export function FoodSearchSetupPanel({
-  storageSummary,
   searchActivitySummary,
   embedded = false,
   isMobileLayout,
-  activeMealLabel,
-  searchCatalogBadge,
-  isEnrichingExternal,
   searchMode,
   onSearchModeChange,
   searchQuery,
@@ -43,68 +38,61 @@ export function FoodSearchSetupPanel({
   onCustomFoodOpen,
 }: FoodSearchSetupPanelProps) {
   return (
-    <div className="glass-panel static-panel relative overflow-hidden p-4">
-      {!embedded ? (
-        <>
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
-            <PanelHeader
-              title="Buscar e registrar"
-              subtitle={
-                isMobileLayout
-                  ? `Encontre um alimento e registre direto em ${activeMealLabel.toLowerCase()} sem perder o contexto do dia.`
-                  : "Encontre um alimento, revise o resultado e registre o consumo sem perder o contexto do dia."
-              }
-            />
-            <span className="badge badge-success self-start">{searchCatalogBadge}</span>
-          </div>
+    <div className="grid gap-3">
+      {/* Mode tabs - compact pill row */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onSearchModeChange("name")}
+          className={`rounded-full px-3.5 py-1.5 text-[0.82rem] font-medium transition-colors ${
+            searchMode === "name"
+              ? "bg-[#34d399]/15 text-[#34d399] ring-1 ring-[#34d399]/25"
+              : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          }`}
+        >
+          Nome
+        </button>
+        <button
+          type="button"
+          onClick={() => onSearchModeChange("barcode")}
+          className={`rounded-full px-3.5 py-1.5 text-[0.82rem] font-medium transition-colors ${
+            searchMode === "barcode"
+              ? "bg-[#34d399]/15 text-[#34d399] ring-1 ring-[#34d399]/25"
+              : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          }`}
+        >
+          Código
+        </button>
+        <button
+          type="button"
+          onClick={() => onSearchModeChange("custom")}
+          className={`rounded-full px-3.5 py-1.5 text-[0.82rem] font-medium transition-colors ${
+            searchMode === "custom"
+              ? "bg-[#34d399]/15 text-[#34d399] ring-1 ring-[#34d399]/25"
+              : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          }`}
+        >
+          Manual
+        </button>
 
-          <div className="mb-4 grid gap-1.5">
-            <p className="text-sm text-[var(--text-secondary)]">{storageSummary}</p>
-            {searchActivitySummary ? (
-              <p className="text-[0.82rem] text-[var(--accent-primary)]">{searchActivitySummary}</p>
-            ) : null}
-          </div>
-          {isMobileLayout ? (
-            <div className="mb-4 flex items-start justify-between gap-3 rounded-[1rem] border border-[#34d399]/14 bg-[#06162d]/62 p-3">
-              <div className="min-w-0">
-                <span className="block text-[0.68rem] uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                  Refeição de destino
-                </span>
-                <strong className="mt-1 block text-[0.98rem] text-[var(--text-primary)]">{activeMealLabel}</strong>
-                <p className="mt-1 text-[0.82rem] text-[var(--text-secondary)]">
-                  Quando você concluir o registro, o item entra nesta refeição.
-                </p>
-              </div>
-              <span className="badge badge-success shrink-0">Em foco</span>
-            </div>
-          ) : null}
-        </>
-      ) : (
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div className="grid gap-1.5">
-            <p className="max-w-[42rem] text-sm text-[var(--text-secondary)]">{storageSummary}</p>
-            {searchActivitySummary ? (
-              <p className="text-[0.82rem] text-[var(--accent-primary)]">{searchActivitySummary}</p>
-            ) : null}
-          </div>
-          <div className="flex flex-wrap justify-end gap-2">
-            {isEnrichingExternal ? <span className="badge badge-success self-start">Catálogo atualizando</span> : null}
-            <span className="badge badge-success self-start">{searchCatalogBadge}</span>
-          </div>
-        </div>
-      )}
-
-      <div className="mb-4 flex flex-wrap gap-2">
-        <SegmentButton active={searchMode === "name"} label="Nome" onClick={() => onSearchModeChange("name")} />
-        <SegmentButton active={searchMode === "barcode"} label="Código" onClick={() => onSearchModeChange("barcode")} />
-        <SegmentButton active={searchMode === "custom"} label="Manual" onClick={() => onSearchModeChange("custom")} />
+        {searchActivitySummary ? (
+          <span className="ml-auto text-[0.75rem] text-[var(--accent-primary)] animate-pulse">
+            {isSearching ? "Buscando..." : "Atualizando..."}
+          </span>
+        ) : null}
       </div>
 
+      {/* Search input */}
       {searchMode === "name" ? (
-        <Field label="Nome do alimento">
-          <div className={isMobileLayout ? "grid gap-2.5" : "flex flex-wrap gap-2.5"}>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search
+              size={16}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+            />
             <input
-              className="input-field min-w-[14rem] flex-1"
+              className="input-field w-full"
+              style={{ paddingLeft: "2.25rem" }}
               value={searchQuery}
               onChange={(event) => onSearchQueryChange(event.target.value)}
               onKeyDown={(event) => {
@@ -113,85 +101,85 @@ export function FoodSearchSetupPanel({
                   onSearch();
                 }
               }}
-              placeholder="Ex.: banana prata, arroz cozido, iogurte"
+              placeholder="Buscar alimento..."
               autoFocus
             />
-            <div className={`grid gap-2.5 ${isMobileLayout ? "grid-cols-2" : "grid-cols-[auto]"}`}>
-              <button type="button" onClick={onSearch} className="btn-primary" disabled={isSearching}>
-                {isSearching ? "Buscando..." : "Buscar"}
-              </button>
-              {isMobileLayout ? (
-                <button
-                  type="button"
-                  onClick={onOpenScanner}
-                  className="btn-outline inline-flex items-center justify-center gap-2 border-dashed text-[var(--accent-primary)]"
-                >
-                  <ScanLine size={16} />
-                  Escanear
-                </button>
-              ) : null}
-            </div>
           </div>
-        </Field>
+          <button
+            type="button"
+            onClick={onSearch}
+            disabled={isSearching}
+            className="btn-primary shrink-0 px-4 py-[0.85rem]"
+          >
+            {isSearching ? "..." : "Buscar"}
+          </button>
+          {isMobileLayout ? (
+            <button
+              type="button"
+              onClick={onOpenScanner}
+              className="flex h-[calc(0.85rem*2+1.7rem)] w-[calc(0.85rem*2+1.7rem)] shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-glass)] text-[var(--accent-primary)] transition-colors hover:bg-[#34d399]/8"
+              aria-label="Escanear código de barras"
+            >
+              <ScanLine size={18} />
+            </button>
+          ) : null}
+        </div>
       ) : null}
 
       {searchMode === "barcode" ? (
-        <Field label="Código de barras">
-          <div className="grid gap-2.5">
-            <p className="text-[0.84rem] text-[var(--text-secondary)]">
-              Digite o número da embalagem ou use a câmera para ler o código automaticamente.
-            </p>
-            <div className={isMobileLayout ? "grid gap-2.5" : "flex flex-wrap gap-2.5"}>
-              <input
-                className="input-field min-w-[12rem] flex-1"
-                value={barcodeQuery}
-                onChange={(event) => onBarcodeQueryChange(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    onBarcodeLookup(barcodeQuery);
-                  }
-                }}
-                placeholder="Ex.: 7891234567890"
-              />
-              <div className={`grid gap-2.5 ${isMobileLayout ? "grid-cols-2" : "grid-cols-[auto_auto]"}`}>
-                <button type="button" onClick={() => onBarcodeLookup(barcodeQuery)} className="btn-primary">
-                  Buscar código
-                </button>
-                <button
-                  type="button"
-                  onClick={onOpenScanner}
-                  className="btn-outline inline-flex items-center justify-center gap-2 border-dashed text-[var(--accent-primary)]"
-                >
-                  <ScanLine size={16} />
-                  Escanear
-                </button>
-              </div>
-            </div>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <ScanLine
+              size={16}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+            />
+            <input
+              className="input-field w-full"
+              style={{ paddingLeft: "2.25rem" }}
+              value={barcodeQuery}
+              onChange={(event) => onBarcodeQueryChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  onBarcodeLookup(barcodeQuery);
+                }
+              }}
+              placeholder="Código de barras..."
+            />
           </div>
-        </Field>
+          <button
+            type="button"
+            onClick={() => onBarcodeLookup(barcodeQuery)}
+            className="btn-primary shrink-0 px-4 py-[0.85rem]"
+          >
+            Buscar
+          </button>
+          <button
+            type="button"
+            onClick={onOpenScanner}
+            className="flex h-[calc(0.85rem*2+1.7rem)] w-[calc(0.85rem*2+1.7rem)] shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-glass)] text-[var(--accent-primary)] transition-colors hover:bg-[#34d399]/8"
+            aria-label="Abrir câmera"
+          >
+            <ScanLine size={18} />
+          </button>
+        </div>
       ) : null}
 
       {searchMode === "custom" ? (
-        <div className="glass-panel static-panel grid gap-3 bg-[#041225]/72 p-4">
-          <div>
-            <strong className="block">Criar alimento manualmente</strong>
-            <p className="mt-1 text-[0.9rem] text-[var(--text-secondary)]">
-              Salve um alimento seu para reencontrar depois na busca e usar no diário sem depender do catálogo.
+        <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-dashed border-[var(--border-glass)] p-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-[0.88rem] text-[var(--text-secondary)]">
+              Crie um alimento personalizado para usar no diário.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2.5">
-            <button type="button" onClick={onCustomFoodOpen} className="btn-primary">
-              Criar alimento
-            </button>
-            <button
-              type="button"
-              onClick={() => onSearchModeChange("name")}
-              className="btn-outline min-w-auto px-3 py-2"
-            >
-              Voltar para busca
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onCustomFoodOpen}
+            className="btn-primary inline-flex shrink-0 items-center gap-1.5 px-4"
+          >
+            <Plus size={16} />
+            Criar
+          </button>
         </div>
       ) : null}
     </div>

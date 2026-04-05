@@ -21,6 +21,7 @@ interface NutritionSearchWorkspaceProps {
   resultState: { title: string; text: string };
   onApplyFoodSelection: (food: FoodItem, options?: { openComposer?: boolean; hideResults?: boolean }) => void;
   onCustomFoodOpen: () => void;
+  onEditCustomFood?: (food: FoodItem) => void;
   onClearSearch: () => void;
   selectedFood: FoodItem | null;
   isComposerOpen: boolean;
@@ -59,6 +60,7 @@ export function NutritionSearchWorkspace({
   resultState,
   onApplyFoodSelection,
   onCustomFoodOpen,
+  onEditCustomFood,
   onClearSearch,
   selectedFood,
   isComposerOpen,
@@ -98,6 +100,7 @@ export function NutritionSearchWorkspace({
       resultState={resultState}
       onApplyFoodSelection={onApplyFoodSelection}
       onCustomFoodOpen={onCustomFoodOpen}
+      onEditCustomFood={onEditCustomFood}
       onClearSearch={onClearSearch}
       selectedFood={selectedFood}
       isComposerOpen={isComposerOpen}
