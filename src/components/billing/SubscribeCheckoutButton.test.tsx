@@ -187,6 +187,10 @@ describe("SubscribeCheckoutButton", () => {
         "Assinatura autorizada. Aguarde a confirmação do primeiro pagamento.",
       ),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /autorizar assinatura/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Número do cartão")).not.toBeInTheDocument();
     expect(assignMock).not.toHaveBeenCalled();
   });
 

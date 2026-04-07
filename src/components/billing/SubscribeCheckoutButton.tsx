@@ -162,6 +162,7 @@ export function SubscribeCheckoutButton({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFormLoading, setIsFormLoading] = useState(false);
   const [isDirectFormReady, setIsDirectFormReady] = useState(false);
+  const [isCardFormLocked, setIsCardFormLocked] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sdkError, setSdkError] = useState<string | null>(null);
@@ -182,6 +183,7 @@ export function SubscribeCheckoutButton({
   const canUseDirectCheckout = Boolean(
     user && sessionReady && !directCheckoutUnavailableReason,
   );
+  const canMountDirectCheckout = canUseDirectCheckout && !isCardFormLocked;
   const formPrefix = "subscribe-checkout";
 
   function navigateToLogin() {
@@ -224,6 +226,10 @@ export function SubscribeCheckoutButton({
       return;
     }
 
+    if (data?.subscriptionStatus === "authorized") {
+      setIsCardFormLocked(true);
+    }
+
     setMessage(resolveSuccessMessage(data?.subscriptionStatus));
   }
 
@@ -231,6 +237,7 @@ export function SubscribeCheckoutButton({
     event.preventDefault();
     setError(null);
     setMessage(null);
+    setIsCardFormLocked(false);
 
     if (!cardFormRef.current) {
       setError(
@@ -261,7 +268,7 @@ export function SubscribeCheckoutButton({
   }
 
   useEffect(() => {
-    if (!canUseDirectCheckout) {
+    if (!canMountDirectCheckout) {
       cardFormRef.current = null;
       setIsFormLoading(false);
       setIsDirectFormReady(false);
@@ -404,7 +411,7 @@ export function SubscribeCheckoutButton({
     };
   }, [
     amountCents,
-    canUseDirectCheckout,
+    canMountDirectCheckout,
     formPrefix,
     mercadoPagoPublicKey,
     payerEmail,
@@ -429,7 +436,7 @@ export function SubscribeCheckoutButton({
     );
   }
 
-  const shouldRenderDirectForm = canUseDirectCheckout;
+  const shouldRenderDirectForm = canMountDirectCheckout;
   const directButtonLabel = isSubmitting
     ? "Autorizando assinatura..."
     : isFormLoading
