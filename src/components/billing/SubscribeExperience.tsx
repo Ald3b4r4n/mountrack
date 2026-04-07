@@ -19,8 +19,6 @@ interface SubscribeExperienceProps {
   amountCents: number;
   monthlyPrice: string;
   trialDays: number;
-  mercadoPagoPublicKey: string;
-  sandboxPayerEmail?: string;
 }
 
 interface BillingAccessPayload {
@@ -50,8 +48,6 @@ export function SubscribeExperience({
   amountCents,
   monthlyPrice,
   trialDays,
-  mercadoPagoPublicKey,
-  sandboxPayerEmail,
 }: SubscribeExperienceProps) {
   const { user, loading, sessionReady, signOut } = useAuth();
   const router = useRouter();
@@ -291,7 +287,7 @@ export function SubscribeExperience({
 
                 <article className={styles.metricCard}>
                   <span className={styles.metricLabel}>Pagamento</span>
-                  <strong className={styles.metricValue}>Mercado Pago</strong>
+                  <strong className={styles.metricValue}>Stripe</strong>
                   <span className={styles.metricHelper}>
                     Pagamento seguro para ativar o acesso sem perder o que você
                     já registrou.
@@ -500,8 +496,8 @@ export function SubscribeExperience({
                   Assine sem sair da sua rotina.
                 </h2>
                 <p className={styles.slideText}>
-                  Quando decidir continuar, abra o checkout do Mercado Pago e
-                  siga do mesmo ponto em que parou.
+                  Quando decidir continuar, abra o checkout da Stripe e siga do
+                  mesmo ponto em que parou.
                 </p>
               </div>
 
@@ -513,7 +509,7 @@ export function SubscribeExperience({
                   <li>Seu histórico continua salvo na mesma conta.</li>
                   <li>O acesso volta assim que o pagamento é confirmado.</li>
                   <li>
-                    Se preferir, você pode abrir o ambiente do Mercado Pago.
+                    Cartões, Apple Pay, Google Pay e Link no mesmo checkout.
                   </li>
                 </ul>
               </div>
@@ -521,8 +517,6 @@ export function SubscribeExperience({
               <SubscribeCheckoutButton
                 planCode={planCode}
                 amountCents={amountCents}
-                mercadoPagoPublicKey={mercadoPagoPublicKey}
-                sandboxPayerEmail={sandboxPayerEmail}
               />
 
               <div className={styles.utilityRow}>

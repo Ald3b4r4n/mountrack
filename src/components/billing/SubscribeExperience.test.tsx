@@ -61,7 +61,6 @@ describe("SubscribeExperience", () => {
         amountCents={1499}
         monthlyPrice="R$ 14,99"
         trialDays={7}
-        mercadoPagoPublicKey=""
       />,
     );
 
@@ -100,7 +99,6 @@ describe("SubscribeExperience", () => {
         amountCents={1499}
         monthlyPrice="R$ 14,99"
         trialDays={7}
-        mercadoPagoPublicKey=""
       />,
     );
 
@@ -135,7 +133,6 @@ describe("SubscribeExperience", () => {
         amountCents={1499}
         monthlyPrice="R$ 14,99"
         trialDays={7}
-        mercadoPagoPublicKey=""
       />,
     );
 
@@ -171,7 +168,6 @@ describe("SubscribeExperience", () => {
         amountCents={1499}
         monthlyPrice="R$ 14,99"
         trialDays={7}
-        mercadoPagoPublicKey=""
       />,
     );
 
@@ -209,7 +205,6 @@ describe("SubscribeExperience", () => {
         amountCents={1499}
         monthlyPrice="R$ 14,99"
         trialDays={7}
-        mercadoPagoPublicKey=""
       />,
     );
 
@@ -240,7 +235,6 @@ describe("SubscribeExperience", () => {
         amountCents={1499}
         monthlyPrice="R$ 14,99"
         trialDays={7}
-        mercadoPagoPublicKey=""
       />,
     );
 

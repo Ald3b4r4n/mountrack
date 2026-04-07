@@ -7,7 +7,7 @@ Plataforma mobile-first para acompanhamento de tratamento, peso, doses, rotina a
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Firebase](https://img.shields.io/badge/Firebase-Auth%20%26%20Admin-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
 [![Supabase](https://img.shields.io/badge/Supabase-Postgres-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
-[![Mercado Pago](https://img.shields.io/badge/Mercado%20Pago-Subscriptions-00B1EA?style=for-the-badge&logo=mercadopago&logoColor=white)](https://www.mercadopago.com.br/developers/pt)
+[![Stripe](https://img.shields.io/badge/Stripe-Subscriptions-635BFF?style=for-the-badge&logo=stripe&logoColor=white)](https://docs.stripe.com/)
 [![Vercel](https://img.shields.io/badge/Vercel-Deploy-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com/)
 
 Desenvolvido por **A&R Software Development**.
@@ -67,7 +67,7 @@ O objetivo é reduzir fricção para o usuário final e, ao mesmo tempo, entrega
 ### Billing e operação
 
 - trial configurável;
-- assinatura recorrente com Mercado Pago;
+- assinatura recorrente com Stripe;
 - webhook e reconciliação de pagamentos;
 - cancelamento da renovação pelo próprio usuário;
 - painel interno de concessões manuais para `owner/admin`.
@@ -127,8 +127,8 @@ O objetivo é reduzir fricção para o usuário final e, ao mesmo tempo, entrega
 
 ### Billing
 
-- Mercado Pago
-- assinatura recorrente (`preapproval`)
+- Stripe
+- assinatura recorrente via Stripe Checkout
 - webhook de reconciliação
 
 ### Deploy
@@ -145,7 +145,7 @@ flowchart LR
     W --> A["Firebase Auth"]
     W --> N["Next.js App Router"]
     N --> P["Supabase Postgres"]
-    N --> M["Mercado Pago"]
+    N --> S["Stripe"]
     N --> F["Firebase Admin"]
     N --> C["Catálogo Nutricional"]
 ```
@@ -155,7 +155,7 @@ flowchart LR
 - **Firebase Auth**: login do usuário no cliente.
 - **Firebase Admin**: lookup e diretório de usuários para operação interna.
 - **Supabase Postgres**: billing, grants, checkout sessions, subscriptions, payments e dados server-side.
-- **Mercado Pago**: assinatura recorrente, checkout e notificações.
+- **Stripe**: assinatura recorrente, checkout e notificações.
 - **Next.js**: camada de UI, rotas, SSR, APIs e shell instalável.
 
 ---
@@ -198,12 +198,9 @@ BOOTSTRAP_ADMIN_EMAILS=owner@example.com
 
 APP_BASE_URL=http://localhost:3000
 
-MERCADO_PAGO_ACCESS_TOKEN=TEST-your-mercado-pago-access-token
-NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY=TEST-your-mercado-pago-public-key
-MERCADO_PAGO_TEST_PAYER_EMAIL=test_user_123456@testuser.com
-NEXT_PUBLIC_MERCADO_PAGO_TEST_PAYER_EMAIL=test_user_123456@testuser.com
-MERCADO_PAGO_NOTIFICATION_URL=https://your-app.example.com/api/billing/webhooks/mercado-pago
-MERCADO_PAGO_WEBHOOK_SECRET=your-mercado-pago-webhook-secret
+STRIPE_SECRET_KEY=sk_test_your-stripe-secret-key
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your-stripe-publishable-key
+STRIPE_WEBHOOK_SECRET=whsec_your-stripe-webhook-secret
 
 CRON_SECRET=generate-a-long-random-token
 NUTRITION_INGEST_TOKEN=generate-a-long-random-token
@@ -230,8 +227,7 @@ A aplicação ficará disponível em [http://localhost:3000](http://localhost:30
 - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
 - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
 - `NEXT_PUBLIC_FIREBASE_APP_ID`
-- `NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY`
-- `NEXT_PUBLIC_MERCADO_PAGO_TEST_PAYER_EMAIL`
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
 
 ### Backend e operação
 
@@ -245,10 +241,8 @@ A aplicação ficará disponível em [http://localhost:3000](http://localhost:30
 
 ### Billing
 
-- `MERCADO_PAGO_ACCESS_TOKEN`
-- `MERCADO_PAGO_TEST_PAYER_EMAIL`
-- `MERCADO_PAGO_NOTIFICATION_URL`
-- `MERCADO_PAGO_WEBHOOK_SECRET`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
 
 ---
 
@@ -288,7 +282,7 @@ npm audit --audit-level=high
 O modelo atual do produto é de **assinatura mensal recorrente** com:
 
 - período de teste gratuito;
-- checkout no Mercado Pago;
+- checkout hospedado no Stripe Checkout;
 - webhook de reconciliação;
 - cancelamento da renovação pelo próprio usuário;
 - concessões manuais para operação interna.
@@ -338,7 +332,7 @@ Objetivo: reduzir fricção de acesso recorrente e aproximar o uso da experiênc
 - Vercel para frontend e rotas server-side
 - Firebase para autenticação
 - Supabase/Postgres para dados e billing
-- Mercado Pago para assinatura
+- Stripe para assinatura
 
 ### Recomendação de publicação
 
@@ -346,7 +340,7 @@ Antes de abrir para usuários finais:
 
 1. validar login e sessão;
 2. validar trial e expiração;
-3. validar assinatura no Mercado Pago;
+3. validar assinatura no Stripe Checkout;
 4. validar cancelamento;
 5. validar webhook e reconciliação;
 6. validar o painel de grants com conta `owner/admin`.
@@ -361,7 +355,7 @@ O projeto possui integração nutricional com atribuição obrigatória. Para ca
 
 `Powered by fatsecret nutrition API`
 
-### Mercado Pago
+### Stripe
 
 As credenciais de produção e o secret de webhook devem ser configurados na Vercel antes do uso real da cobrança.
 
@@ -395,4 +389,3 @@ Na prática, o projeto está em estágio de **lançamento controlado**, com base
 ## Licença e Uso
 
 Repositório privado de produto. Uso, distribuição e operação sujeitos às regras definidas pela A&R Software Development e pelos provedores integrados.
-

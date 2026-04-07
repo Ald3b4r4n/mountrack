@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { readServerAppAccess } from "@/modules/billing/auth/server-access";
-import { cancelMercadoPagoPreapproval } from "@/modules/billing/providers/mercado-pago";
+import { cancelStripeSubscription } from "@/modules/billing/providers/stripe";
 import { upsertBillingSubscription } from "@/modules/billing/repositories/billing-store";
 
 export const runtime = "nodejs";
@@ -21,7 +21,10 @@ export async function POST() {
     return createJsonError("Billing subscription not found", 404);
   }
 
-  if (currentSubscription.cancelAtPeriodEnd || currentSubscription.status === "cancelled") {
+  if (
+    currentSubscription.cancelAtPeriodEnd ||
+    currentSubscription.status === "cancelled"
+  ) {
     return NextResponse.json(
       {
         subscription: currentSubscription,
@@ -31,7 +34,7 @@ export async function POST() {
   }
 
   try {
-    await cancelMercadoPagoPreapproval(currentSubscription.providerSubscriptionId);
+    await cancelStripeSubscription(currentSubscription.providerSubscriptionId);
 
     const updatedSubscription = await upsertBillingSubscription({
       id: currentSubscription.id,
@@ -58,8 +61,8 @@ export async function POST() {
       { status: 200 },
     );
   } catch (error) {
-    if (error instanceof Error && error.message.startsWith("MERCADO_PAGO_")) {
-      return createJsonError("Failed to cancel Mercado Pago subscription", 502);
+    if (error instanceof Error && error.message.startsWith("STRIPE_")) {
+      return createJsonError("Failed to cancel Stripe subscription", 502);
     }
 
     return createJsonError("Failed to cancel billing subscription", 500);

@@ -41,8 +41,6 @@ export default async function SubscribePage() {
         amountCents={plan?.amountCents ?? BILLING_MONTHLY_PRICE_CENTS}
         monthlyPrice={monthlyPrice}
         trialDays={trialDays}
-        mercadoPagoPublicKey={process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY ?? ""}
-        sandboxPayerEmail={process.env.NEXT_PUBLIC_MERCADO_PAGO_TEST_PAYER_EMAIL ?? ""}
       />
     </main>
   );

@@ -15,7 +15,10 @@ export async function GET() {
   const access = await readServerAppAccess();
 
   if (!access?.user) {
-    return NextResponse.json({ error: "Missing authenticated session" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Missing authenticated session" },
+      { status: 401 },
+    );
   }
 
   if (!hasBillingPermission(access.roles, "billing:webhooks:view")) {
@@ -23,11 +26,14 @@ export async function GET() {
   }
 
   if (getBillingStorageResponse() === "unavailable") {
-    return NextResponse.json({ error: "Billing storage unavailable" }, { status: 503 });
+    return NextResponse.json(
+      { error: "Billing storage unavailable" },
+      { status: 503 },
+    );
   }
 
   const summary = await getBillingWebhookHealthSummary(
-    "mercado_pago",
+    "stripe",
     new Date(),
     RECENT_WINDOW_HOURS,
     STALE_AFTER_MINUTES,

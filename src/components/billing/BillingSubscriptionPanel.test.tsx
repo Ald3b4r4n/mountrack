@@ -60,10 +60,10 @@ describe("BillingSubscriptionPanel", () => {
     expect(
       screen.getByRole("heading", { name: "Acesso liberado até 23/04/2026." }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Mercado Pago | mensal")).toBeInTheDocument();
+    expect(screen.getByText("Stripe | mensal")).toBeInTheDocument();
     expect(screen.getByText("23/03/2026 até 23/04/2026")).toBeInTheDocument();
     expect(
-      screen.getByText("Cobrança processada pelo Mercado Pago"),
+      screen.getByText("Cobrança processada pela Stripe"),
     ).toBeInTheDocument();
 
     await userEvent.click(

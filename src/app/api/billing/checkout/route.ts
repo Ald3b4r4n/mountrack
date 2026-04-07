@@ -7,25 +7,22 @@ import {
 } from "@/modules/billing/domain/types";
 import { APP_SESSION_COOKIE_NAME } from "@/modules/billing/auth/session-cookie";
 import {
-  isMercadoPagoConfigured,
-  resolveBillingAppBaseUrl,
-} from "@/modules/billing/config/mercado-pago";
-import { createMercadoPagoPreapproval } from "@/modules/billing/providers/mercado-pago";
-import {
   createBillingCheckoutSession,
   getBillingPlan,
   getBillingStorageResponse,
   updateBillingCheckoutSession,
-  upsertBillingSubscription,
 } from "@/modules/billing/repositories/billing-store";
-import { resolveMercadoPagoCheckoutPayerEmail } from "@/modules/billing/services/mercado-pago-checkout";
+import {
+  isStripeConfigured,
+  resolveStripeAppBaseUrl,
+} from "@/modules/billing/config/stripe";
+import { createStripeCheckoutSubscriptionSession } from "@/modules/billing/providers/stripe";
 
 export const runtime = "nodejs";
 
 const checkoutRequestSchema = z
   .object({
     planCode: z.string().trim().min(1).optional(),
-    cardTokenId: z.string().trim().min(1).optional(),
   })
   .strict();
 
@@ -49,10 +46,6 @@ function createJsonError(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
-function isMercadoPagoSandboxCollectorMismatch(error: Error): boolean {
-  return error.message.includes("Both payer and collector must be real or test users");
-}
-
 export async function POST(request: Request) {
   const sessionToken = readSessionToken(request);
   if (!sessionToken) {
@@ -62,22 +55,22 @@ export async function POST(request: Request) {
   let sessionId: string | null = null;
 
   try {
-    const payload = checkoutRequestSchema.parse(await request.json().catch(() => ({})));
-
-    if (!payload.cardTokenId) {
-      return createJsonError("Direct checkout requires card token", 400);
-    }
+    const payload = checkoutRequestSchema.parse(
+      await request.json().catch(() => ({})),
+    );
 
     if (getBillingStorageResponse() === "unavailable") {
       return createJsonError("Billing storage unavailable", 503);
     }
 
-    if (!isMercadoPagoConfigured()) {
-      return createJsonError("Mercado Pago checkout unavailable", 503);
+    if (!isStripeConfigured()) {
+      return createJsonError("Stripe checkout unavailable", 503);
     }
 
     const decodedToken = await verifyFirebaseIdToken(sessionToken);
-    const plan = await getBillingPlan(payload.planCode ?? BILLING_MONTHLY_PLAN_CODE);
+    const plan = await getBillingPlan(
+      payload.planCode ?? BILLING_MONTHLY_PLAN_CODE,
+    );
 
     if (!plan) {
       return createJsonError("Billing plan not found", 404);
@@ -103,36 +96,30 @@ export async function POST(request: Request) {
     });
     sessionId = session.id;
 
-    const subscription = await createMercadoPagoPreapproval({
+    const checkout = await createStripeCheckoutSubscriptionSession({
       sessionId: session.id,
+      userId: decodedToken.uid,
+      planId: plan.id,
+      planCode: plan.code,
       planName: plan.name,
       amountCents: plan.amountCents,
       currency: plan.currency,
-      payerEmail: await resolveMercadoPagoCheckoutPayerEmail(
+      customerEmail:
         typeof decodedToken.email === "string" ? decodedToken.email : undefined,
-      ),
-      appBaseUrl: resolveBillingAppBaseUrl(request.url),
-      cardTokenId: payload.cardTokenId,
+      appBaseUrl: resolveStripeAppBaseUrl(request.url),
     });
-    const checkoutSessionStatus: BillingCheckoutSessionStatus = "pending";
-
-    await upsertBillingSubscription({
-      id: `billing-subscription:${subscription.providerSubscriptionId}`,
-      userId: decodedToken.uid,
-      planId: plan.id,
-      providerSubscriptionId: subscription.providerSubscriptionId,
-      status: subscription.providerStatus,
-    });
+    const checkoutSessionStatus: BillingCheckoutSessionStatus =
+      "redirect_ready";
 
     const readySession = await updateBillingCheckoutSession({
       sessionId: session.id,
       status: checkoutSessionStatus,
-      providerCheckoutId: subscription.providerSubscriptionId,
-      providerCheckoutUrl: null,
+      providerCheckoutId: checkout.providerCheckoutId,
+      providerCheckoutUrl: checkout.providerCheckoutUrl,
     });
 
     if (!readySession) {
-      return createJsonError("Failed to prepare Mercado Pago subscription checkout", 502);
+      return createJsonError("Failed to prepare Stripe checkout", 502);
     }
 
     return NextResponse.json(
@@ -142,10 +129,10 @@ export async function POST(request: Request) {
           status: readySession.status,
           expiresAt: readySession.expiresAt,
         },
-        checkoutUrl: null,
-        provider: "mercado_pago",
-        flow: "direct",
-        subscriptionStatus: subscription.providerStatus,
+        checkoutUrl: checkout.providerCheckoutUrl,
+        provider: "stripe",
+        flow: "redirect",
+        paymentMethods: ["card", "apple_pay", "google_pay", "link"],
       },
       { status: 201 },
     );
@@ -161,27 +148,19 @@ export async function POST(request: Request) {
       return createJsonError("Invalid request payload", 400);
     }
 
-    if (error instanceof Error && error.message === "MERCADO_PAGO_NOT_CONFIGURED") {
-      return createJsonError("Mercado Pago checkout unavailable", 503);
+    if (error instanceof Error && error.message === "STRIPE_NOT_CONFIGURED") {
+      return createJsonError("Stripe checkout unavailable", 503);
     }
 
-    if (error instanceof Error && error.message === "MERCADO_PAGO_TEST_PAYER_EMAIL_REQUIRED") {
-      return createJsonError("Mercado Pago test buyer email missing", 503);
+    if (
+      error instanceof Error &&
+      error.message === "BILLING_APP_BASE_URL_REQUIRED"
+    ) {
+      return createJsonError("Billing checkout URL unavailable", 503);
     }
 
-    if (error instanceof Error && error.message === "MERCADO_PAGO_TEST_PAYER_EMAIL_INVALID") {
-      return createJsonError("Mercado Pago test buyer email invalid", 503);
-    }
-
-    if (error instanceof Error && isMercadoPagoSandboxCollectorMismatch(error)) {
-      return createJsonError(
-        "Mercado Pago sandbox mismatch: token e comprador precisam ser ambos de teste",
-        503,
-      );
-    }
-
-    if (error instanceof Error && error.message.startsWith("MERCADO_PAGO_")) {
-      return createJsonError("Failed to create Mercado Pago subscription checkout", 502);
+    if (error instanceof Error && error.message.startsWith("STRIPE_")) {
+      return createJsonError("Failed to create Stripe checkout session", 502);
     }
 
     return createJsonError("Failed to create checkout session", 500);

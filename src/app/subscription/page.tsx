@@ -53,7 +53,7 @@ function resolveSummaryCard(payload: BillingAccessPayload) {
   return {
     label: "Próxima renovação",
     value: renewalDate ?? "mensal",
-    hint: "A cobrança recorrente é processada pelo Mercado Pago. Aqui você acompanha o ciclo e controla a renovação.",
+    hint: "A cobrança recorrente é processada pela Stripe. Aqui você acompanha o ciclo e controla a renovação.",
   };
 }
 
@@ -83,7 +83,9 @@ export default async function SubscriptionPage() {
       <section className={`glass-panel anim-enter ${styles.hero}`}>
         <div className={styles.heroCopy}>
           <span className={styles.eyebrow}>Minha assinatura</span>
-          <h1 className={styles.title}>Seu acesso, seu ciclo e sua renovação.</h1>
+          <h1 className={styles.title}>
+            Seu acesso, seu ciclo e sua renovação.
+          </h1>
           <p className={styles.description}>
             {resolveDescription(initialPayload)}
           </p>
@@ -92,10 +94,7 @@ export default async function SubscriptionPage() {
             <Link href="/" className="btn-outline">
               Voltar para o painel
             </Link>
-            <Link
-              href={buildSubscribePath("checkout")}
-              className="btn-primary"
-            >
+            <Link href={buildSubscribePath("checkout")} className="btn-primary">
               Ver plano e pagamento
             </Link>
             {canManageGrants ? (
@@ -134,17 +133,19 @@ export default async function SubscriptionPage() {
           <h2 className={styles.detailTitle}>Onde a cobrança acontece</h2>
           <p className={styles.detailText}>
             A cobrança recorrente, o cartão e a confirmação do pagamento ficam
-            com o Mercado Pago. O MounTrack recebe o status e libera o acesso
-            da sua conta depois da confirmação.
+            com a Stripe. O MounTrack recebe o status e libera o acesso da sua
+            conta depois da confirmação.
           </p>
           <div className={styles.supportCard}>
             <p>
               Quando precisar iniciar ou retomar a assinatura, abra
-              <Link href={buildSubscribePath("checkout")}> o plano</Link> e
-              siga para o ambiente do Mercado Pago.
+              <Link href={buildSubscribePath("checkout")}> o plano</Link> e siga
+              para o checkout da Stripe.
             </p>
             <div className={styles.supportContacts}>
-              <span className={styles.supportContactsTitle}>Suporte ao usuario</span>
+              <span className={styles.supportContactsTitle}>
+                Suporte ao usuário
+              </span>
               <a href={`mailto:${USER_SUPPORT_CONTACT.email}`}>
                 Email: {USER_SUPPORT_CONTACT.email}
               </a>

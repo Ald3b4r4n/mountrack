@@ -90,7 +90,7 @@ function resolvePanelCopy(payload: BillingAccessPayload) {
       ? `Acesso liberado até ${accessDate}.`
       : "Sua assinatura está ativa.",
     description:
-      "A renovação continua mensalmente no Mercado Pago. Se quiser encerrar, você cancela a próxima cobrança aqui e continua usando o app até o fim do período pago.",
+      "A renovação continua mensalmente na Stripe. Se quiser encerrar, você cancela a próxima cobrança aqui e continua usando o app até o fim do período pago.",
     primaryAction: "Cancelar renovação",
     secondaryLabel: "Abrir plano",
   };
@@ -103,9 +103,8 @@ interface BillingSubscriptionPanelProps {
 export function BillingSubscriptionPanel({
   initialPayload,
 }: BillingSubscriptionPanelProps) {
-  const [subscriptionOverride, setSubscriptionOverride] = useState<
-    BillingAccessPayload["subscription"]
-  >(null);
+  const [subscriptionOverride, setSubscriptionOverride] =
+    useState<BillingAccessPayload["subscription"]>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +122,10 @@ export function BillingSubscriptionPanel({
   );
 
   const panelCopy = useMemo(() => {
-    if (!payload?.authenticated || !payload.subscription?.providerSubscriptionId) {
+    if (
+      !payload?.authenticated ||
+      !payload.subscription?.providerSubscriptionId
+    ) {
       return null;
     }
 
@@ -135,12 +137,16 @@ export function BillingSubscriptionPanel({
   }, [payload]);
 
   const accessEndsAt = formatDate(
-    payload?.entitlementEndsAt ?? payload?.subscription?.currentPeriodEnd ?? null,
+    payload?.entitlementEndsAt ??
+      payload?.subscription?.currentPeriodEnd ??
+      null,
   );
   const cycleStartsAt = formatDate(
     payload?.subscription?.currentPeriodStart ?? null,
   );
-  const renewalDate = formatDate(payload?.subscription?.currentPeriodEnd ?? null);
+  const renewalDate = formatDate(
+    payload?.subscription?.currentPeriodEnd ?? null,
+  );
   const canceledAt = formatDate(payload?.subscription?.canceledAt ?? null);
   const effectiveStatusLabel = payload
     ? resolveEffectiveStatusLabel(payload)
@@ -225,7 +231,7 @@ export function BillingSubscriptionPanel({
 
           <article className={styles.metaCard}>
             <span className={styles.metaLabel}>Cobrança</span>
-            <strong className={styles.metaValue}>Mercado Pago | mensal</strong>
+            <strong className={styles.metaValue}>Stripe | mensal</strong>
           </article>
         </div>
 
@@ -262,11 +268,11 @@ export function BillingSubscriptionPanel({
 
         <div className={styles.providerCard}>
           <span className={styles.providerLabel}>
-            Cobrança processada pelo Mercado Pago
+            Cobrança processada pela Stripe
           </span>
           <p className={styles.providerText}>
-            O cartão e a recorrência ficam no ambiente seguro do Mercado Pago.
-            Aqui você acompanha o ciclo, o acesso e a renovação.
+            O cartão e a recorrência ficam no ambiente seguro da Stripe. Aqui
+            você acompanha o ciclo, o acesso e a renovação.
           </p>
         </div>
       </div>

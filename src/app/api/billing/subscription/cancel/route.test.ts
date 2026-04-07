@@ -4,8 +4,8 @@ jest.mock("@/modules/billing/auth/server-access", () => ({
   readServerAppAccess: jest.fn(),
 }));
 
-jest.mock("@/modules/billing/providers/mercado-pago", () => ({
-  cancelMercadoPagoPreapproval: jest.fn(),
+jest.mock("@/modules/billing/providers/stripe", () => ({
+  cancelStripeSubscription: jest.fn(),
 }));
 
 jest.mock("@/modules/billing/repositories/billing-store", () => ({
@@ -14,18 +14,18 @@ jest.mock("@/modules/billing/repositories/billing-store", () => ({
 
 import { POST } from "@/app/api/billing/subscription/cancel/route";
 import { readServerAppAccess } from "@/modules/billing/auth/server-access";
-import { cancelMercadoPagoPreapproval } from "@/modules/billing/providers/mercado-pago";
+import { cancelStripeSubscription } from "@/modules/billing/providers/stripe";
 import { upsertBillingSubscription } from "@/modules/billing/repositories/billing-store";
 
 const readServerAppAccessMock = jest.mocked(readServerAppAccess);
-const cancelMercadoPagoPreapprovalMock = jest.mocked(cancelMercadoPagoPreapproval);
+const cancelStripeSubscriptionMock = jest.mocked(cancelStripeSubscription);
 const upsertBillingSubscriptionMock = jest.mocked(upsertBillingSubscription);
 
 const activeSubscription = {
-  id: "billing-subscription:preapproval-123",
+  id: "billing-subscription:sub_123",
   userId: "user-123",
   planId: "billing-plan-pro-monthly",
-  providerSubscriptionId: "preapproval-123",
+  providerSubscriptionId: "sub_123",
   status: "active",
   trialEndsAt: null,
   currentPeriodStart: "2026-03-23T12:00:00.000Z",
@@ -98,7 +98,7 @@ describe("POST /api/billing/subscription/cancel", () => {
     const response = await POST();
 
     expect(response.status).toBe(200);
-    expect(cancelMercadoPagoPreapprovalMock).not.toHaveBeenCalled();
+    expect(cancelStripeSubscriptionMock).not.toHaveBeenCalled();
     await expect(response.json()).resolves.toEqual({
       subscription: {
         ...activeSubscription,
@@ -121,17 +121,7 @@ describe("POST /api/billing/subscription/cancel", () => {
       entitlementEndsAt: "2026-04-23T12:00:00.000Z",
       subscription: activeSubscription,
     });
-    cancelMercadoPagoPreapprovalMock.mockResolvedValue({
-      providerSubscriptionId: "preapproval-123",
-      status: "cancelled",
-      externalReference: "checkout-123",
-      nextPaymentDate: null,
-      lastChargedAt: "2026-03-23T12:00:00.000Z",
-      rawPayload: {
-        id: "preapproval-123",
-        status: "cancelled",
-      },
-    });
+    cancelStripeSubscriptionMock.mockResolvedValue({} as never);
     upsertBillingSubscriptionMock.mockResolvedValue({
       ...activeSubscription,
       cancelAtPeriodEnd: true,
@@ -141,11 +131,11 @@ describe("POST /api/billing/subscription/cancel", () => {
     const response = await POST();
 
     expect(response.status).toBe(200);
-    expect(cancelMercadoPagoPreapprovalMock).toHaveBeenCalledWith("preapproval-123");
+    expect(cancelStripeSubscriptionMock).toHaveBeenCalledWith("sub_123");
     expect(upsertBillingSubscriptionMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: "billing-subscription:preapproval-123",
-        providerSubscriptionId: "preapproval-123",
+        id: "billing-subscription:sub_123",
+        providerSubscriptionId: "sub_123",
         status: "active",
         cancelAtPeriodEnd: true,
         currentPeriodEnd: "2026-04-23T12:00:00.000Z",
@@ -160,7 +150,7 @@ describe("POST /api/billing/subscription/cancel", () => {
     });
   });
 
-  it("returns 502 when Mercado Pago rejects the cancellation request", async () => {
+  it("returns 502 when Stripe rejects the cancellation request", async () => {
     readServerAppAccessMock.mockResolvedValue({
       user: {
         uid: "user-123",
@@ -173,8 +163,8 @@ describe("POST /api/billing/subscription/cancel", () => {
       entitlementEndsAt: "2026-04-23T12:00:00.000Z",
       subscription: activeSubscription,
     });
-    cancelMercadoPagoPreapprovalMock.mockRejectedValue(
-      new Error("MERCADO_PAGO_PREAPPROVAL_CANCEL_FAILED:400:bad_request"),
+    cancelStripeSubscriptionMock.mockRejectedValue(
+      new Error("STRIPE_SUBSCRIPTION_CANCEL_FAILED:400:bad_request"),
     );
 
     const response = await POST();
@@ -182,7 +172,7 @@ describe("POST /api/billing/subscription/cancel", () => {
     expect(response.status).toBe(502);
     expect(upsertBillingSubscriptionMock).not.toHaveBeenCalled();
     await expect(response.json()).resolves.toEqual({
-      error: "Failed to cancel Mercado Pago subscription",
+      error: "Failed to cancel Stripe subscription",
     });
   });
 });

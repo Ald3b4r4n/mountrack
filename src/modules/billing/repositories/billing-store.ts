@@ -474,10 +474,7 @@ export function resolveBillingPoolOptions(): BillingPoolOptions {
 
   return {
     connectionString: requireDatabaseUrl(),
-    max: readPositiveIntegerEnv(
-      "BILLING_DB_POOL_MAX",
-      productionDefaults.max,
-    ),
+    max: readPositiveIntegerEnv("BILLING_DB_POOL_MAX", productionDefaults.max),
     idleTimeoutMillis: readPositiveIntegerEnv(
       "BILLING_DB_IDLE_TIMEOUT_MS",
       productionDefaults.idleTimeoutMillis,
@@ -521,7 +518,9 @@ function mapBillingPlanRow(row: BillingPlanRow): BillingPlan {
   };
 }
 
-function mapManualAccessGrantRow(row: ManualAccessGrantRow): ManualAccessGrantRecord {
+function mapManualAccessGrantRow(
+  row: ManualAccessGrantRow,
+): ManualAccessGrantRecord {
   return {
     id: row.id,
     userId: row.user_id,
@@ -585,7 +584,9 @@ function mapBillingSubscriptionRow(
   };
 }
 
-function mapBillingCheckoutSessionRow(row: BillingCheckoutSessionRow): BillingCheckoutSessionRecord {
+function mapBillingCheckoutSessionRow(
+  row: BillingCheckoutSessionRow,
+): BillingCheckoutSessionRecord {
   return {
     id: row.id,
     userId: row.user_id,
@@ -697,7 +698,14 @@ async function appendAuditLog(
     insert into billing_audit_logs (id, actor_user_id, action, target_type, target_id, metadata_json)
     values ($1, $2, $3, $4, $5, $6::jsonb)
     `,
-    [randomUUID(), actorUserId, action, targetType, targetId, JSON.stringify(metadata)],
+    [
+      randomUUID(),
+      actorUserId,
+      action,
+      targetType,
+      targetId,
+      JSON.stringify(metadata),
+    ],
   );
 }
 
@@ -718,7 +726,9 @@ export async function listBillingPlans(): Promise<BillingPlan[]> {
   return result.rows.map(mapBillingPlanRow);
 }
 
-export async function getBillingPlan(code = BILLING_MONTHLY_PLAN_CODE): Promise<BillingPlan | null> {
+export async function getBillingPlan(
+  code = BILLING_MONTHLY_PLAN_CODE,
+): Promise<BillingPlan | null> {
   if (!hasDatabaseUrl()) {
     return null;
   }
@@ -737,7 +747,9 @@ export async function getBillingPlan(code = BILLING_MONTHLY_PLAN_CODE): Promise<
   return result.rows[0] ? mapBillingPlanRow(result.rows[0]) : null;
 }
 
-export async function getBillingPlanById(planId: string): Promise<BillingPlan | null> {
+export async function getBillingPlanById(
+  planId: string,
+): Promise<BillingPlan | null> {
   if (!hasDatabaseUrl()) {
     return null;
   }
@@ -776,7 +788,10 @@ export async function listBillingUserRoles(userId: string): Promise<AppRole[]> {
   return result.rows.map((row) => row.code);
 }
 
-export async function bootstrapBillingOwner(userId: string, email: string): Promise<AppRole[]> {
+export async function bootstrapBillingOwner(
+  userId: string,
+  email: string,
+): Promise<AppRole[]> {
   if (!hasDatabaseUrl()) {
     return [];
   }
@@ -814,7 +829,9 @@ export async function bootstrapBillingOwner(userId: string, email: string): Prom
   return listBillingUserRoles(userId);
 }
 
-export async function upsertBillingEntitlement(input: UpsertBillingEntitlementInput): Promise<BillingEntitlementRecord> {
+export async function upsertBillingEntitlement(
+  input: UpsertBillingEntitlementInput,
+): Promise<BillingEntitlementRecord> {
   requireDatabaseUrl();
   await ensureSchema();
 
@@ -880,7 +897,9 @@ export async function ensureBillingTrialEntitlement(
   }
 
   const startsAt = now.toISOString();
-  const endsAt = new Date(now.getTime() + BILLING_TRIAL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const endsAt = new Date(
+    now.getTime() + BILLING_TRIAL_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
   const trialId = `trial:${userId}`;
 
   return upsertBillingEntitlement({
@@ -894,7 +913,9 @@ export async function ensureBillingTrialEntitlement(
   });
 }
 
-export async function saveManualAccessGrant(input: SaveManualAccessGrantInput): Promise<ManualAccessGrantRecord> {
+export async function saveManualAccessGrant(
+  input: SaveManualAccessGrantInput,
+): Promise<ManualAccessGrantRecord> {
   requireDatabaseUrl();
   await ensureSchema();
 
@@ -948,11 +969,16 @@ export async function saveManualAccessGrant(input: SaveManualAccessGrantInput): 
   return mapManualAccessGrantRow(result.rows[0]);
 }
 
-export async function revokeManualAccessGrant(grantId: string, revokedBy: string): Promise<boolean> {
+export async function revokeManualAccessGrant(
+  grantId: string,
+  revokedBy: string,
+): Promise<boolean> {
   requireDatabaseUrl();
   await ensureSchema();
 
-  const result = await getPool().query<Pick<ManualAccessGrantRow, "id" | "user_id">>(
+  const result = await getPool().query<
+    Pick<ManualAccessGrantRow, "id" | "user_id">
+  >(
     `
     update billing_manual_access_grants
     set revoked_by = $2, revoked_at = now()
@@ -1186,7 +1212,7 @@ export async function updateBillingEventProcessingStatus(
 }
 
 export async function getBillingWebhookHealthSummary(
-  provider = "mercado_pago",
+  provider = "stripe",
   now = new Date(),
   recentWindowHours = 24,
   staleAfterMinutes = 10,
@@ -1542,15 +1568,15 @@ export async function getBillingAccessSnapshot(
   userId: string,
   now = new Date(),
 ): Promise<BillingAccessSnapshot> {
-    if (!hasDatabaseUrl()) {
-      return {
-        entitlementStatus: null,
-        entitlementStartsAt: null,
-        entitlementEndsAt: null,
-        manualGrant: null,
-        roles: [],
-      };
-    }
+  if (!hasDatabaseUrl()) {
+    return {
+      entitlementStatus: null,
+      entitlementStartsAt: null,
+      entitlementEndsAt: null,
+      manualGrant: null,
+      roles: [],
+    };
+  }
 
   await ensureSchema();
   const timestamp = now.toISOString();

@@ -33,12 +33,14 @@ type QueryResult = {
   rowCount?: number;
 };
 
-function makeQueryMock(resolver: (sql: string, params?: unknown[]) => QueryResult): jest.Mock {
+function makeQueryMock(
+  resolver: (sql: string, params?: unknown[]) => QueryResult,
+): jest.Mock {
   return jest.fn(async (sql: string, params?: unknown[]) => {
     const result = resolver(String(sql), params);
     return {
       rows: result.rows ?? [],
-      rowCount: result.rowCount ?? (result.rows?.length ?? 0),
+      rowCount: result.rowCount ?? result.rows?.length ?? 0,
     };
   });
 }
@@ -64,7 +66,8 @@ describe("billing-store", () => {
   };
 
   beforeEach(() => {
-    process.env.DATABASE_URL = "postgres://billing:test@localhost:5432/mountrack";
+    process.env.DATABASE_URL =
+      "postgres://billing:test@localhost:5432/mountrack";
     process.env.DATABASE_SSL = "";
     mutableEnv.NODE_ENV = "test";
     process.env.BILLING_DB_POOL_MAX = "";
@@ -82,7 +85,8 @@ describe("billing-store", () => {
     mutableEnv.NODE_ENV = originalNodeEnv;
     process.env.BILLING_DB_POOL_MAX = originalPoolMax;
     process.env.BILLING_DB_IDLE_TIMEOUT_MS = originalPoolIdleTimeout;
-    process.env.BILLING_DB_CONNECTION_TIMEOUT_MS = originalPoolConnectionTimeout;
+    process.env.BILLING_DB_CONNECTION_TIMEOUT_MS =
+      originalPoolConnectionTimeout;
     process.env.BOOTSTRAP_OWNER_EMAIL = originalBootstrapOwnerEmail;
     process.env.BOOTSTRAP_ADMIN_EMAILS = originalBootstrapAdminEmails;
   });
@@ -155,7 +159,10 @@ describe("billing-store", () => {
         isActive: true,
       },
     ]);
-    expect(query).toHaveBeenCalledWith(expect.stringContaining("insert into billing_plans"), expect.any(Array));
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("insert into billing_plans"),
+      expect.any(Array),
+    );
   });
 
   it("bootstraps owner and admin roles for the configured operator email", async () => {
@@ -165,7 +172,10 @@ describe("billing-store", () => {
     const query = makeQueryMock((sql) => {
       if (sql.includes("insert into billing_user_roles")) {
         return {
-          rows: [{ role_id: "billing-role:owner" }, { role_id: "billing-role:admin" }],
+          rows: [
+            { role_id: "billing-role:owner" },
+            { role_id: "billing-role:admin" },
+          ],
         };
       }
 
@@ -180,10 +190,16 @@ describe("billing-store", () => {
 
     globalStore.__billingPool__ = { query };
 
-    const roles = await bootstrapBillingOwner("user-owner", "OWNER@mountrack.app");
+    const roles = await bootstrapBillingOwner(
+      "user-owner",
+      "OWNER@mountrack.app",
+    );
 
     expect(roles).toEqual(["owner", "admin"]);
-    expect(query).toHaveBeenCalledWith(expect.stringContaining("insert into billing_audit_logs"), expect.any(Array));
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("insert into billing_audit_logs"),
+      expect.any(Array),
+    );
   });
 
   it("records billing webhook events idempotently", async () => {
@@ -197,7 +213,7 @@ describe("billing-store", () => {
           rows: [
             {
               id: "event-1",
-              provider: "mercado_pago",
+              provider: "stripe",
               provider_event_id: "provider-event-1",
               event_type: "payment.updated",
               signature_verified: true,
@@ -215,7 +231,7 @@ describe("billing-store", () => {
     globalStore.__billingPool__ = { query };
 
     const result = await recordBillingEventIfNew({
-      provider: "mercado_pago",
+      provider: "stripe",
       providerEventId: "provider-event-1",
       eventType: "payment.updated",
       signatureVerified: true,
@@ -227,7 +243,7 @@ describe("billing-store", () => {
       inserted: false,
       record: {
         id: "event-1",
-        provider: "mercado_pago",
+        provider: "stripe",
         providerEventId: "provider-event-1",
         eventType: "payment.updated",
         signatureVerified: true,
@@ -245,7 +261,7 @@ describe("billing-store", () => {
           rows: [
             {
               id: "evt-1",
-              provider: "mercado_pago",
+              provider: "stripe",
               provider_event_id: "provider-event-1",
               event_type: "payment.updated",
               signature_verified: true,
@@ -270,7 +286,7 @@ describe("billing-store", () => {
 
     expect(record).toEqual({
       id: "evt-1",
-      provider: "mercado_pago",
+      provider: "stripe",
       providerEventId: "provider-event-1",
       eventType: "payment.updated",
       signatureVerified: true,
@@ -280,7 +296,7 @@ describe("billing-store", () => {
     });
   });
 
-  it("summarizes Mercado Pago webhook health for operator visibility", async () => {
+  it("summarizes Stripe webhook health for operator visibility", async () => {
     const query = makeQueryMock((sql) => {
       if (sql.includes("with latest_processed as")) {
         return {
@@ -291,7 +307,7 @@ describe("billing-store", () => {
               stale_received_count: 2,
               latest_processed_at: "2026-03-23T18:44:23.000Z",
               latest_failure_at: "2026-03-23T17:10:00.000Z",
-              latest_failure_event_type: "subscription_preapproval.updated",
+              latest_failure_event_type: "customer.subscription.updated",
             },
           ],
         };
@@ -303,20 +319,20 @@ describe("billing-store", () => {
     globalStore.__billingPool__ = { query };
 
     const summary = await getBillingWebhookHealthSummary(
-      "mercado_pago",
+      "stripe",
       new Date("2026-03-23T18:45:00.000Z"),
       24,
       10,
     );
 
     expect(summary).toEqual({
-      provider: "mercado_pago",
+      provider: "stripe",
       recentProcessedCount: 12,
       recentFailureCount: 1,
       staleReceivedCount: 2,
       latestProcessedAt: "2026-03-23T18:44:23.000Z",
       latestFailureAt: "2026-03-23T17:10:00.000Z",
-      latestFailureEventType: "subscription_preapproval.updated",
+      latestFailureEventType: "customer.subscription.updated",
     });
   });
 
@@ -371,10 +387,13 @@ describe("billing-store", () => {
       expiresAt: "2026-03-19T14:30:00.000Z",
       createdAt: "2026-03-19T14:00:00.000Z",
     });
-    expect(query).toHaveBeenCalledWith(expect.stringContaining("insert into billing_checkout_sessions"), expect.any(Array));
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("insert into billing_checkout_sessions"),
+      expect.any(Array),
+    );
   });
 
-  it("updates checkout sessions with Mercado Pago redirect data", async () => {
+  it("updates checkout sessions with provider redirect data", async () => {
     const query = makeQueryMock((sql) => {
       if (sql.includes("update billing_checkout_sessions")) {
         return {
@@ -387,7 +406,8 @@ describe("billing-store", () => {
               currency: "BRL",
               nonce: "nonce-1",
               provider_checkout_id: "pref-123",
-              provider_checkout_url: "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=pref-123",
+              provider_checkout_url:
+                "https://checkout.stripe.com/c/pay/cs_test_123",
               status: "redirect_ready",
               expires_at: "2026-03-19T14:30:00.000Z",
               created_at: "2026-03-19T14:00:00.000Z",
@@ -405,7 +425,7 @@ describe("billing-store", () => {
       sessionId: "checkout-1",
       status: "redirect_ready",
       providerCheckoutId: "pref-123",
-      providerCheckoutUrl: "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=pref-123",
+      providerCheckoutUrl: "https://checkout.stripe.com/c/pay/cs_test_123",
     });
 
     expect(session).toEqual({
@@ -416,12 +436,15 @@ describe("billing-store", () => {
       currency: "BRL",
       nonce: "nonce-1",
       providerCheckoutId: "pref-123",
-      providerCheckoutUrl: "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=pref-123",
+      providerCheckoutUrl: "https://checkout.stripe.com/c/pay/cs_test_123",
       status: "redirect_ready",
       expiresAt: "2026-03-19T14:30:00.000Z",
       createdAt: "2026-03-19T14:00:00.000Z",
     });
-    expect(query).toHaveBeenCalledWith(expect.stringContaining("update billing_checkout_sessions"), expect.any(Array));
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("update billing_checkout_sessions"),
+      expect.any(Array),
+    );
   });
 
   it("finds a checkout session by id", async () => {
@@ -437,7 +460,8 @@ describe("billing-store", () => {
               currency: "BRL",
               nonce: "nonce-1",
               provider_checkout_id: "pref-123",
-              provider_checkout_url: "https://sandbox.mercadopago.com.br/checkout/v1/redirect?pref_id=pref-123",
+              provider_checkout_url:
+                "https://checkout.stripe.com/c/pay/cs_test_456",
               status: "redirect_ready",
               expires_at: "2026-03-19T14:30:00.000Z",
               created_at: "2026-03-19T14:00:00.000Z",
@@ -461,7 +485,7 @@ describe("billing-store", () => {
       currency: "BRL",
       nonce: "nonce-1",
       providerCheckoutId: "pref-123",
-      providerCheckoutUrl: "https://sandbox.mercadopago.com.br/checkout/v1/redirect?pref_id=pref-123",
+      providerCheckoutUrl: "https://checkout.stripe.com/c/pay/cs_test_456",
       status: "redirect_ready",
       expiresAt: "2026-03-19T14:30:00.000Z",
       createdAt: "2026-03-19T14:00:00.000Z",
@@ -477,7 +501,7 @@ describe("billing-store", () => {
               id: "billing-payment:999999999",
               user_id: "user-a",
               subscription_id: null,
-              provider: "mercado_pago",
+              provider: "stripe",
               provider_payment_id: "999999999",
               provider_status: "approved",
               internal_status: "paid",
@@ -498,7 +522,7 @@ describe("billing-store", () => {
     const payment = await upsertBillingPayment({
       id: "billing-payment:999999999",
       userId: "user-a",
-      provider: "mercado_pago",
+      provider: "stripe",
       providerPaymentId: "999999999",
       providerStatus: "approved",
       internalStatus: "paid",
@@ -512,7 +536,7 @@ describe("billing-store", () => {
       id: "billing-payment:999999999",
       userId: "user-a",
       subscriptionId: null,
-      provider: "mercado_pago",
+      provider: "stripe",
       providerPaymentId: "999999999",
       providerStatus: "approved",
       internalStatus: "paid",
@@ -523,7 +547,7 @@ describe("billing-store", () => {
     });
   });
 
-  it("upserts billing subscriptions for Mercado Pago recurring checkouts", async () => {
+  it("upserts billing subscriptions for Stripe recurring checkouts", async () => {
     let subscriptionUpsertSql = "";
     const query = makeQueryMock((sql) => {
       if (sql.includes("insert into billing_subscriptions")) {
@@ -531,11 +555,11 @@ describe("billing-store", () => {
         return {
           rows: [
             {
-              id: "billing-subscription:preapproval-123",
+              id: "billing-subscription:sub_123",
               user_id: "user-a",
               billing_customer_id: null,
               plan_id: "billing-plan-pro-monthly",
-              provider_subscription_id: "preapproval-123",
+              provider_subscription_id: "sub_123",
               status: "pending",
               trial_ends_at: null,
               current_period_start: null,
@@ -556,18 +580,18 @@ describe("billing-store", () => {
     globalStore.__billingPool__ = { query };
 
     const subscription = await upsertBillingSubscription({
-      id: "billing-subscription:preapproval-123",
+      id: "billing-subscription:sub_123",
       userId: "user-a",
       planId: "billing-plan-pro-monthly",
-      providerSubscriptionId: "preapproval-123",
+      providerSubscriptionId: "sub_123",
       status: "pending",
     });
 
     expect(subscription).toEqual({
-      id: "billing-subscription:preapproval-123",
+      id: "billing-subscription:sub_123",
       userId: "user-a",
       planId: "billing-plan-pro-monthly",
-      providerSubscriptionId: "preapproval-123",
+      providerSubscriptionId: "sub_123",
       status: "pending",
       trialEndsAt: null,
       currentPeriodStart: null,
@@ -592,7 +616,10 @@ describe("billing-store", () => {
       "utf8",
     );
     const migrationSource = readFileSync(
-      join(process.cwd(), "supabase/migrations/20260318_000003_public_rls_hardening.sql"),
+      join(
+        process.cwd(),
+        "supabase/migrations/20260318_000003_public_rls_hardening.sql",
+      ),
       "utf8",
     );
 
@@ -609,8 +636,12 @@ describe("billing-store", () => {
       "billing_events",
       "billing_audit_logs",
     ]) {
-      expect(runtimeSchemaSource).toContain(`alter table ${tableName} enable row level security;`);
-      expect(migrationSource).toContain(`alter table if exists public.${tableName} enable row level security;`);
+      expect(runtimeSchemaSource).toContain(
+        `alter table ${tableName} enable row level security;`,
+      );
+      expect(migrationSource).toContain(
+        `alter table if exists public.${tableName} enable row level security;`,
+      );
     }
   });
 
@@ -620,7 +651,10 @@ describe("billing-store", () => {
       "utf8",
     );
     const migrationSource = readFileSync(
-      join(process.cwd(), "supabase/migrations/20260319_000004_billing_checkout_provider_link.sql"),
+      join(
+        process.cwd(),
+        "supabase/migrations/20260319_000004_billing_checkout_provider_link.sql",
+      ),
       "utf8",
     );
 
@@ -628,7 +662,9 @@ describe("billing-store", () => {
     expect(runtimeSchemaSource).toContain(
       "alter table billing_checkout_sessions add column if not exists provider_checkout_url text;",
     );
-    expect(migrationSource).toContain("add column if not exists provider_checkout_url text");
+    expect(migrationSource).toContain(
+      "add column if not exists provider_checkout_url text",
+    );
   });
 
   it("returns the current access snapshot from entitlements, manual grant and roles", async () => {
@@ -705,7 +741,10 @@ describe("billing-store", () => {
       endsAt: "2026-03-18T00:00:00.000Z",
     });
 
-    const snapshot = await getBillingAccessSnapshot("user-a", new Date("2026-03-15T12:00:00.000Z"));
+    const snapshot = await getBillingAccessSnapshot(
+      "user-a",
+      new Date("2026-03-15T12:00:00.000Z"),
+    );
 
     expect(snapshot).toEqual({
       entitlementStatus: "trialing",

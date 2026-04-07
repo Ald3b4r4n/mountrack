@@ -18,7 +18,9 @@ import {
 
 const readServerAppAccessMock = jest.mocked(readServerAppAccess);
 const getBillingStorageResponseMock = jest.mocked(getBillingStorageResponse);
-const getBillingWebhookHealthSummaryMock = jest.mocked(getBillingWebhookHealthSummary);
+const getBillingWebhookHealthSummaryMock = jest.mocked(
+  getBillingWebhookHealthSummary,
+);
 
 describe("GET /api/billing/webhook-health", () => {
   beforeEach(() => {
@@ -87,7 +89,7 @@ describe("GET /api/billing/webhook-health", () => {
       subscription: null,
     });
     getBillingWebhookHealthSummaryMock.mockResolvedValue({
-      provider: "mercado_pago",
+      provider: "stripe",
       recentProcessedCount: 8,
       recentFailureCount: 0,
       staleReceivedCount: 0,
@@ -100,7 +102,7 @@ describe("GET /api/billing/webhook-health", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
-      provider: "mercado_pago",
+      provider: "stripe",
       status: "healthy",
       recentWindowHours: 24,
       staleAfterMinutes: 10,
@@ -112,7 +114,7 @@ describe("GET /api/billing/webhook-health", () => {
       latestFailureEventType: null,
     });
     expect(getBillingWebhookHealthSummaryMock).toHaveBeenCalledWith(
-      "mercado_pago",
+      "stripe",
       expect.any(Date),
       24,
       10,
@@ -130,7 +132,7 @@ describe("GET /api/billing/webhook-health", () => {
       subscription: null,
     });
     getBillingWebhookHealthSummaryMock.mockResolvedValue({
-      provider: "mercado_pago",
+      provider: "stripe",
       recentProcessedCount: 6,
       recentFailureCount: 1,
       staleReceivedCount: 0,
@@ -143,7 +145,7 @@ describe("GET /api/billing/webhook-health", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
-      provider: "mercado_pago",
+      provider: "stripe",
       status: "attention",
       recentWindowHours: 24,
       staleAfterMinutes: 10,
