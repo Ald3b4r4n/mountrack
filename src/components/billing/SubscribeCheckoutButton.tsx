@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { loadMercadoPago } from "@mercadopago/sdk-js";
 import type { FormEvent } from "react";
@@ -186,15 +186,14 @@ export function SubscribeCheckoutButton({
 
   function navigateToLogin() {
     if (typeof window === "undefined") {
-      navigate(`/login?next=${encodeURIComponent(buildSubscribePath("checkout"))}`);
+      navigate(
+        `/login?next=${encodeURIComponent(buildSubscribePath("checkout"))}`,
+      );
       return;
     }
 
     navigate(
-      buildLoginNavigationUrl(
-        window.location,
-        buildSubscribePath("checkout"),
-      ),
+      buildLoginNavigationUrl(window.location, buildSubscribePath("checkout")),
     );
   }
 
@@ -210,9 +209,9 @@ export function SubscribeCheckoutButton({
       }),
     });
 
-    const data = (await response.json().catch(() => null)) as
-      | CheckoutResponse
-      | null;
+    const data = (await response
+      .json()
+      .catch(() => null)) as CheckoutResponse | null;
     if (!response.ok) {
       setError(resolveDisplayError(data?.error));
       return;
@@ -233,7 +232,7 @@ export function SubscribeCheckoutButton({
     setError(null);
     setMessage(null);
 
-    if (!cardFormRef.current) {
+    if (!isDirectFormReady || isFormLoading || !cardFormRef.current) {
       setError(
         "O formulário de pagamento ainda está carregando. Tente novamente em alguns segundos.",
       );
@@ -348,12 +347,13 @@ export function SubscribeCheckoutButton({
                   "Failed to mount Mercado Pago card form",
                   mountError,
                 );
-                setSdkError("Não foi possível carregar o formulário de pagamento.");
+                setSdkError(
+                  "Não foi possível carregar o formulário de pagamento.",
+                );
                 setIsFormLoading(false);
                 return;
               }
 
-              cardFormRef.current = cardFormInstance;
               setIsDirectFormReady(true);
               setIsFormLoading(false);
             },
@@ -374,11 +374,18 @@ export function SubscribeCheckoutButton({
             },
           },
         });
+
+        if (!isMounted) {
+          if (typeof cardFormInstance?.unmount === "function") {
+            cardFormInstance.unmount();
+          }
+          return;
+        }
+
+        // Keep a stable reference even if the SDK invokes onFormMounted synchronously.
+        cardFormRef.current = cardFormInstance;
       } catch (mountError) {
-        console.error(
-          "Failed to bootstrap Mercado Pago card form",
-          mountError,
-        );
+        console.error("Failed to bootstrap Mercado Pago card form", mountError);
         if (!isMounted) {
           return;
         }
@@ -572,13 +579,17 @@ export function SubscribeCheckoutButton({
       ) : null}
 
       {paymentFormError ? (
-        <p className={`${styles.message} ${styles.messageError}`}>{paymentFormError}</p>
+        <p className={`${styles.message} ${styles.messageError}`}>
+          {paymentFormError}
+        </p>
       ) : null}
       {error ? (
         <p className={`${styles.message} ${styles.messageError}`}>{error}</p>
       ) : null}
       {message ? (
-        <p className={`${styles.message} ${styles.messageSuccess}`}>{message}</p>
+        <p className={`${styles.message} ${styles.messageSuccess}`}>
+          {message}
+        </p>
       ) : null}
 
       <p className={styles.footerNote}>

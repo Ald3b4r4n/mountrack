@@ -20,16 +20,18 @@ describe("SubscribeCheckoutButton", () => {
   const assignMock = jest.fn();
   const cardFormDataMock = jest.fn(() => ({ token: "card-token-123" }));
   const cardFormUnmountMock = jest.fn();
-  const cardFormMock = jest.fn((config: { callbacks?: { onFormMounted?: (error?: unknown) => void } }) => {
-    const instance = {
-      getCardFormData: cardFormDataMock,
-      unmount: cardFormUnmountMock,
-    };
-    queueMicrotask(() => {
-      config.callbacks?.onFormMounted?.();
-    });
-    return instance;
-  });
+  const cardFormMock = jest.fn(
+    (config: { callbacks?: { onFormMounted?: (error?: unknown) => void } }) => {
+      const instance = {
+        getCardFormData: cardFormDataMock,
+        unmount: cardFormUnmountMock,
+      };
+      queueMicrotask(() => {
+        config.callbacks?.onFormMounted?.();
+      });
+      return instance;
+    },
+  );
   const mercadoPagoConstructorMock = jest.fn().mockImplementation(() => ({
     cardForm: cardFormMock,
   }));
@@ -38,7 +40,8 @@ describe("SubscribeCheckoutButton", () => {
     jest.clearAllMocks();
     global.fetch = jest.fn();
     loadMercadoPagoMock.mockResolvedValue(undefined);
-    (window as Window & { MercadoPago?: unknown }).MercadoPago = mercadoPagoConstructorMock;
+    (window as Window & { MercadoPago?: unknown }).MercadoPago =
+      mercadoPagoConstructorMock;
     window.history.replaceState({}, "", "/subscribe");
   });
 
@@ -69,10 +72,16 @@ describe("SubscribeCheckoutButton", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Entrar para pagar" })).toBeInTheDocument();
-    expect(screen.getByText("Entre com sua conta para concluir a assinatura.")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Entrar para pagar" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Entre com sua conta para concluir a assinatura."),
+    ).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Entrar para pagar" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Entrar para pagar" }),
+    );
 
     expect(assignMock).toHaveBeenCalledWith(
       "/login?next=%2Fsubscribe%3Fentry%3Dcheckout",
@@ -138,16 +147,26 @@ describe("SubscribeCheckoutButton", () => {
 
     await waitFor(() => {
       expect(loadMercadoPagoMock).toHaveBeenCalled();
-      expect(mercadoPagoConstructorMock).toHaveBeenCalledWith("TEST-public-key", {
-        locale: "pt-BR",
-      });
+      expect(mercadoPagoConstructorMock).toHaveBeenCalledWith(
+        "TEST-public-key",
+        {
+          locale: "pt-BR",
+        },
+      );
     });
 
-    expect(await screen.findByRole("button", { name: "Autorizar assinatura" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Autorizar assinatura" }),
+    ).toBeInTheDocument();
 
     await userEvent.type(screen.getByLabelText("Nome do titular"), "APRO");
-    await userEvent.type(screen.getByLabelText("Número do documento"), "12345678909");
-    await userEvent.click(screen.getByRole("button", { name: "Autorizar assinatura" }));
+    await userEvent.type(
+      screen.getByLabelText("Número do documento"),
+      "12345678909",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Autorizar assinatura" }),
+    );
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
@@ -157,7 +176,9 @@ describe("SubscribeCheckoutButton", () => {
         }),
       );
     });
-    expect(JSON.parse(jest.mocked(global.fetch).mock.calls[0][1]?.body as string)).toEqual({
+    expect(
+      JSON.parse(jest.mocked(global.fetch).mock.calls[0][1]?.body as string),
+    ).toEqual({
       planCode: "pro_monthly",
       cardTokenId: "card-token-123",
     });
@@ -209,5 +230,84 @@ describe("SubscribeCheckoutButton", () => {
     });
 
     expect(misses).toBeGreaterThan(0);
+  });
+
+  it("submits successfully when Mercado Pago mounts synchronously", async () => {
+    const user = userEvent.setup();
+
+    useAuthMock.mockReturnValue({
+      user: { uid: "user-123", email: "user@example.com" },
+      loading: false,
+      sessionReady: true,
+      signInWithGoogle: jest.fn(),
+      signOut: jest.fn(),
+    } as never);
+
+    const syncCardFormDataMock = jest.fn(() => ({ token: "sync-token-123" }));
+    const syncCardFormUnmountMock = jest.fn();
+    const syncCardFormMock = jest.fn(
+      (config: {
+        callbacks?: { onFormMounted?: (error?: unknown) => void };
+      }) => {
+        const instance = {
+          getCardFormData: syncCardFormDataMock,
+          unmount: syncCardFormUnmountMock,
+        };
+        config.callbacks?.onFormMounted?.();
+        return instance;
+      },
+    );
+
+    mercadoPagoConstructorMock.mockImplementationOnce(() => ({
+      cardForm: syncCardFormMock,
+    }));
+
+    jest.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        checkoutUrl: null,
+        flow: "direct",
+        subscriptionStatus: "authorized",
+      }),
+    } as Response);
+
+    render(
+      <SubscribeCheckoutButton
+        planCode="pro_monthly"
+        amountCents={1499}
+        mercadoPagoPublicKey="TEST-public-key"
+        sandboxPayerEmail="buyer@testuser.com"
+        navigate={assignMock}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(syncCardFormMock).toHaveBeenCalled();
+    });
+
+    await user.type(screen.getByLabelText("Nome do titular"), "APRO");
+    await user.type(
+      screen.getByLabelText("Número do documento"),
+      "12345678909",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Autorizar assinatura" }),
+    );
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/billing/checkout",
+        expect.objectContaining({
+          method: "POST",
+        }),
+      );
+    });
+
+    expect(
+      JSON.parse(jest.mocked(global.fetch).mock.calls[0][1]?.body as string),
+    ).toEqual({
+      planCode: "pro_monthly",
+      cardTokenId: "sync-token-123",
+    });
   });
 });
