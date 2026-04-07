@@ -31,7 +31,7 @@ describe("GET /api/billing/access", () => {
     });
   });
 
-  it("returns 403 when the user is authenticated but billing access is blocked", async () => {
+  it("returns 200 with accessAllowed=false when the user is authenticated but billing access is blocked", async () => {
     readServerAppAccessMock.mockResolvedValue({
       user: {
         uid: "user-123",
@@ -47,7 +47,7 @@ describe("GET /api/billing/access", () => {
 
     const response = await GET();
 
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
       authenticated: true,
       accessAllowed: false,

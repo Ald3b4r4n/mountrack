@@ -23,6 +23,10 @@ interface SubscribeExperienceProps {
   sandboxPayerEmail?: string;
 }
 
+interface BillingAccessPayload {
+  accessAllowed?: boolean;
+}
+
 const slides = [
   {
     id: "overview",
@@ -54,7 +58,9 @@ export function SubscribeExperience({
   const searchParams = useSearchParams();
   const subscribeEntry = resolveSubscribeEntry(searchParams.get("entry"));
   const keepUserOnSubscribe = shouldStayOnSubscribe(subscribeEntry);
-  const [activeStep, setActiveStep] = useState(resolveSubscribeStep(subscribeEntry));
+  const [activeStep, setActiveStep] = useState(
+    resolveSubscribeStep(subscribeEntry),
+  );
   const [isSwitchingAccount, setIsSwitchingAccount] = useState(false);
   const [isCheckingAccess, setIsCheckingAccess] = useState(false);
   const [accessResolved, setAccessResolved] = useState(false);
@@ -63,9 +69,7 @@ export function SubscribeExperience({
   const frameRef = useRef<HTMLDivElement | null>(null);
   const didMountRef = useRef(false);
   const hasAuthenticatedUser = Boolean(user);
-  const entryButtonLabel = hasAuthenticatedUser
-    ? "Abrir o app"
-    : "Fazer login";
+  const entryButtonLabel = hasAuthenticatedUser ? "Abrir o app" : "Fazer login";
 
   const accessStatusCopy = useMemo(() => {
     if (loading || (hasAuthenticatedUser && !sessionReady)) {
@@ -157,12 +161,19 @@ export function SubscribeExperience({
           cache: "no-store",
           credentials: "include",
         });
+        const payload = (await response
+          .json()
+          .catch(() => null)) as BillingAccessPayload | null;
 
         if (cancelled) {
           return;
         }
 
-        if (response.status === 200 && !keepUserOnSubscribe) {
+        if (
+          response.status === 200 &&
+          payload?.accessAllowed === true &&
+          !keepUserOnSubscribe
+        ) {
           router.replace("/");
           return;
         }
@@ -382,8 +393,8 @@ export function SubscribeExperience({
                   <h2>Quando a assinatura faz sentido</h2>
                   <p>
                     Se o MounTrack já entrou na sua rotina, a assinatura mantém
-                    tudo no mesmo lugar: histórico, metas, doses e nutrição,
-                    sem recomeçar do zero.
+                    tudo no mesmo lugar: histórico, metas, doses e nutrição, sem
+                    recomeçar do zero.
                   </p>
                 </aside>
               </div>
@@ -395,7 +406,10 @@ export function SubscribeExperience({
               <div className={styles.slideHead}>
                 <span className={styles.slideKicker}>Primeiro contato</span>
                 <h2 className={styles.slideTitle}>
-                  Os <span className={styles.highlight}>{trialDays} dias grátis</span>{" "}
+                  Os{" "}
+                  <span className={styles.highlight}>
+                    {trialDays} dias grátis
+                  </span>{" "}
                   começam no primeiro acesso.
                 </h2>
                 <p className={styles.slideText}>

@@ -9,14 +9,14 @@ export async function GET() {
   if (!access?.user) {
     return NextResponse.json(
       {
-      authenticated: false,
-      accessAllowed: false,
-      effectiveStatus: "missing",
-      entitlementStartsAt: null,
-      entitlementEndsAt: null,
-      roles: [],
-      subscription: null,
-    },
+        authenticated: false,
+        accessAllowed: false,
+        effectiveStatus: "missing",
+        entitlementStartsAt: null,
+        entitlementEndsAt: null,
+        roles: [],
+        subscription: null,
+      },
       { status: 401 },
     );
   }
@@ -30,10 +30,5 @@ export async function GET() {
     roles: access.roles,
     subscription: access.subscription,
   };
-
-  if (!access.accessAllowed) {
-    return NextResponse.json(body, { status: 403 });
-  }
-
   return NextResponse.json(body, { status: 200 });
 }

@@ -60,8 +60,8 @@ describe("ProtectedRoute", () => {
       signOut: jest.fn(),
     } as never);
     jest.mocked(global.fetch).mockResolvedValue({
-      ok: false,
-      status: 403,
+      ok: true,
+      status: 200,
       json: async () => ({
         authenticated: true,
         accessAllowed: false,

@@ -9,7 +9,9 @@ jest.mock("next/navigation", () => ({
 }));
 
 jest.mock("@/components/billing/SubscribeCheckoutButton", () => ({
-  SubscribeCheckoutButton: () => <div data-testid="subscribe-checkout">checkout</div>,
+  SubscribeCheckoutButton: () => (
+    <div data-testid="subscribe-checkout">checkout</div>
+  ),
 }));
 
 jest.mock("@/contexts/AuthContext", () => ({
@@ -63,10 +65,14 @@ describe("SubscribeExperience", () => {
       />,
     );
 
-    expect(screen.getByText("Seu histórico continua com você.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Seu histórico continua com você."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Etapa 1 de 3")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Ver como funciona" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Ver como funciona" }),
+    );
 
     expect(
       screen.getByRole("heading", {
@@ -76,9 +82,13 @@ describe("SubscribeExperience", () => {
     expect(screen.getByText("Etapa 2 de 3")).toBeInTheDocument();
     expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
 
-    await userEvent.click(screen.getByRole("button", { name: "Ir para pagamento" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Ir para pagamento" }),
+    );
 
-    expect(screen.getByText("Assine sem sair da sua rotina.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Assine sem sair da sua rotina."),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("subscribe-checkout")).toBeInTheDocument();
     expect(screen.getByText("Etapa 3 de 3")).toBeInTheDocument();
   });
@@ -139,6 +149,41 @@ describe("SubscribeExperience", () => {
     await waitFor(() => {
       expect(replace).toHaveBeenCalledWith("/");
     });
+  });
+
+  it("keeps authenticated users on subscribe when access is blocked", async () => {
+    useAuthMock.mockReturnValue({
+      user: { uid: "user-1", email: "user@example.com" },
+      loading: false,
+      sessionReady: true,
+      signInWithGoogle: jest.fn(),
+      signOut: jest.fn(),
+    } as never);
+    (global.fetch as jest.Mock).mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: async () => ({ accessAllowed: false }),
+    });
+
+    render(
+      <SubscribeExperience
+        planCode="pro_monthly"
+        amountCents={1499}
+        monthlyPrice="R$ 14,99"
+        trialDays={7}
+        mercadoPagoPublicKey=""
+      />,
+    );
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith("/api/billing/access", {
+        method: "GET",
+        cache: "no-store",
+        credentials: "include",
+      });
+    });
+
+    expect(replace).not.toHaveBeenCalled();
   });
 
   it("keeps authenticated users on the subscribe page when entry=plan", async () => {
