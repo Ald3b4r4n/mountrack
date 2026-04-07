@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { SegmentButton } from "@/components/nutrition/CommonUI";
 import { NutritionScreenShell } from "@/components/nutrition/NutritionScreenShell";
 import { NutritionScreenPreviewGate } from "@/components/nutrition/NutritionScreenPreviewGate";
@@ -25,6 +25,7 @@ import {
   saveNutritionFocusedMealToBrowser,
 } from "@/modules/nutrition/client-storage";
 import type {
+  DiaryHistoryEntry,
   MealType,
   NutritionObjective,
 } from "@/modules/nutrition/domain/types";
@@ -146,6 +147,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     isComposerOpen,
     lastSearchSource,
     message: searchMessage,
+    barcodeMissCode,
   } = sState;
   const {
     handleSearchQueryChange,
@@ -200,6 +202,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
   const activePlanningPanelRef = useRef<HTMLDivElement | null>(null);
   const mealPreferenceReadyForUserRef = useRef<string | null>(null);
   const lastAutoSyncedMealRef = useRef<MealType | null>(null);
+  const [searchTargetDate, setSearchTargetDate] = useState<string | null>(null);
 
   const mealDefinitions = useMemo(
     () => buildMealDefinitions(diaryItems, diaryMealDefinitions),
@@ -276,6 +279,25 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     loadHistory,
   });
 
+  const openSearchForTodayMeal = (nextMealType?: MealType) => {
+    setSearchTargetDate(null);
+    openSearchForMeal(nextMealType);
+  };
+
+  const openSearchForDateMeal = (
+    targetDate: string,
+    nextMealType: MealType,
+  ) => {
+    setSearchTargetDate(targetDate.slice(0, 10));
+    openSearchForMeal(nextMealType);
+  };
+
+  useEffect(() => {
+    if (activeArea !== "search" && searchTargetDate) {
+      setSearchTargetDate(null);
+    }
+  }, [activeArea, searchTargetDate]);
+
   const {
     handleAddDiaryItem,
     handleUpdateDiaryItem,
@@ -290,6 +312,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
   } = useNutritionScreenActions({
     activeUser,
     today,
+    searchTargetDate,
     storageMode,
     canUseBrowserPersistence,
     historyPage,
@@ -329,6 +352,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     setIsGeneratingPlan,
     setIsExportingPdf,
     setCustomWaterOpen,
+    setSearchTargetDate,
     loadBrowserDashboard,
     loadBrowserHistory,
     hydrateDashboard,
@@ -659,61 +683,27 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
       ))}
     </div>
   );
-  const todayWorkspaceProps = {
-    activeDiaryView,
-    onChangeDiaryView: setActiveDiaryView,
-    onChangeDiaryPage: setDiaryPage,
+  const todayEntry: DiaryHistoryEntry = {
+    date: today,
+    itemCount: diaryItems.length,
     summary,
-    waterRatio,
+  };
+
+  const todayWorkspaceProps = {
+    authUser: activeUser,
     isMobileLayout,
-    onAdjustWater: (amount: number) => {
-      void handleSaveCustomWater(amount, "increment");
-    },
-    onOpenCustomWater: () => setCustomWaterOpen(true),
-    isUpdatingWater,
-    mealDefinitions,
-    activeDiaryMeal,
-    onChangeActiveDiaryMeal: setActiveDiaryMeal,
-    onOpenMeal: (meal: MealType) => {
-      setActiveDiaryMeal(meal);
-      if (isMobileLayout) {
-        focusTodayDashboard({ openDiaryPanel: true });
-        return;
-      }
-      handleChangeArea("today");
-      setActiveDiaryView("today");
-      setDiaryPage(1);
-    },
-    onOpenSearchForMeal: openSearchForMeal,
-    onOpenMealChooser: () => {
-      setDiarySuccessFeedback(null);
-      setMealChooserOpen(true);
-    },
-    groupedDiaryItems,
-    activeDiaryItems,
-    diaryPage,
-    diaryTotalPages,
-    isLoading,
-    pagedDiaryItems,
-    onUpdateDiaryItem: handleUpdateDiaryItem,
-    onDeleteDiaryItem: handleDeleteDiaryItem,
+    todayEntry,
+    onAddToToday: () => openSearchForTodayMeal(activeDiaryMeal),
+    onOpenSearchForDateMeal: (targetDate: string, meal: MealType) =>
+      openSearchForDateMeal(targetDate, meal),
     isHistoryLoading,
     historyEntries,
     historyPage,
     historyTotalPages,
     onLoadHistory: (page: number) => void loadHistory(page),
-    onManageMeal: openManageMealDialog,
-    recentlyLoggedFoodLabel:
-      activeArea === "today" && isMobileLayout
-        ? activeMealRecentlyLoggedFoodLabel
-        : null,
-    mealsSectionOpen: todayMealsSectionOpen,
-    onMealsSectionOpenChange: handleTodayMealsSectionOpenChange,
-    mealsSectionRef: todayMealsSectionRef,
     diarySectionOpen: todayDiarySectionOpen,
     onDiarySectionOpenChange: handleTodayDiarySectionOpenChange,
     diarySectionRef: todayDiarySectionRef,
-    onAddMeal: openCreateMealDialog,
   };
   const searchWorkspaceProps = {
     storageMode,
@@ -734,11 +724,18 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     searchResults,
     resultState,
     onApplyFoodSelection: applyFoodSelection,
+    barcodeMissCode,
+    onBarcodeMissAddManually: () => {
+      setEditingCustomFood(null);
+      setCustomFoodOpen(true);
+    },
     onCustomFoodOpen: () => {
       setEditingCustomFood(null);
       setCustomFoodOpen(true);
     },
-    onEditCustomFood: (food: import("@/modules/nutrition/domain/types").FoodItem) => {
+    onEditCustomFood: (
+      food: import("@/modules/nutrition/domain/types").FoodItem,
+    ) => {
       setEditingCustomFood(food);
       setCustomFoodOpen(true);
     },
@@ -911,7 +908,11 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
           setCustomFoodOpen(false);
           setEditingCustomFood(null);
           setDiarySuccessFeedback(null);
-          setMessage(wasEditing ? `Alimento ${food.name} atualizado.` : `Alimento ${food.name} cadastrado.`);
+          setMessage(
+            wasEditing
+              ? `Alimento ${food.name} atualizado.`
+              : `Alimento ${food.name} cadastrado.`,
+          );
           applyFoodSelection(food);
         },
       }}
@@ -931,6 +932,10 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
         goal,
         waterRatio,
         consumedRatio,
+        mealDefinitions,
+        mealCalories: summary.meals,
+        activeMeal: activeDiaryMeal,
+        groupedDiaryItems,
         activeMealLabel: activeDiaryMealDefinition.label,
         activeMealCalories: summary.meals[activeDiaryMeal] ?? 0,
         recentlyLoggedFoodLabel:
@@ -940,16 +945,25 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
         onOpenConsumedSummary: isMobileLayout
           ? handleOpenConsumedSummary
           : undefined,
-        onOpenMealChooser: isMobileLayout
-          ? () => {
+        onFocusMeal: isMobileLayout
+          ? (meal) => {
               setDiarySuccessFeedback(null);
-              setMealChooserOpen(true);
+              setActiveDiaryMeal(meal);
+              setMealType(meal);
             }
           : undefined,
-        onAddToActiveMeal: isMobileLayout
-          ? () => {
-              openSearchForMeal(activeDiaryMeal);
+        onAddToMeal: isMobileLayout
+          ? (meal) => {
+              setActiveDiaryMeal(meal);
+              setMealType(meal);
+              openSearchForTodayMeal(meal);
             }
+          : undefined,
+        onUpdateDiaryItem: isMobileLayout
+          ? (input) => handleUpdateDiaryItem(input)
+          : undefined,
+        onDeleteDiaryItem: isMobileLayout
+          ? (itemId) => void handleDeleteDiaryItem(itemId)
           : undefined,
         onAdjustWater: (amount) => {
           void handleSaveCustomWater(amount, "increment");
@@ -987,7 +1001,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
           if (!diarySuccessFeedback) {
             return;
           }
-          openSearchForMeal(diarySuccessFeedback.mealType);
+          openSearchForTodayMeal(diarySuccessFeedback.mealType);
         },
       }}
     />

@@ -47,8 +47,10 @@ export function NutritionScreenShell({
       <MealSwitchDialog {...mealSwitchDialogProps} />
       <CustomFoodDialog {...customFoodDialogProps} />
       <CustomWaterDialog {...customWaterDialogProps} />
-      <NutritionHeader {...headerProps} />
       <NutritionWorkspaceNav {...navProps} />
+      {(!isMobileLayout || navProps.activeArea === "today") && (
+        <NutritionHeader {...headerProps} />
+      )}
       <NutritionStatusBanners {...statusBannersProps} />
       {workspaceContent}
       <footer className="mt-4 flex justify-center pb-2">

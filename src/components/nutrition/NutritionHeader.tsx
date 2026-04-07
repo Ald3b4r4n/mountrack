@@ -1,17 +1,23 @@
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
-  Apple,
   ArrowLeft,
+  ChevronDown,
   ChevronRight,
   Coffee,
   Droplets,
   GlassWater,
-  Salad,
+  Moon,
+  Plus,
+  Sun,
   Utensils,
-  UtensilsCrossed,
 } from "lucide-react";
 import type {
   DailySummary,
+  DiaryItemSnapshot,
+  MealDefinition,
+  MealType,
   NutritionGoal,
 } from "@/modules/nutrition/domain/types";
 import {
@@ -19,6 +25,9 @@ import {
   formatGrams,
   formatMilliliters,
 } from "@/modules/nutrition/ui-helpers";
+import { ConfirmActionDialog } from "@/components/nutrition/ConfirmActionDialog";
+import { DiaryItemRow } from "@/components/nutrition/DiaryItemRow";
+import { MealHistoryDialog } from "@/components/nutrition/MealHistoryDialog";
 
 function CircularProgress({
   ratio,
@@ -134,7 +143,9 @@ function DesktopMacroStatusCard({
   target: number;
   accent: string;
 }) {
+  const exceeds = target > 0 && current > target;
   const ratio = target > 0 ? Math.min((current / target) * 100, 100) : 0;
+  const displayColor = exceeds ? "#fb7185" : accent;
 
   return (
     <div className="glass-panel static-panel min-h-full rounded-[1rem] bg-[#020b1c]/75 p-3">
@@ -146,7 +157,10 @@ function DesktopMacroStatusCard({
           {target > 0 ? `${formatGrams(target)} alvo` : "Sem alvo"}
         </span>
       </div>
-      <strong className="mb-2 block text-[1rem]" style={{ color: accent }}>
+      <strong
+        className="mb-2 block text-[1rem]"
+        style={{ color: displayColor }}
+      >
         {formatGrams(current)}
       </strong>
       <div className="progress-track mb-[0.35rem] h-[0.42rem]">
@@ -154,12 +168,16 @@ function DesktopMacroStatusCard({
           className="progress-fill"
           style={{
             width: `${ratio}%`,
-            background: `linear-gradient(135deg, ${accent}, rgba(255,255,255,0.92))`,
+            background: `linear-gradient(135deg, ${displayColor}, rgba(255,255,255,0.92))`,
           }}
         />
       </div>
-      <span className="text-[0.78rem] text-[var(--text-secondary)]">
-        {Math.round(ratio)}% do objetivo
+      <span
+        className={`text-[0.78rem] ${exceeds ? "font-medium text-[#fb7185]" : "text-[var(--text-secondary)]"}`}
+      >
+        {exceeds
+          ? `+${formatGrams(current - target)} acima`
+          : `${Math.round(ratio)}% do objetivo`}
       </span>
     </div>
   );
@@ -261,121 +279,6 @@ function MobileSummaryTile({
   );
 }
 
-function MobileActiveMealCard({
-  mealLabel,
-  mealCalories,
-  onAddToMeal,
-  recentlyLoggedFoodLabel,
-  suggestedCalories = 0,
-  onOpenMealChooser,
-}: {
-  mealLabel: string;
-  mealCalories: number;
-  onAddToMeal?: () => void;
-  onOpenMealChooser?: () => void;
-  recentlyLoggedFoodLabel?: string | null;
-  suggestedCalories?: number;
-}) {
-  const getMealTheme = (label: string) => {
-    const l = label.toLowerCase();
-    if (l.includes("café") || l.includes("breakfast")) {
-      return { Icon: Coffee, color: "#f59e0b", label: "Café" };
-    }
-    if (l.includes("almoço") || l.includes("lunch")) {
-      return { Icon: Salad, color: "#10b981", label: "Almoço" };
-    }
-    if (l.includes("lanche") || l.includes("snack")) {
-      return { Icon: Apple, color: "#0ea5e9", label: "Lanche" };
-    }
-    if (l.includes("jantar") || l.includes("dinner")) {
-      return { Icon: Utensils, color: "#6366f1", label: "Jantar" };
-    }
-    return { Icon: UtensilsCrossed, color: "#34d399", label: "Refeição" };
-  };
-
-  const theme = getMealTheme(mealLabel);
-
-  return (
-    <article className="relative mt-2 overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#050f1d]/80 p-5 shadow-2xl">
-      <div className="flex items-start justify-between">
-        <div>
-          <span className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)] opacity-50">
-            AGORA
-          </span>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">
-              <theme.Icon size={24} style={{ color: theme.color }} />
-            </span>
-            <h3 className="text-[1.45rem] font-black tracking-tight text-[var(--text-primary)]">
-              {recentlyLoggedFoodLabel || mealLabel}
-            </h3>
-          </div>
-          {suggestedCalories > 0 && (
-            <div className="mt-2 flex items-center gap-2">
-              <div
-                className="h-1.5 w-1.5 rounded-full animate-pulse"
-                style={{
-                  backgroundColor: theme.color,
-                  boxShadow: `0 0 8px ${theme.color}`,
-                }}
-              />
-              <p className="text-[0.8rem] font-bold text-[var(--text-secondary)] opacity-90">
-                Sugerido:{" "}
-                <span className="text-[var(--text-primary)]">
-                  {formatCalories(suggestedCalories)}
-                </span>
-              </p>
-            </div>
-          )}
-        </div>
-        <div className="flex flex-col items-end gap-2.5">
-          <span
-            className="rounded-full px-4 py-1.5 text-[0.8rem] font-black text-[#050f1d] transition-all duration-500"
-            style={{
-              backgroundColor: theme.color,
-              boxShadow: `0 0 20px ${theme.color}44`,
-            }}
-          >
-            {formatCalories(mealCalories)}
-          </span>
-          <div className="flex items-center gap-1.5 opacity-60">
-            <WaveIcon color={theme.color} className="h-5 w-14" />
-          </div>
-        </div>
-      </div>
-
-      <div className="relative mt-6 h-2 w-full overflow-hidden rounded-full bg-white/5">
-        <div
-          className="absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ease-out"
-          style={{
-            width:
-              suggestedCalories > 0
-                ? `${Math.min((mealCalories / suggestedCalories) * 100, 100)}%`
-                : "0%",
-            background: `linear-gradient(90deg, ${theme.color}, #ffffff55)`,
-            boxShadow: `0 0 15px ${theme.color}88`,
-          }}
-        />
-      </div>
-
-      <div className="mt-6 grid grid-cols-2 gap-3">
-        <button
-          onClick={onOpenMealChooser}
-          className="btn-outline min-h-[3.2rem] rounded-xl text-[0.85rem] font-bold border-white/10 hover:bg-white/5"
-        >
-          Trocar
-        </button>
-        <button
-          onClick={onAddToMeal}
-          className="btn-primary min-h-[3.2rem] rounded-xl text-[0.85rem] font-black shadow-lg"
-        >
-          Adicionar
-        </button>
-      </div>
-    </article>
-  );
-}
-
 function MobileMacroRail({
   label,
   current,
@@ -387,7 +290,9 @@ function MobileMacroRail({
   target: number;
   accent: string;
 }) {
+  const exceeds = target > 0 && current > target;
   const ratio = target > 0 ? Math.min((current / target) * 100, 100) : 0;
+  const displayColor = exceeds ? "#fb7185" : accent;
 
   return (
     <article className="relative overflow-hidden rounded-[1.25rem] border border-white/10 bg-[#050f1d]/80 p-5 shadow-xl">
@@ -399,16 +304,21 @@ function MobileMacroRail({
           <div className="mt-1 flex items-baseline gap-2">
             <strong
               className="text-[1.3rem] font-black tracking-tight"
-              style={{ color: accent }}
+              style={{ color: displayColor }}
             >
               {formatGrams(current)}
             </strong>
+            {exceeds ? (
+              <span className="text-[0.7rem] font-bold text-[#fb7185]">
+                +{formatGrams(current - target)} acima
+              </span>
+            ) : null}
           </div>
         </div>
         <div className="flex flex-col items-end gap-2">
           <CircularProgress
             ratio={ratio}
-            color={accent}
+            color={displayColor}
             size={38}
             strokeWidth={3}
           >
@@ -417,7 +327,7 @@ function MobileMacroRail({
             </span>
           </CircularProgress>
           <div className="flex items-center gap-1.5 opacity-60">
-            <WaveIcon color={accent} className="h-5 w-12" />
+            <WaveIcon color={displayColor} className="h-5 w-12" />
             <span className="text-[0.65rem] font-bold text-[var(--text-secondary)]">
               Meta {formatGrams(target)}
             </span>
@@ -430,12 +340,314 @@ function MobileMacroRail({
           className="h-full rounded-full transition-all duration-1000 ease-out"
           style={{
             width: `${ratio}%`,
-            backgroundColor: accent,
-            boxShadow: `0 0 12px ${accent}`,
+            backgroundColor: displayColor,
+            boxShadow: `0 0 12px ${displayColor}`,
           }}
         />
       </div>
     </article>
+  );
+}
+
+function resolveMealIcon(mealType: MealType): {
+  Icon: typeof Coffee;
+  colorClass: string;
+} {
+  if (mealType === "breakfast") {
+    return { Icon: Coffee, colorClass: "text-amber-300" };
+  }
+  if (mealType === "lunch") {
+    return { Icon: Sun, colorClass: "text-yellow-300" };
+  }
+  if (mealType === "snack") {
+    return { Icon: Moon, colorClass: "text-cyan-300" };
+  }
+  return { Icon: Utensils, colorClass: "text-rose-300" };
+}
+
+function MobileMealQuickList({
+  mealDefinitions,
+  mealCalories,
+  activeMeal,
+  groupedDiaryItems,
+  onFocusMeal,
+  onAddToMeal,
+  onUpdateDiaryItem,
+  onDeleteDiaryItem,
+}: {
+  mealDefinitions: MealDefinition[];
+  mealCalories: Record<string, number>;
+  activeMeal: MealType;
+  groupedDiaryItems?: Record<string, DiaryItemSnapshot[]>;
+  onFocusMeal?: (meal: MealType) => void;
+  onAddToMeal?: (meal: MealType) => void;
+  onUpdateDiaryItem?: (input: {
+    itemId: string;
+    quantity: number;
+    mealType: MealType;
+  }) => Promise<boolean | void> | boolean | void;
+  onDeleteDiaryItem?: (itemId: string) => Promise<void> | void;
+}) {
+  if (!onFocusMeal && !onAddToMeal) {
+    return null;
+  }
+
+  const [expandedMeals, setExpandedMeals] = useState<Set<string>>(new Set());
+  const [inspectedMealKey, setInspectedMealKey] = useState<MealType | null>(
+    null,
+  );
+  const [inspectedItemId, setInspectedItemId] = useState<string | null>(null);
+  const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(
+    null,
+  );
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isDeletePending, setIsDeletePending] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
+  const expandTransition = { duration: prefersReducedMotion ? 0 : 0.24 };
+
+  useEffect(() => {
+    if (!toastMessage) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setToastMessage(null);
+    }, 2200);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [toastMessage]);
+
+  const toggleMeal = (meal: MealType) => {
+    setExpandedMeals((prev) => {
+      const next = new Set(prev);
+      if (next.has(meal)) {
+        next.delete(meal);
+      } else {
+        next.add(meal);
+      }
+      return next;
+    });
+  };
+
+  const inspectedMeal =
+    inspectedMealKey == null
+      ? null
+      : (mealDefinitions.find((meal) => meal.key === inspectedMealKey) ?? null);
+  const inspectedMealAllItems =
+    inspectedMealKey == null
+      ? []
+      : (groupedDiaryItems?.[inspectedMealKey] ?? []);
+  const inspectedMealItems =
+    inspectedItemId == null
+      ? inspectedMealAllItems
+      : inspectedMealAllItems.filter((item) => item.id === inspectedItemId);
+  const inspectedMealCalories = inspectedMealItems.reduce(
+    (sum, item) => sum + item.calories,
+    0,
+  );
+  const deleteCandidateName = (() => {
+    if (!deleteCandidateId) {
+      return null;
+    }
+
+    for (const mealItems of Object.values(groupedDiaryItems ?? {})) {
+      const matchedItem = mealItems.find((item) => item.id === deleteCandidateId);
+      if (matchedItem) {
+        return matchedItem.foodName;
+      }
+    }
+
+    return null;
+  })();
+  const canManageItems = Boolean(onUpdateDiaryItem || onDeleteDiaryItem);
+
+  const closeMealDialog = () => {
+    setInspectedMealKey(null);
+    setInspectedItemId(null);
+  };
+
+  const handleInlineDelete = async (itemId: string) => {
+    if (!onDeleteDiaryItem) {
+      return;
+    }
+
+    await onDeleteDiaryItem(itemId);
+    setToastMessage("Alimento removido do diário.");
+  };
+
+  const confirmInlineDelete = async () => {
+    if (!deleteCandidateId) {
+      return;
+    }
+
+    setIsDeletePending(true);
+    try {
+      await handleInlineDelete(deleteCandidateId);
+      setDeleteCandidateId(null);
+    } finally {
+      setIsDeletePending(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="grid gap-2">
+        {mealDefinitions.map((meal) => {
+          const { Icon, colorClass } = resolveMealIcon(meal.key);
+          const isActive = activeMeal === meal.key;
+          const calories = mealCalories[meal.key] ?? 0;
+          const isExpanded = expandedMeals.has(meal.key);
+          const items = groupedDiaryItems?.[meal.key] ?? [];
+
+          return (
+            <article
+              key={meal.key}
+              className={`rounded-[1rem] border p-2.5 transition-colors ${
+                isActive
+                  ? "border-[#34d399]/40 bg-[#34d399]/10"
+                  : "border-white/8 bg-[#051328]/72"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onFocusMeal?.(meal.key);
+                    toggleMeal(meal.key);
+                  }}
+                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                  aria-label={meal.label}
+                >
+                  <span
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 ${colorClass}`}
+                  >
+                    <Icon size={14} />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[0.9rem] font-semibold text-[var(--text-primary)]">
+                    {meal.label}
+                  </span>
+                  {calories > 0 ? (
+                    <span className="shrink-0 text-[0.72rem] text-[var(--text-secondary)]">
+                      {formatCalories(calories)}
+                    </span>
+                  ) : null}
+                  {isExpanded ? (
+                    <ChevronDown
+                      size={14}
+                      className="shrink-0 text-[var(--text-muted)]"
+                    />
+                  ) : (
+                    <ChevronRight
+                      size={14}
+                      className="shrink-0 text-[var(--text-muted)]"
+                    />
+                  )}
+                </button>
+
+                {onAddToMeal ? (
+                  <button
+                    type="button"
+                    onClick={() => onAddToMeal(meal.key)}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#34d399]/25 bg-[#34d399]/10 text-[#34d399]"
+                    aria-label={`Adicionar alimento em ${meal.label}`}
+                  >
+                    <Plus size={16} />
+                  </button>
+                ) : null}
+              </div>
+
+              <AnimatePresence initial={false}>
+                {isExpanded ? (
+                  <motion.div
+                    key={`${meal.key}-items`}
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={expandTransition}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-2 border-t border-white/8 pt-2">
+                      {items.length === 0 ? (
+                        <p className="py-1 text-center text-[0.78rem] text-[var(--text-muted)]">
+                          Sem itens nesta refeição.
+                        </p>
+                      ) : (
+                        <div className="grid max-h-[26vh] gap-1.5 overflow-y-auto pr-1">
+                          {items.map((item) => (
+                            <div
+                              key={item.id}
+                              className="rounded-[0.85rem] border border-white/14 bg-[#041629]/88 shadow-[0_1px_0_rgba(255,255,255,0.04)]"
+                            >
+                              <DiaryItemRow
+                                item={item}
+                                onEdit={() => {
+                                  if (canManageItems) {
+                                    setInspectedMealKey(meal.key);
+                                    setInspectedItemId(item.id);
+                                  }
+                                }}
+                                onDelete={(itemId) => {
+                                  setDeleteCandidateId(itemId);
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
+            </article>
+          );
+        })}
+      </div>
+
+      <MealHistoryDialog
+        open={Boolean(inspectedMeal)}
+        meal={inspectedMeal}
+        calories={inspectedMealCalories}
+        items={inspectedMealItems}
+        initialEditingItemId={inspectedItemId}
+        mealDefinitions={mealDefinitions}
+        onClose={closeMealDialog}
+        onOpenSearchForMeal={onAddToMeal}
+        onUpdateDiaryItem={onUpdateDiaryItem}
+        onDeleteDiaryItem={onDeleteDiaryItem}
+        onEditSaved={() => {
+          setToastMessage("Item da refeicao atualizado.");
+        }}
+      />
+
+      <ConfirmActionDialog
+        open={Boolean(deleteCandidateId)}
+        title="Excluir alimento"
+        description="Tem certeza que deseja excluir este alimento?"
+        itemName={deleteCandidateName}
+        confirmLabel="Excluir"
+        isPending={isDeletePending}
+        onCancel={() => {
+          if (!isDeletePending) {
+            setDeleteCandidateId(null);
+          }
+        }}
+        onConfirm={confirmInlineDelete}
+      />
+
+      {toastMessage ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none fixed inset-x-0 bottom-5 z-[120] flex justify-center px-4"
+        >
+          <div className="rounded-full border border-[#34d399]/28 bg-[#041f1d]/95 px-4 py-2 text-[0.82rem] font-medium text-[#86efac] shadow-2xl">
+            {toastMessage}
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -444,12 +656,16 @@ function MobileSummaryStrip({
   goal,
   waterRatio,
   consumedRatio,
+  mealDefinitions,
+  mealCalories,
+  activeMeal,
+  groupedDiaryItems,
   activeMealLabel,
-  activeMealCalories,
   onOpenConsumedSummary,
-  onOpenMealChooser,
-  onAddToActiveMeal,
-  recentlyLoggedFoodLabel,
+  onFocusMeal,
+  onAddToMeal,
+  onUpdateDiaryItem,
+  onDeleteDiaryItem,
   onAdjustWater,
   onOpenCustomWater,
 }: {
@@ -457,16 +673,23 @@ function MobileSummaryStrip({
   goal: NutritionGoal;
   waterRatio: number;
   consumedRatio: number;
+  mealDefinitions: MealDefinition[];
+  mealCalories: Record<string, number>;
+  activeMeal: MealType;
+  groupedDiaryItems?: Record<string, DiaryItemSnapshot[]>;
   activeMealLabel: string;
-  activeMealCalories: number;
   onOpenConsumedSummary?: () => void;
-  onOpenMealChooser?: () => void;
-  onAddToActiveMeal?: () => void;
-  recentlyLoggedFoodLabel?: string | null;
+  onFocusMeal?: (meal: MealType) => void;
+  onAddToMeal?: (meal: MealType) => void;
+  onUpdateDiaryItem?: (input: {
+    itemId: string;
+    quantity: number;
+    mealType: MealType;
+  }) => Promise<boolean | void> | boolean | void;
+  onDeleteDiaryItem?: (itemId: string) => Promise<void> | void;
   onAdjustWater?: (amount: number) => void;
   onOpenCustomWater?: () => void;
 }) {
-  const suggestedCalories = Math.round((goal.targetCalories || 0) / 4);
   return (
     <div className="grid min-w-0 gap-2.5">
       <div className="grid min-w-0 grid-cols-2 gap-2.5">
@@ -486,13 +709,15 @@ function MobileSummaryStrip({
           ratio={100 - consumedRatio}
         />
       </div>
-      <MobileActiveMealCard
-        mealLabel={activeMealLabel}
-        mealCalories={activeMealCalories}
-        onOpenMealChooser={onOpenMealChooser}
-        onAddToMeal={onAddToActiveMeal}
-        recentlyLoggedFoodLabel={recentlyLoggedFoodLabel}
-        suggestedCalories={suggestedCalories}
+      <MobileMealQuickList
+        mealDefinitions={mealDefinitions}
+        mealCalories={mealCalories}
+        activeMeal={activeMeal}
+        groupedDiaryItems={groupedDiaryItems}
+        onFocusMeal={onFocusMeal}
+        onAddToMeal={onAddToMeal}
+        onUpdateDiaryItem={onUpdateDiaryItem}
+        onDeleteDiaryItem={onDeleteDiaryItem}
       />
       <div className="glass-panel static-panel min-w-0 overflow-hidden rounded-[1.25rem] border-white/5 bg-[#050f1d] p-4 shadow-2xl">
         <div className="mb-5 flex items-start justify-between gap-3">
@@ -641,11 +866,21 @@ interface NutritionHeaderProps {
   goal: NutritionGoal;
   waterRatio: number;
   consumedRatio: number;
+  mealDefinitions: MealDefinition[];
+  mealCalories: Record<string, number>;
+  activeMeal: MealType;
+  groupedDiaryItems?: Record<string, DiaryItemSnapshot[]>;
   activeMealLabel: string;
   activeMealCalories: number;
   onOpenConsumedSummary?: () => void;
-  onAddToActiveMeal?: () => void;
-  onOpenMealChooser?: () => void;
+  onFocusMeal?: (meal: MealType) => void;
+  onAddToMeal?: (meal: MealType) => void;
+  onUpdateDiaryItem?: (input: {
+    itemId: string;
+    quantity: number;
+    mealType: MealType;
+  }) => Promise<boolean | void> | boolean | void;
+  onDeleteDiaryItem?: (itemId: string) => Promise<void> | void;
   recentlyLoggedFoodLabel?: string | null;
   onAdjustWater?: (amount: number) => void;
   onOpenCustomWater?: () => void;
@@ -658,11 +893,17 @@ export function NutritionHeader({
   goal,
   waterRatio,
   consumedRatio,
+  mealDefinitions,
+  mealCalories,
+  activeMeal,
+  groupedDiaryItems,
   activeMealLabel,
   activeMealCalories,
   onOpenConsumedSummary,
-  onOpenMealChooser,
-  onAddToActiveMeal,
+  onFocusMeal,
+  onAddToMeal,
+  onUpdateDiaryItem,
+  onDeleteDiaryItem,
   recentlyLoggedFoodLabel,
   onAdjustWater,
   onOpenCustomWater,
@@ -696,7 +937,7 @@ export function NutritionHeader({
               {isMobileLayout ? (
                 <Link
                   href="/"
-                  className="inline-flex items-center gap-1 rounded-full border border-white/8 bg-white/4 px-2.5 py-1 pr-8 text-[0.76rem] text-[var(--text-secondary)] transition-colors duration-200 hover:border-[#34d399]/18 hover:text-[var(--text-primary)]"
+                  className="inline-flex items-center gap-1 rounded-full border border-white/8 bg-white/4 px-2.5 py-1 text-[0.76rem] text-[var(--text-secondary)] transition-colors duration-200 hover:border-[#34d399]/18 hover:text-[var(--text-primary)]"
                 >
                   <ArrowLeft size={13} />
                   Painel
@@ -712,7 +953,7 @@ export function NutritionHeader({
               className={`page-subtitle ${isMobileLayout ? "max-w-[30ch] text-[0.92rem]" : "max-w-[58ch]"}`}
             >
               {isMobileLayout
-                ? "Diário, água e metas no mesmo fluxo."
+                ? "Controle de refeições, água e metas."
                 : "Registre refeições, acompanhe água, ajuste metas e organize seu plano alimentar."}
             </p>
             {!isMobileLayout && isPreview ? (
@@ -737,12 +978,16 @@ export function NutritionHeader({
             goal={goal}
             waterRatio={waterRatio}
             consumedRatio={consumedRatio}
+            mealDefinitions={mealDefinitions}
+            mealCalories={mealCalories}
+            activeMeal={activeMeal}
+            groupedDiaryItems={groupedDiaryItems}
             activeMealLabel={activeMealLabel}
-            activeMealCalories={activeMealCalories}
             onOpenConsumedSummary={onOpenConsumedSummary}
-            onOpenMealChooser={onOpenMealChooser}
-            onAddToActiveMeal={onAddToActiveMeal}
-            recentlyLoggedFoodLabel={recentlyLoggedFoodLabel}
+            onFocusMeal={onFocusMeal}
+            onAddToMeal={onAddToMeal}
+            onUpdateDiaryItem={onUpdateDiaryItem}
+            onDeleteDiaryItem={onDeleteDiaryItem}
             onAdjustWater={onAdjustWater}
             onOpenCustomWater={onOpenCustomWater}
           />

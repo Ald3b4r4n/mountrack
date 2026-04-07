@@ -1391,6 +1391,41 @@ export async function listDiaryHistory(
   };
 }
 
+export async function findDiaryItemById(
+  userId: string,
+  itemId: string,
+): Promise<DiaryItemSnapshot | null> {
+  if (!hasDatabaseUrl()) {
+    const store = getNutritionMemoryStore();
+    for (const diary of store.diaries.values()) {
+      if (diary.userId !== userId) {
+        continue;
+      }
+
+      const matchedItem = diary.items.find((item) => item.id === itemId);
+      if (matchedItem) {
+        return matchedItem;
+      }
+    }
+
+    return null;
+  }
+
+  await ensureSchema();
+  const itemResult = await getPool().query<{ payload: DiaryItemSnapshot }>(
+    `
+    select item.payload
+    from nutrition_diary_items item
+    inner join nutrition_diaries diary on diary.id = item.diary_id
+    where item.id = $1 and diary.user_id = $2
+    limit 1
+    `,
+    [itemId, userId],
+  );
+
+  return itemResult.rows[0]?.payload ?? null;
+}
+
 export async function replaceDiaryItem(userId: string, itemId: string, nextItem: DiaryItemSnapshot): Promise<DiaryRecord | null> {
   if (!hasDatabaseUrl()) {
     const store = getNutritionMemoryStore();

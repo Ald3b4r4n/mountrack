@@ -14,7 +14,7 @@ import {
 import {
   Flame,
   Gem,
-  Headset,
+  LifeBuoy,
   Lightbulb,
   Trophy,
   TrendingDown,
@@ -26,7 +26,6 @@ import { BillingTrialBanner } from "@/components/billing/BillingTrialBanner";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/lib/firebase";
-import { USER_SUPPORT_CONTACT } from "@/modules/support-contact";
 import {
   DEFAULT_DOSES_PER_AMPOULE,
   buildGoogleCalendarLink,
@@ -566,13 +565,22 @@ export default function Home() {
           >
             Ampolas
           </Link>
-          <a
-            href="#suporte"
-            className="nav-pill"
+          <Link
+            href="/suporte"
+            className="nav-pill nav-pill-support"
           >
+            <LifeBuoy size={14} />
             Suporte
-          </a>
+          </Link>
         </nav>
+
+        <Link
+          href="/suporte"
+          className="home-mobile-support anim-enter anim-delay-1"
+        >
+          <LifeBuoy size={16} />
+          Dúvidas? Fale com o Suporte
+        </Link>
 
         <BillingTrialBanner />
 
@@ -1346,130 +1354,6 @@ export default function Home() {
           </>
         )}
 
-        <section
-          id="suporte"
-          className="glass-panel anim-enter"
-          style={{
-            marginTop: "1rem",
-            padding: "1.5rem",
-            border: "1px solid rgba(148, 163, 184, 0.12)",
-            background: "rgba(8, 16, 28, 0.86)",
-            scrollMarginTop: "1rem",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.6rem",
-              marginBottom: "0.85rem",
-            }}
-          >
-            <span style={{ display: "inline-flex", color: "var(--accent-primary)" }}>
-              <Headset size={20} />
-            </span>
-            <h2
-              style={{
-                margin: 0,
-                fontSize: "1.05rem",
-                fontWeight: 600,
-                color: "var(--text-primary)",
-              }}
-            >
-              Suporte ao usuario
-            </h2>
-          </div>
-          <p
-            style={{
-              margin: "0 0 1rem",
-              color: "var(--text-secondary)",
-              fontSize: "0.92rem",
-              lineHeight: 1.65,
-            }}
-          >
-            Precisa de ajuda ou quer tirar uma duvida? Entre em contato por qualquer um dos canais abaixo.
-          </p>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: "0.75rem",
-            }}
-          >
-            <a
-              href={`mailto:${USER_SUPPORT_CONTACT.email}`}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.7rem 1rem",
-                borderRadius: "0.75rem",
-                border: "1px solid rgba(148, 163, 184, 0.12)",
-                background: "rgba(9, 18, 31, 0.66)",
-                color: "var(--accent-primary)",
-                textDecoration: "none",
-                fontSize: "0.88rem",
-              }}
-            >
-              Email: {USER_SUPPORT_CONTACT.email}
-            </a>
-            <a
-              href={USER_SUPPORT_CONTACT.phoneHref}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.7rem 1rem",
-                borderRadius: "0.75rem",
-                border: "1px solid rgba(148, 163, 184, 0.12)",
-                background: "rgba(9, 18, 31, 0.66)",
-                color: "var(--accent-primary)",
-                textDecoration: "none",
-                fontSize: "0.88rem",
-              }}
-            >
-              Telefone: {USER_SUPPORT_CONTACT.phoneDisplay}
-            </a>
-            <a
-              href={USER_SUPPORT_CONTACT.whatsappHref}
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.7rem 1rem",
-                borderRadius: "0.75rem",
-                border: "1px solid rgba(52, 211, 153, 0.2)",
-                background: "rgba(52, 211, 153, 0.06)",
-                color: "var(--accent-primary)",
-                textDecoration: "none",
-                fontSize: "0.88rem",
-              }}
-            >
-              WhatsApp: {USER_SUPPORT_CONTACT.phoneDisplay}
-            </a>
-            <a
-              href={USER_SUPPORT_CONTACT.websiteHref}
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.7rem 1rem",
-                borderRadius: "0.75rem",
-                border: "1px solid rgba(148, 163, 184, 0.12)",
-                background: "rgba(9, 18, 31, 0.66)",
-                color: "var(--accent-primary)",
-                textDecoration: "none",
-                fontSize: "0.88rem",
-              }}
-            >
-              Site: {USER_SUPPORT_CONTACT.websiteLabel}
-            </a>
-          </div>
-        </section>
       </main>
     </ProtectedRoute>
   );

@@ -17,6 +17,7 @@ import {
 import {
   hasStrongFoodSearchResult,
   searchFoodsByQuery,
+  type FoodSourceFilter,
 } from "@/modules/nutrition/services/food-search.service";
 import {
   fetchOpenFoodFactsBarcode,
@@ -131,6 +132,7 @@ function resolveCatalogSource(results: FoodItem[]): string {
 export async function searchNutritionCatalog(
   userId: string,
   query: string,
+  sourceFilter: FoodSourceFilter = "all",
 ): Promise<{ results: FoodItem[]; source: string; externalPending: boolean }> {
   if (!query.trim()) {
     return { results: [], source: "none", externalPending: false };
@@ -154,10 +156,11 @@ export async function searchNutritionCatalog(
     const localLastResults = await searchFoodsByQuery(query, {
       internalFoods: catalogFoods,
       limit: SEARCH_LIMIT,
+      source: sourceFilter,
     });
 
     const prioritizedResults = appendUniqueFoods(
-      fatSecretPrimaryResults,
+      sourceFilter === "all" ? fatSecretPrimaryResults : [],
       localLastResults,
     ).slice(0, SEARCH_LIMIT);
 
@@ -205,10 +208,11 @@ export async function searchNutritionCatalog(
   const localLastResults = await searchFoodsByQuery(query, {
     internalFoods: catalogFoods,
     limit: SEARCH_LIMIT,
+    source: sourceFilter,
   });
 
   const prioritizedResults = appendUniqueFoods(
-    secondaryExternalResults,
+    sourceFilter === "all" ? secondaryExternalResults : [],
     localLastResults,
   ).slice(0, SEARCH_LIMIT);
 

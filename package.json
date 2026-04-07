@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
+    "support:test-mobile-smoke": "node scripts/support/mobile-home-support-smoke.mjs",
     "nutrition:enrich": "node scripts/trigger-nutrition-enrichment.mjs",
     "nutrition:test-mobile-add": "node scripts/nutrition/mobile-add-food-smoke.mjs",
     "nutrition:validate-persistence": "node scripts/nutrition/validate-persistence.js",
@@ -31,6 +32,7 @@
     "pg": "^8.20.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^4.3.6"

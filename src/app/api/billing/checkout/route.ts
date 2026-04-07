@@ -64,6 +64,10 @@ export async function POST(request: Request) {
   try {
     const payload = checkoutRequestSchema.parse(await request.json().catch(() => ({})));
 
+    if (!payload.cardTokenId) {
+      return createJsonError("Direct checkout requires card token", 400);
+    }
+
     if (getBillingStorageResponse() === "unavailable") {
       return createJsonError("Billing storage unavailable", 503);
     }
@@ -110,10 +114,7 @@ export async function POST(request: Request) {
       appBaseUrl: resolveBillingAppBaseUrl(request.url),
       cardTokenId: payload.cardTokenId,
     });
-
-    const checkoutSessionStatus: BillingCheckoutSessionStatus = subscription.providerCheckoutUrl
-      ? "redirect_ready"
-      : "pending";
+    const checkoutSessionStatus: BillingCheckoutSessionStatus = "pending";
 
     await upsertBillingSubscription({
       id: `billing-subscription:${subscription.providerSubscriptionId}`,
@@ -127,7 +128,7 @@ export async function POST(request: Request) {
       sessionId: session.id,
       status: checkoutSessionStatus,
       providerCheckoutId: subscription.providerSubscriptionId,
-      providerCheckoutUrl: subscription.providerCheckoutUrl,
+      providerCheckoutUrl: null,
     });
 
     if (!readySession) {
@@ -141,9 +142,9 @@ export async function POST(request: Request) {
           status: readySession.status,
           expiresAt: readySession.expiresAt,
         },
-        checkoutUrl: readySession.providerCheckoutUrl ?? null,
+        checkoutUrl: null,
         provider: "mercado_pago",
-        flow: readySession.providerCheckoutUrl ? "redirect" : "direct",
+        flow: "direct",
         subscriptionStatus: subscription.providerStatus,
       },
       { status: 201 },

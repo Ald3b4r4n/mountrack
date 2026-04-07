@@ -1,5 +1,11 @@
 import { FoodSearchPanel } from "@/components/nutrition/FoodSearchPanel";
-import type { FoodItem, MealDefinition, MealType, NutritionTotals, NutritionUnit } from "@/modules/nutrition/domain/types";
+import type {
+  FoodItem,
+  MealDefinition,
+  MealType,
+  NutritionTotals,
+  NutritionUnit,
+} from "@/modules/nutrition/domain/types";
 
 interface NutritionSearchWorkspaceProps {
   storageMode: string;
@@ -19,13 +25,21 @@ interface NutritionSearchWorkspaceProps {
   resultsVisible: boolean;
   searchResults: FoodItem[];
   resultState: { title: string; text: string };
-  onApplyFoodSelection: (food: FoodItem, options?: { openComposer?: boolean; hideResults?: boolean }) => void;
+  barcodeMissCode?: string | null;
+  onBarcodeMissAddManually?: () => void;
+  onApplyFoodSelection: (
+    food: FoodItem,
+    options?: { openComposer?: boolean; hideResults?: boolean },
+  ) => void;
   onCustomFoodOpen: () => void;
   onEditCustomFood?: (food: FoodItem) => void;
   onClearSearch: () => void;
   selectedFood: FoodItem | null;
   isComposerOpen: boolean;
-  selectedFoodTotals: Pick<NutritionTotals, "calories" | "protein" | "carbs" | "fat"> | null;
+  selectedFoodTotals: Pick<
+    NutritionTotals,
+    "calories" | "protein" | "carbs" | "fat"
+  > | null;
   onOpenComposer: () => void;
   onCloseComposer: () => void;
   onReopenSearchResults: () => void;
@@ -58,6 +72,8 @@ export function NutritionSearchWorkspace({
   resultsVisible,
   searchResults,
   resultState,
+  barcodeMissCode,
+  onBarcodeMissAddManually,
   onApplyFoodSelection,
   onCustomFoodOpen,
   onEditCustomFood,
@@ -98,6 +114,8 @@ export function NutritionSearchWorkspace({
       resultsVisible={resultsVisible}
       searchResults={searchResults}
       resultState={resultState}
+      barcodeMissCode={barcodeMissCode}
+      onBarcodeMissAddManually={onBarcodeMissAddManually}
       onApplyFoodSelection={onApplyFoodSelection}
       onCustomFoodOpen={onCustomFoodOpen}
       onEditCustomFood={onEditCustomFood}

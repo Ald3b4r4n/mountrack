@@ -100,7 +100,7 @@ function createInitialNutritionScreenUiState(): NutritionScreenUiState {
     quantity: "100",
     unit: "g",
     mealType: defaultFocusedMeal,
-    activeArea: "none",
+    activeArea: "today",
     planningTab: "goal",
     activeDiaryView: "today",
     activeDiaryMeal: defaultFocusedMeal,

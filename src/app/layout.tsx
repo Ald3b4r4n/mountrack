@@ -6,6 +6,7 @@ import { AppFooter } from "@/components/AppFooter";
 import { MobileNativeShell } from "@/components/mobile/MobileNativeShell";
 import { PwaInstallPrompt } from "@/components/pwa/PwaInstallPrompt";
 import { PwaRegistrar } from "@/components/pwa/PwaRegistrar";
+import { Toaster } from "sonner";
 
 function resolveMetadataBase() {
   try {
@@ -54,6 +55,25 @@ export default function RootLayout({
         <AuthProvider>
           <PwaRegistrar />
           <PwaInstallPrompt />
+          <Toaster
+            position="bottom-center"
+            offset="1rem"
+            mobileOffset="calc(env(safe-area-inset-bottom, 0px) + 5rem)"
+            richColors
+            closeButton
+            toastOptions={{
+              duration: 2200,
+              style: {
+                borderRadius: "999px",
+                border: "1px solid rgba(52, 211, 153, 0.28)",
+                background: "rgba(4,31,29,0.95)",
+                color: "#86efac",
+                fontSize: "0.82rem",
+                fontWeight: "600",
+                boxShadow: "0 20px 45px rgba(2,6,23,0.45)",
+              },
+            }}
+          />
           <MobileNativeShell>
             <PageTransition>
               {children}

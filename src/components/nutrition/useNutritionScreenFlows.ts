@@ -39,12 +39,32 @@ interface NutritionScreenFlowsDeps {
   mealType: MealType;
   historyPage: number;
   setMealType: (value: MealType | ((current: MealType) => MealType)) => void;
-  setActiveDiaryMeal: (value: MealType | ((current: MealType) => MealType)) => void;
-  setActiveArea: (value: "none" | "today" | "search" | "planning" | ((current: "none" | "today" | "search" | "planning") => "none" | "today" | "search" | "planning")) => void;
-  setActiveDiaryView: (value: "today" | "history" | ((current: "today" | "history") => "today" | "history")) => void;
+  setActiveDiaryMeal: (
+    value: MealType | ((current: MealType) => MealType),
+  ) => void;
+  setActiveArea: (
+    value:
+      | "none"
+      | "today"
+      | "search"
+      | "planning"
+      | ((
+          current: "none" | "today" | "search" | "planning",
+        ) => "none" | "today" | "search" | "planning"),
+  ) => void;
+  setActiveDiaryView: (
+    value:
+      | "today"
+      | "history"
+      | ((current: "today" | "history") => "today" | "history"),
+  ) => void;
   setDiaryPage: (value: number | ((current: number) => number)) => void;
-  setTodayMealsSectionOpen: (value: boolean | ((current: boolean) => boolean)) => void;
-  setTodayDiarySectionOpen: (value: boolean | ((current: boolean) => boolean)) => void;
+  setTodayMealsSectionOpen: (
+    value: boolean | ((current: boolean) => boolean),
+  ) => void;
+  setTodayDiarySectionOpen: (
+    value: boolean | ((current: boolean) => boolean),
+  ) => void;
   setDiarySuccessFeedback: (
     value:
       | DiarySuccessFeedback
@@ -52,19 +72,32 @@ interface NutritionScreenFlowsDeps {
       | ((current: DiarySuccessFeedback | null) => DiarySuccessFeedback | null),
   ) => void;
   setCustomMealOpen: (value: boolean | ((current: boolean) => boolean)) => void;
-  setCustomWaterOpen: (value: boolean | ((current: boolean) => boolean)) => void;
-  setEditingMeal: (
-    value: MealDefinition | null | ((current: MealDefinition | null) => MealDefinition | null),
+  setCustomWaterOpen: (
+    value: boolean | ((current: boolean) => boolean),
   ) => void;
-  setMessage: (value: string | null | ((current: string | null) => string | null)) => void;
+  setEditingMeal: (
+    value:
+      | MealDefinition
+      | null
+      | ((current: MealDefinition | null) => MealDefinition | null),
+  ) => void;
+  setMessage: (
+    value: string | null | ((current: string | null) => string | null),
+  ) => void;
   loadBrowserDashboard: () => NutritionDashboardSnapshot | null;
   hydrateDashboard: (snapshot: Partial<NutritionDashboardSnapshot>) => void;
   setDiaryMealDefinitions: (definitions: MealDefinition[]) => void;
-  resolveRequestError: (response: Response, fallbackMessage: string) => Promise<string>;
+  resolveRequestError: (
+    response: Response,
+    fallbackMessage: string,
+  ) => Promise<string>;
   loadBrowserHistory: (page: number) => NutritionHistorySnapshot | null;
   hydrateHistory: (snapshot: Partial<NutritionHistorySnapshot>) => void;
   loadDashboard: () => Promise<string>;
-  loadHistory: (page: number, modeOverride?: NutritionUiStorageMode) => Promise<void>;
+  loadHistory: (
+    page: number,
+    modeOverride?: NutritionUiStorageMode,
+  ) => Promise<void>;
 }
 
 export function useNutritionScreenFlows({
@@ -107,23 +140,29 @@ export function useNutritionScreenFlows({
 
   function getActiveMealDefinition(selectedMealType: MealType): MealDefinition {
     return (
-      mealDefinitions.find((definition) => definition.key === selectedMealType) ?? {
+      mealDefinitions.find(
+        (definition) => definition.key === selectedMealType,
+      ) ?? {
         key: selectedMealType,
         label: getMealLabel(selectedMealType),
       }
     );
   }
 
-  function handleChangeArea(nextArea: "none" | "today" | "search" | "planning") {
-    setActiveArea((current) => {
-      if (current === nextArea) {
-        return "none";
-      }
-      if (nextArea !== "today") {
-        setDiarySuccessFeedback(null);
-      }
-      return nextArea;
-    });
+  function handleChangeArea(
+    nextArea: "none" | "today" | "search" | "planning",
+  ) {
+    if (nextArea !== "today") {
+      setDiarySuccessFeedback(null);
+    }
+
+    setActiveArea(nextArea);
+
+    if (nextArea !== "none") {
+      queueNutritionScroll(() => {
+        scrollNutritionViewToTop();
+      });
+    }
   }
 
   function scrollNutritionViewToTop() {
@@ -140,7 +179,10 @@ export function useNutritionScreenFlows({
     });
   }
 
-  function focusTodayDashboard(options?: { openMealsSummary?: boolean; openDiaryPanel?: boolean }) {
+  function focusTodayDashboard(options?: {
+    openMealsSummary?: boolean;
+    openDiaryPanel?: boolean;
+  }) {
     const openMealsSummary = options?.openMealsSummary ?? false;
     const openDiaryPanel = options?.openDiaryPanel ?? false;
 
@@ -198,7 +240,10 @@ export function useNutritionScreenFlows({
     focusTodayDashboard({ openMealsSummary: true });
   }
 
-  function announceDiarySuccess(foodLabel: string, mealDefinition: MealDefinition) {
+  function announceDiarySuccess(
+    foodLabel: string,
+    mealDefinition: MealDefinition,
+  ) {
     setMessage(null);
     setDiarySuccessFeedback({
       foodLabel,
@@ -235,7 +280,10 @@ export function useNutritionScreenFlows({
     setCustomMealOpen(true);
   }
 
-  async function persistMealDefinitions(nextMealDefinitions: MealDefinition[], failureMessage: string): Promise<boolean> {
+  async function persistMealDefinitions(
+    nextMealDefinitions: MealDefinition[],
+    failureMessage: string,
+  ): Promise<boolean> {
     if (!activeUser) {
       return false;
     }
@@ -259,16 +307,21 @@ export function useNutritionScreenFlows({
       return true;
     }
 
-    const response = await authorizedNutritionFetch(activeUser, `/api/nutrition/diaries/${today}`, {
-      method: "PATCH",
-      body: JSON.stringify({ mealDefinitions: nextMealDefinitions }),
-    });
+    const response = await authorizedNutritionFetch(
+      activeUser,
+      `/api/nutrition/diaries/${today}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ mealDefinitions: nextMealDefinitions }),
+      },
+    );
     if (!response.ok) {
       await resolveRequestError(response, failureMessage);
       return false;
     }
 
-    const payload = (await response.json()) as Partial<NutritionDashboardSnapshot>;
+    const payload =
+      (await response.json()) as Partial<NutritionDashboardSnapshot>;
     hydrateDashboard(payload);
     setDiaryMealDefinitions(nextMealDefinitions);
     return true;
@@ -278,10 +331,16 @@ export function useNutritionScreenFlows({
     if (!activeUser) return;
 
     const nextDefinition = createCustomMealDefinition(label, mealDefinitions);
-    const nextMealDefinitions = buildMealDefinitions(diaryItems, [...diaryMealDefinitions, nextDefinition]);
+    const nextMealDefinitions = buildMealDefinitions(diaryItems, [
+      ...diaryMealDefinitions,
+      nextDefinition,
+    ]);
 
     try {
-      const saved = await persistMealDefinitions(nextMealDefinitions, "Não foi possível criar a nova refeição agora.");
+      const saved = await persistMealDefinitions(
+        nextMealDefinitions,
+        "Não foi possível criar a nova refeição agora.",
+      );
       if (!saved) {
         return;
       }
@@ -292,7 +351,9 @@ export function useNutritionScreenFlows({
       handleChangeArea("search");
       setMessage(`${nextDefinition.label} pronta para receber itens.`);
     } catch {
-      setMessage((current) => current ?? "Não foi possível criar a nova refeição agora.");
+      setMessage(
+        (current) => current ?? "Não foi possível criar a nova refeição agora.",
+      );
     }
   }
 
@@ -304,7 +365,8 @@ export function useNutritionScreenFlows({
     const hasDuplicateLabel = mealDefinitions.some(
       (definition) =>
         definition.key !== targetMeal.key &&
-        definition.label.trim().toLocaleLowerCase("pt-BR") === normalizedLabel.toLocaleLowerCase("pt-BR"),
+        definition.label.trim().toLocaleLowerCase("pt-BR") ===
+          normalizedLabel.toLocaleLowerCase("pt-BR"),
     );
     if (hasDuplicateLabel) {
       setMessage("Já existe uma refeição com esse nome.");
@@ -312,11 +374,16 @@ export function useNutritionScreenFlows({
     }
 
     const nextMealDefinitions = mealDefinitions.map((definition) =>
-      definition.key === targetMeal.key ? { ...definition, label: normalizedLabel } : definition,
+      definition.key === targetMeal.key
+        ? { ...definition, label: normalizedLabel }
+        : definition,
     );
 
     try {
-      const saved = await persistMealDefinitions(nextMealDefinitions, "Não foi possível renomear a refeição agora.");
+      const saved = await persistMealDefinitions(
+        nextMealDefinitions,
+        "Não foi possível renomear a refeição agora.",
+      );
       if (!saved) {
         return;
       }
@@ -325,7 +392,9 @@ export function useNutritionScreenFlows({
       closeCustomMealDialog();
       setMessage(`Refeição atualizada para ${normalizedLabel}.`);
     } catch {
-      setMessage((current) => current ?? "Não foi possível renomear a refeição agora.");
+      setMessage(
+        (current) => current ?? "Não foi possível renomear a refeição agora.",
+      );
     }
   }
 
@@ -334,8 +403,11 @@ export function useNutritionScreenFlows({
     if (!activeUser || !targetMeal || isDefaultMealType(targetMeal.key)) return;
 
     const targetMealItems = groupedDiaryItems[targetMeal.key] ?? [];
-    const nextMealDefinitions = mealDefinitions.filter((definition) => definition.key !== targetMeal.key);
-    const fallbackMeal = nextMealDefinitions[0]?.key ?? getDefaultMealDefinitions()[0].key;
+    const nextMealDefinitions = mealDefinitions.filter(
+      (definition) => definition.key !== targetMeal.key,
+    );
+    const fallbackMeal =
+      nextMealDefinitions[0]?.key ?? getDefaultMealDefinitions()[0].key;
 
     try {
       if (storageMode === "volatile" && canUseBrowserPersistence) {
@@ -343,7 +415,10 @@ export function useNutritionScreenFlows({
           removeNutritionDiaryItemFromBrowser(activeUser.uid, item.id);
         }
 
-        const saved = await persistMealDefinitions(nextMealDefinitions, "Não foi possível excluir a refeição agora.");
+        const saved = await persistMealDefinitions(
+          nextMealDefinitions,
+          "Não foi possível excluir a refeição agora.",
+        );
         if (!saved) {
           return;
         }
@@ -354,16 +429,26 @@ export function useNutritionScreenFlows({
         }
       } else {
         for (const item of targetMealItems) {
-          const response = await authorizedNutritionFetch(activeUser, `/api/nutrition/diary-items/${item.id}`, {
-            method: "DELETE",
-          });
+          const response = await authorizedNutritionFetch(
+            activeUser,
+            `/api/nutrition/diary-items/${item.id}`,
+            {
+              method: "DELETE",
+            },
+          );
           if (!response.ok) {
-            await resolveRequestError(response, "Não foi possível excluir a refeição agora.");
+            await resolveRequestError(
+              response,
+              "Não foi possível excluir a refeição agora.",
+            );
             return;
           }
         }
 
-        const saved = await persistMealDefinitions(nextMealDefinitions, "Não foi possível excluir a refeição agora.");
+        const saved = await persistMealDefinitions(
+          nextMealDefinitions,
+          "Não foi possível excluir a refeição agora.",
+        );
         if (!saved) {
           return;
         }
@@ -385,7 +470,9 @@ export function useNutritionScreenFlows({
           : `${targetMeal.label} removida do diário de hoje.`,
       );
     } catch {
-      setMessage((current) => current ?? "Não foi possível excluir a refeição agora.");
+      setMessage(
+        (current) => current ?? "Não foi possível excluir a refeição agora.",
+      );
     }
   }
 

@@ -10,13 +10,19 @@ import {
 export function HistoryEntryCard({
   entry,
   isMobileLayout,
+  onOpenRetroactive,
 }: {
   entry: DiaryHistoryEntry;
   isMobileLayout: boolean;
+  onOpenRetroactive?: () => void;
 }) {
   return (
     <article
-      className={`glass-panel static-panel bg-[#040f20]/70 ${isMobileLayout ? "rounded-[1rem] p-3.5" : "p-3.5 px-4"}`}
+      className={`glass-panel static-panel bg-[#040f20]/70 ${isMobileLayout ? "rounded-[1rem] p-3.5" : "p-3.5 px-4"} ${onOpenRetroactive ? "cursor-pointer transition-colors hover:bg-[#040f20]/90" : ""}`}
+      onClick={onOpenRetroactive}
+      role={onOpenRetroactive ? "button" : undefined}
+      tabIndex={onOpenRetroactive ? 0 : undefined}
+      onKeyDown={onOpenRetroactive ? (e) => { if (e.key === "Enter") onOpenRetroactive(); } : undefined}
     >
       <div className="mb-2.5 flex flex-wrap justify-between gap-3">
         <div className="min-w-0">

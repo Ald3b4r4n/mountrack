@@ -41,8 +41,6 @@ describe("NutritionHeader", () => {
   it("lets the mobile consumed card open the meal summary shortcut", async () => {
     const user = userEvent.setup();
     const onOpenConsumedSummary = jest.fn();
-    const onAddToActiveMeal = jest.fn();
-    const onOpenMealChooser = jest.fn();
 
     render(
       <NutritionHeader
@@ -52,12 +50,18 @@ describe("NutritionHeader", () => {
         goal={goal}
         waterRatio={0}
         consumedRatio={26}
+        mealDefinitions={[
+          { key: "breakfast", label: "Café da manhã", isDefault: true },
+          { key: "lunch", label: "Almoço", isDefault: true },
+          { key: "snack", label: "Lanche", isDefault: true },
+          { key: "dinner", label: "Jantar", isDefault: true },
+        ]}
+        mealCalories={summary.meals}
+        activeMeal="breakfast"
         activeMealLabel="Café da manhã"
         activeMealCalories={185}
         recentlyLoggedFoodLabel="Iogurte natural"
         onOpenConsumedSummary={onOpenConsumedSummary}
-        onAddToActiveMeal={onAddToActiveMeal}
-        onOpenMealChooser={onOpenMealChooser}
       />,
     );
 
@@ -66,28 +70,17 @@ describe("NutritionHeader", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Painel/i })).toBeInTheDocument();
     expect(
-      screen.getByText(/Diário, água e metas no mesmo fluxo./i),
+      screen.getByText(/Controle de refeições, água e metas./i),
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Consumido/i }));
 
     expect(onOpenConsumedSummary).toHaveBeenCalledTimes(1);
-    expect(screen.getByText(/^Agora$/i)).toBeInTheDocument();
-    expect(screen.getByText(/Sugerido/i)).toBeInTheDocument();
-    expect(screen.getByText(/Iogurte natural/i)).toBeInTheDocument();
     expect(screen.getAllByText(/^26%$/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/^Livre$/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/^Água e metas$/i)).toBeInTheDocument();
     expect(screen.getByText(/Café da manhã em foco/i)).toBeInTheDocument();
     expect(screen.getByText(/Água 0%/i)).toBeInTheDocument();
     expect(screen.getByText(/Meta 140 g/i)).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: /^Trocar$/i }));
-
-    expect(onOpenMealChooser).toHaveBeenCalledTimes(1);
-
-    await user.click(screen.getByRole("button", { name: /^Adicionar$/i }));
-
-    expect(onAddToActiveMeal).toHaveBeenCalledTimes(1);
   });
 });

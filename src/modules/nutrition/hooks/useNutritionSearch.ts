@@ -74,10 +74,12 @@ export function useNutritionSearch(
   const [isSearching, setIsSearching] = useState(false);
   const [isEnrichingExternal, setIsEnrichingExternal] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [barcodeMissCode, setBarcodeMissCode] = useState<string | null>(null);
   const [storageMode, setStorageMode] =
     useState<NutritionUiStorageMode>("checking");
   const searchRequestIdRef = useRef(0);
   const selectedFoodRef = useRef<FoodItem | null>(null);
+  const searchCacheRef = useRef<Map<string, FoodItem[]>>(new Map());
 
   useEffect(() => {
     selectedFoodRef.current = selectedFood;
@@ -119,6 +121,7 @@ export function useNutritionSearch(
   function handleSearchQueryChange(value: string) {
     searchRequestIdRef.current += 1;
     setIsEnrichingExternal(false);
+    setBarcodeMissCode(null);
     setSearchQuery(value);
     if (searchResults.length || selectedFood) {
       clearSearchResults();
@@ -168,6 +171,12 @@ export function useNutritionSearch(
       return;
     }
 
+    const cached = searchCacheRef.current.get(query);
+    if (cached) {
+      applySearchPayload({ results: cached });
+      return;
+    }
+
     const requestId = searchRequestIdRef.current + 1;
     searchRequestIdRef.current = requestId;
     setIsSearching(true);
@@ -192,6 +201,10 @@ export function useNutritionSearch(
       setStorageMode(resolveUiStorageMode(response, canUseBrowserPersistence));
       const payload = (await response.json()) as NutritionSearchPayload;
       const { results } = applySearchPayload(payload);
+
+      if (results.length > 0) {
+        searchCacheRef.current.set(query, results);
+      }
 
       if (results.length === 1) {
         setSelectedFood(results[0]);
@@ -269,6 +282,7 @@ export function useNutritionSearch(
         setResultsVisible(false);
         setIsComposerOpen(false);
         setLastSearchSource(payload.source ?? "none");
+        setBarcodeMissCode(normalizedCode);
         setMessage(
           `Não encontrei esse código de barras no catálogo.${buildBarcodeDebugMessage(rawCode, normalizedCode, candidates, payload.source ?? "none")}`,
         );
@@ -362,6 +376,7 @@ export function useNutritionSearch(
       isSearching,
       isEnrichingExternal,
       message,
+      barcodeMissCode,
       storageMode,
     },
     setters: {

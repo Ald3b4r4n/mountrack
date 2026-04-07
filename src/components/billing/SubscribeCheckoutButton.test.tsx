@@ -80,7 +80,7 @@ describe("SubscribeCheckoutButton", () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it("falls back to the hosted checkout when the public key is missing", async () => {
+  it("shows direct checkout unavailable when the public key is missing", () => {
     useAuthMock.mockReturnValue({
       user: { uid: "user-123", email: "user@example.com" },
       loading: false,
@@ -88,14 +88,6 @@ describe("SubscribeCheckoutButton", () => {
       signInWithGoogle: jest.fn(),
       signOut: jest.fn(),
     } as never);
-    jest.mocked(global.fetch).mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        checkoutUrl: "https://www.mercadopago.com.br/subscriptions/checkout?preapproval_id=preapproval-123",
-        flow: "redirect",
-        subscriptionStatus: "pending",
-      }),
-    } as Response);
 
     render(
       <SubscribeCheckoutButton
@@ -108,24 +100,13 @@ describe("SubscribeCheckoutButton", () => {
 
     expect(
       screen.getByText(
-        "Você será redirecionado para o ambiente do Mercado Pago para concluir o pagamento.",
+        "O pagamento por cartão ainda não está disponível no momento.",
       ),
     ).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: "Pagar no Mercado Pago" }));
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      "/api/billing/checkout",
-      expect.objectContaining({
-        method: "POST",
-      }),
-    );
-    expect(JSON.parse(jest.mocked(global.fetch).mock.calls[0][1]?.body as string)).toEqual({
-      planCode: "pro_monthly",
-    });
-    expect(assignMock).toHaveBeenCalledWith(
-      "https://www.mercadopago.com.br/subscriptions/checkout?preapproval_id=preapproval-123",
-    );
+    expect(
+      screen.queryByRole("button", { name: "Pagar no Mercado Pago" }),
+    ).not.toBeInTheDocument();
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   it("submits the direct checkout with the Mercado Pago card token", async () => {
@@ -154,17 +135,6 @@ describe("SubscribeCheckoutButton", () => {
         navigate={assignMock}
       />,
     );
-
-    expect(
-      screen.getByRole("button", { name: "Pagar no Mercado Pago" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Digitar cartão aqui" }),
-    ).toBeInTheDocument();
-    expect(loadMercadoPagoMock).not.toHaveBeenCalled();
-    expect(mercadoPagoConstructorMock).not.toHaveBeenCalled();
-
-    await userEvent.click(screen.getByRole("button", { name: "Digitar cartão aqui" }));
 
     await waitFor(() => {
       expect(loadMercadoPagoMock).toHaveBeenCalled();
@@ -233,8 +203,6 @@ describe("SubscribeCheckoutButton", () => {
         navigate={assignMock}
       />,
     );
-
-    await userEvent.click(screen.getByRole("button", { name: "Digitar cartão aqui" }));
 
     await waitFor(() => {
       expect(cardFormMock).toHaveBeenCalled();

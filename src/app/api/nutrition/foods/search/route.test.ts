@@ -58,11 +58,37 @@ describe("GET /api/nutrition/foods/search", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(searchNutritionCatalogMock).toHaveBeenCalledWith("user-123", "banana");
+    expect(searchNutritionCatalogMock).toHaveBeenCalledWith("user-123", "banana", "all");
     await expect(response.json()).resolves.toEqual({
       results: [{ id: "food-1", name: "Banana prata" }],
       source: "catalog",
       externalPending: false,
     });
+  });
+
+  // T009 — invalid source value must return 400
+  it("returns 400 for an invalid source filter value", async () => {
+    const response = await GET(
+      new Request("http://localhost/api/nutrition/foods/search?q=banana&source=invalid_source"),
+    );
+
+    expect(response.status).toBe(400);
+    expect(searchNutritionCatalogMock).not.toHaveBeenCalled();
+  });
+
+  // T009b — valid source value passes through to catalog search
+  it("passes source filter to catalog search when a valid source is provided", async () => {
+    searchNutritionCatalogMock.mockResolvedValue({
+      results: [],
+      source: "none",
+      externalPending: false,
+    } as never);
+
+    const response = await GET(
+      new Request("http://localhost/api/nutrition/foods/search?q=frango&source=custom"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(searchNutritionCatalogMock).toHaveBeenCalledWith("user-123", "frango", "custom");
   });
 });

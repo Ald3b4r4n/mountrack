@@ -1,5 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen } from "@testing-library/react";
 import { NutritionHeader } from "@/components/nutrition/NutritionHeader";
 import { NutritionScreen } from "@/components/nutrition/NutritionScreen";
 import { NutritionWorkspaceNav } from "@/components/nutrition/NutritionWorkspaceNav";
@@ -208,33 +207,13 @@ describe("NutritionScreen", () => {
     jest.clearAllMocks();
   });
 
-  it("opens with the time-based meal in focus and keeps add button in search", async () => {
-    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-
+  it("opens with the time-based meal in focus and shows HISTÓRICO nav tab", async () => {
     render(<NutritionScreen />);
 
     expect(await screen.findByText(/Almoço em foco/i)).toBeInTheDocument();
 
-    const addButton = await screen.findByRole("button", {
-      name: /^Adicionar$/i,
-    });
-    expect(screen.getByRole("button", { name: "Hoje" })).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
-
-    await user.click(addButton);
-
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Buscar" })).toHaveAttribute(
-        "aria-pressed",
-        "true",
-      );
-    });
-    // Button remains visible in search for continued food additions
-    expect(
-      screen.getByRole("button", { name: /^Adicionar$/i }),
-    ).toBeInTheDocument();
+    // The "today" nav tab is now labelled "HISTÓRICO"
+    expect(screen.getByRole("button", { name: /Histórico/i })).toBeInTheDocument();
   });
 
   it("prefers the last focused meal over the hour fallback", async () => {

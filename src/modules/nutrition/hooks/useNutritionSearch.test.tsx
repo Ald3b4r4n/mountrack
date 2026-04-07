@@ -91,4 +91,41 @@ describe("useNutritionSearch barcode flow", () => {
     expect(result.current.state.message).toContain("barra");
     expect(result.current.state.message).toContain("v");
   });
+
+  // T011 — barcode miss exposes barcodeMissCode for "Adicionar Manualmente" CTA
+  it("sets barcodeMissCode on 404 barcode lookup so the UI can show an add-manually CTA", async () => {
+    authorizedNutritionFetchMock.mockResolvedValue(
+      createMockResponse({ item: null, source: "none" }, 404),
+    );
+
+    const { result } = renderHook(() => useNutritionSearch(authUser, false));
+
+    await act(async () => {
+      await result.current.actions.handleBarcodeLookup("7891000100103");
+    });
+
+    await waitFor(() => {
+      expect(result.current.state.barcodeMissCode).toBe("7891000100103");
+    });
+  });
+
+  it("clears barcodeMissCode when a new search query is entered", async () => {
+    authorizedNutritionFetchMock.mockResolvedValue(
+      createMockResponse({ item: null, source: "none" }, 404),
+    );
+
+    const { result } = renderHook(() => useNutritionSearch(authUser, false));
+
+    await act(async () => {
+      await result.current.actions.handleBarcodeLookup("7891000100103");
+    });
+
+    await waitFor(() => expect(result.current.state.barcodeMissCode).toBe("7891000100103"));
+
+    act(() => {
+      result.current.actions.handleSearchQueryChange("frango");
+    });
+
+    expect(result.current.state.barcodeMissCode).toBeNull();
+  });
 });

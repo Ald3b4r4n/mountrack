@@ -92,15 +92,15 @@ describe("POST /api/billing/checkout", () => {
     });
     createMercadoPagoPreapprovalMock.mockResolvedValue({
       providerSubscriptionId: "preapproval-123",
-      providerCheckoutUrl: "https://www.mercadopago.com.br/subscriptions/checkout?preapproval_id=preapproval-123",
-      providerStatus: "pending",
+      providerCheckoutUrl: null,
+      providerStatus: "authorized",
     });
     upsertBillingSubscriptionMock.mockResolvedValue({
       id: "billing-subscription:preapproval-123",
       userId: "user-123",
       planId: "billing-plan-pro-monthly",
       providerSubscriptionId: "preapproval-123",
-      status: "pending",
+      status: "authorized",
       trialEndsAt: null,
       currentPeriodStart: null,
       currentPeriodEnd: null,
@@ -118,8 +118,8 @@ describe("POST /api/billing/checkout", () => {
       currency: "BRL",
       nonce: "checkout-nonce",
       providerCheckoutId: "preapproval-123",
-      providerCheckoutUrl: "https://www.mercadopago.com.br/subscriptions/checkout?preapproval_id=preapproval-123",
-      status: "redirect_ready",
+      providerCheckoutUrl: null,
+      status: "pending",
       expiresAt: "2026-03-19T14:30:00.000Z",
       createdAt: "2026-03-19T14:00:00.000Z",
     });
@@ -129,7 +129,7 @@ describe("POST /api/billing/checkout", () => {
     randomUuidSpy.mockRestore();
   });
 
-  it("creates a Mercado Pago recurring subscription checkout for the authenticated user", async () => {
+  it("creates a direct Mercado Pago recurring subscription for the authenticated user", async () => {
     const response = await POST(
       new Request("http://localhost/api/billing/checkout", {
         method: "POST",
@@ -139,6 +139,7 @@ describe("POST /api/billing/checkout", () => {
         },
         body: JSON.stringify({
           planCode: "pro_monthly",
+          cardTokenId: "card-token-123",
         }),
       }),
     );
@@ -165,6 +166,7 @@ describe("POST /api/billing/checkout", () => {
         currency: "BRL",
         payerEmail: "test_user_123456@testuser.com",
         appBaseUrl: "http://localhost",
+        cardTokenId: "card-token-123",
       }),
     );
     expect(upsertBillingSubscriptionMock).toHaveBeenCalledWith({
@@ -172,73 +174,12 @@ describe("POST /api/billing/checkout", () => {
       userId: "user-123",
       planId: "billing-plan-pro-monthly",
       providerSubscriptionId: "preapproval-123",
-      status: "pending",
+      status: "authorized",
     });
     expect(updateBillingCheckoutSessionMock).toHaveBeenCalledWith({
       sessionId: "checkout-id",
-      status: "redirect_ready",
+      status: "pending",
       providerCheckoutId: "preapproval-123",
-      providerCheckoutUrl: "https://www.mercadopago.com.br/subscriptions/checkout?preapproval_id=preapproval-123",
-    });
-
-    await expect(response.json()).resolves.toEqual({
-      session: {
-        id: "checkout-id",
-        status: "redirect_ready",
-        expiresAt: "2026-03-19T14:30:00.000Z",
-      },
-      checkoutUrl: "https://www.mercadopago.com.br/subscriptions/checkout?preapproval_id=preapproval-123",
-      provider: "mercado_pago",
-      flow: "redirect",
-      subscriptionStatus: "pending",
-    });
-  });
-
-  it("creates a direct authorized subscription when the client sends a card token", async () => {
-    createMercadoPagoPreapprovalMock.mockResolvedValue({
-      providerSubscriptionId: "preapproval-456",
-      providerCheckoutUrl: null,
-      providerStatus: "authorized",
-    });
-    updateBillingCheckoutSessionMock.mockResolvedValue({
-      id: "checkout-id",
-      userId: "user-123",
-      planId: "billing-plan-pro-monthly",
-      expectedAmountCents: 1499,
-      currency: "BRL",
-      nonce: "checkout-nonce",
-      providerCheckoutId: "preapproval-456",
-      providerCheckoutUrl: null,
-      status: "pending",
-      expiresAt: "2026-03-19T14:30:00.000Z",
-      createdAt: "2026-03-19T14:00:00.000Z",
-    });
-
-    const response = await POST(
-      new Request("http://localhost/api/billing/checkout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Cookie: "mt_session=session-token",
-        },
-        body: JSON.stringify({
-          planCode: "pro_monthly",
-          cardTokenId: "card-token-123",
-        }),
-      }),
-    );
-
-    expect(response.status).toBe(201);
-    expect(createMercadoPagoPreapprovalMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        sessionId: "checkout-id",
-        cardTokenId: "card-token-123",
-      }),
-    );
-    expect(updateBillingCheckoutSessionMock).toHaveBeenCalledWith({
-      sessionId: "checkout-id",
-      status: "pending",
-      providerCheckoutId: "preapproval-456",
       providerCheckoutUrl: null,
     });
 
@@ -253,6 +194,26 @@ describe("POST /api/billing/checkout", () => {
       flow: "direct",
       subscriptionStatus: "authorized",
     });
+  });
+
+  it("rejects requests without card token when direct checkout is required", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/billing/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: "mt_session=session-token",
+        },
+        body: JSON.stringify({
+          planCode: "pro_monthly",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(verifyFirebaseIdTokenMock).not.toHaveBeenCalled();
+    expect(createBillingCheckoutSessionMock).not.toHaveBeenCalled();
+    expect(createMercadoPagoPreapprovalMock).not.toHaveBeenCalled();
   });
 
   it("rejects requests without the server session cookie", async () => {
@@ -297,7 +258,7 @@ describe("POST /api/billing/checkout", () => {
           "Content-Type": "application/json",
           Cookie: "mt_session=session-token",
         },
-        body: JSON.stringify({ planCode: "pro_monthly" }),
+        body: JSON.stringify({ planCode: "pro_monthly", cardTokenId: "card-token-123" }),
       }),
     );
 
@@ -315,7 +276,7 @@ describe("POST /api/billing/checkout", () => {
           "Content-Type": "application/json",
           Cookie: "mt_session=session-token",
         },
-        body: JSON.stringify({ planCode: "pro_monthly" }),
+        body: JSON.stringify({ planCode: "pro_monthly", cardTokenId: "card-token-123" }),
       }),
     );
 
@@ -336,7 +297,7 @@ describe("POST /api/billing/checkout", () => {
           "Content-Type": "application/json",
           Cookie: "mt_session=session-token",
         },
-        body: JSON.stringify({ planCode: "pro_monthly" }),
+        body: JSON.stringify({ planCode: "pro_monthly", cardTokenId: "card-token-123" }),
       }),
     );
 
@@ -363,7 +324,7 @@ describe("POST /api/billing/checkout", () => {
           "Content-Type": "application/json",
           Cookie: "mt_session=session-token",
         },
-        body: JSON.stringify({ planCode: "pro_monthly" }),
+        body: JSON.stringify({ planCode: "pro_monthly", cardTokenId: "card-token-123" }),
       }),
     );
 
@@ -390,7 +351,7 @@ describe("POST /api/billing/checkout", () => {
           "Content-Type": "application/json",
           Cookie: "mt_session=session-token",
         },
-        body: JSON.stringify({ planCode: "pro_monthly" }),
+        body: JSON.stringify({ planCode: "pro_monthly", cardTokenId: "card-token-123" }),
       }),
     );
 
@@ -415,7 +376,7 @@ describe("POST /api/billing/checkout", () => {
           "Content-Type": "application/json",
           Cookie: "mt_session=session-token",
         },
-        body: JSON.stringify({ planCode: "pro_monthly" }),
+        body: JSON.stringify({ planCode: "pro_monthly", cardTokenId: "card-token-123" }),
       }),
     );
 

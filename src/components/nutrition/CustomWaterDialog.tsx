@@ -8,9 +8,10 @@ import { Droplets, Info } from "lucide-react";
 interface CustomWaterDialogProps {
   open: boolean;
   onClose: () => void;
-  onSave: (amount: number, mode: "increment" | "absolute") => void;
+  onSave: (amount: number, mode: "increment" | "absolute", targetDate?: string) => void;
   isSaving?: boolean;
   initialMode?: "increment" | "absolute";
+  targetDate?: string;
 }
 
 export function CustomWaterDialog({
@@ -19,6 +20,7 @@ export function CustomWaterDialog({
   onSave,
   isSaving = false,
   initialMode = "increment",
+  targetDate,
 }: CustomWaterDialogProps) {
   if (!open || typeof document === "undefined") {
     return null;
@@ -31,6 +33,7 @@ export function CustomWaterDialog({
       onSave={onSave}
       isSaving={isSaving}
       initialMode={initialMode}
+      targetDate={targetDate}
     />
   );
 }
@@ -40,6 +43,7 @@ function CustomWaterDialogContent({
   onSave,
   isSaving = false,
   initialMode = "increment",
+  targetDate,
 }: Omit<CustomWaterDialogProps, "open">) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -63,8 +67,8 @@ function CustomWaterDialogContent({
       return;
     }
     
-    onSave(num, mode);
-  }, [value, mode, onSave]);
+    onSave(num, mode, targetDate);
+  }, [value, mode, onSave, targetDate]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

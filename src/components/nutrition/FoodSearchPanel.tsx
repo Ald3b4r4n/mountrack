@@ -45,6 +45,8 @@ interface FoodSearchPanelProps {
   searchResults: FoodItem[];
   resultState: { title: string; text: string };
   onApplyFoodSelection: (food: FoodItem, options?: FoodSelectionOptions) => void;
+  barcodeMissCode?: string | null;
+  onBarcodeMissAddManually?: () => void;
   onCustomFoodOpen: () => void;
   onEditCustomFood?: (food: FoodItem) => void;
   onClearSearch: () => void;
@@ -223,6 +225,8 @@ export function FoodSearchPanel({
   resultsVisible,
   searchResults,
   resultState,
+  barcodeMissCode,
+  onBarcodeMissAddManually,
   onApplyFoodSelection,
   onCustomFoodOpen,
   onEditCustomFood,
@@ -402,6 +406,21 @@ export function FoodSearchPanel({
           onOpenScanner={onOpenScanner}
           onCustomFoodOpen={onCustomFoodOpen}
         />
+
+        {barcodeMissCode && onBarcodeMissAddManually ? (
+          <div className="rounded-xl border border-[var(--border-glass)] bg-[var(--bg-surface)] px-4 py-3">
+            <p className="mb-2 text-[0.84rem] text-[var(--text-secondary)]">
+              Código <span className="font-medium text-[var(--text-primary)]">{barcodeMissCode}</span> não encontrado no catálogo.
+            </p>
+            <button
+              type="button"
+              onClick={onBarcodeMissAddManually}
+              className="btn-primary px-4 py-2 text-[0.84rem]"
+            >
+              Adicionar Manualmente
+            </button>
+          </div>
+        ) : null}
 
         <FoodSearchResultsSection
           isMobileLayout={isMobileLayout}

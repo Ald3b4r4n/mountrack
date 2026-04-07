@@ -1,7 +1,9 @@
+import { useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import { Check, Pencil } from "lucide-react";
-import type { FoodItem } from "@/modules/nutrition/domain/types";
+import type { FoodItem, NutritionGoal } from "@/modules/nutrition/domain/types";
 import { formatCalories, formatFoodSourceLabel, getFoodLabel } from "@/modules/nutrition/ui-helpers";
+import { SourceFilterChips, type FoodSourceFilter } from "@/components/nutrition/SourceFilterChips";
 
 interface FoodSearchResultsSectionProps {
   isMobileLayout: boolean;
@@ -17,6 +19,7 @@ interface FoodSearchResultsSectionProps {
   resultEmptyState: { title: string; text: string };
   isEnrichingExternal: boolean;
   searchSourceLabel: string | null;
+  nutritionGoal?: NutritionGoal | null;
   onCustomFoodOpen: () => void;
   onEditCustomFood?: (food: FoodItem) => void;
   onClearSearch: () => void;
@@ -38,6 +41,7 @@ export function FoodSearchResultsSection({
   searchResults,
   resultEmptyState,
   isEnrichingExternal,
+  nutritionGoal,
   onCustomFoodOpen,
   onEditCustomFood,
   onClearSearch,
@@ -45,6 +49,17 @@ export function FoodSearchResultsSection({
   onReopenSearchResults,
   composerContent,
 }: FoodSearchResultsSectionProps) {
+  const [activeSource, setActiveSource] = useState<FoodSourceFilter>("all");
+
+  const availableSources: FoodSourceFilter[] = ["all", ...Array.from(
+    new Set(searchResults.map((food) => food.source)),
+  )];
+
+  const visibleResults =
+    activeSource === "all"
+      ? searchResults
+      : searchResults.filter((food) => food.source === activeSource);
+
   if (!hasSearchSession) {
     return null;
   }
@@ -88,7 +103,7 @@ export function FoodSearchResultsSection({
         <div>
           <div className="mb-2 flex items-center justify-between">
             <span className="text-[0.78rem] font-medium uppercase tracking-wider text-[var(--text-muted)]">
-              {hasVisibleResults ? `${searchResults.length} resultado${searchResults.length !== 1 ? "s" : ""}` : "Resultados"}
+              {hasVisibleResults ? `${visibleResults.length} resultado${visibleResults.length !== 1 ? "s" : ""}` : "Resultados"}
             </span>
             <div className="flex gap-2">
               {isEnrichingExternal ? (
@@ -106,13 +121,23 @@ export function FoodSearchResultsSection({
             </div>
           </div>
 
+          {hasVisibleResults ? (
+            <SourceFilterChips
+              activeSource={activeSource}
+              onChange={setActiveSource}
+              availableSources={availableSources}
+            />
+          ) : null}
+
           <div className="grid max-h-[min(52vh,480px)] gap-1 overflow-y-auto">
             {hasVisibleResults ? (
-              searchResults.map((food) => {
-                const kcalLabel =
-                  food.caloriesPer100 == null
-                    ? "--"
-                    : `${food.caloriesPer100.toFixed(0)} kcal`;
+              visibleResults.map((food) => {
+                const kcal = food.caloriesPer100;
+                const kcalLabel = kcal == null ? "--" : `${kcal.toFixed(0)} kcal`;
+                const idrPercent =
+                  nutritionGoal && kcal != null && food.servingGrams
+                    ? Math.round((kcal * food.servingGrams) / nutritionGoal.targetCalories)
+                    : null;
                 const isSelected = selectedFood?.id === food.id;
                 const isCustom = food.source === "custom";
 
@@ -143,16 +168,20 @@ export function FoodSearchResultsSection({
                         <strong className="block truncate text-[0.9rem] leading-tight">
                           {getFoodLabel(food)}
                         </strong>
-                        <span className="mt-0.5 block text-[0.78rem] text-[var(--text-secondary)]">
-                          {food.brand ? `${food.brand} · ` : ""}
-                          {formatFoodSourceLabel(food.source, { compact: true })}
-                        </span>
+                        <div className="mt-0.5 flex items-center gap-x-2 text-[0.78rem]">
+                          <span className="min-w-0 flex-1 truncate text-[#34d399]">
+                            {food.servingDescription
+                              ? food.servingDescription
+                              : `${formatFoodSourceLabel(food.source, { compact: true })}`}
+                          </span>
+                          {idrPercent != null ? (
+                            <span className="shrink-0 text-[var(--text-muted)]">IDR {idrPercent}%</span>
+                          ) : null}
+                          <span className="shrink-0 font-medium text-[var(--text-secondary)]">
+                            {kcalLabel}
+                          </span>
+                        </div>
                       </div>
-
-                      {/* Kcal */}
-                      <span className="shrink-0 text-[0.82rem] font-medium text-[var(--text-secondary)]">
-                        {kcalLabel}
-                      </span>
                     </button>
 
                     {isCustom && onEditCustomFood ? (

@@ -24,14 +24,7 @@ describe("DiaryTodayView water quick-add", () => {
         isUpdatingWater={false}
         mealDefinitions={mealDefinitions}
         activeDiaryMeal="breakfast"
-        setActiveDiaryMeal={jest.fn()}
-        setDiaryPage={jest.fn()}
         groupedDiaryItems={{ breakfast: [], lunch: [] }}
-        activeDiaryItems={[]}
-        diaryPage={1}
-        diaryTotalPages={1}
-        isLoading={false}
-        pagedDiaryItems={[]}
         handleDeleteDiaryItem={jest.fn()}
       />,
     );

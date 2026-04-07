@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(speckit --version)",
+      "Bash(speckit-constitution --help)",
+      "Bash(where speckit:*)",
+      "Bash(pip show:*)",
+      "Bash(npm list:*)",
+      "Bash(pip list:*)",
+      "Bash(pip3 list:*)",
+      "Bash(uv tool:*)",
+      "Bash(python -m speckit --help)",
+      "Bash(python3 -m speckit --help)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(specify --help)",
+      "Bash(uv run:*)",
+      "Bash(PYTHONUTF8=1 uv tool run --from specify-cli specify.exe --help)",
+      "Bash(PYTHONUTF8=1 uv tool run --from specify-cli specify.exe integration --help)",
+      "Bash(PYTHONUTF8=1 uv tool run --from specify-cli specify.exe integration list)",
+      "Bash(PYTHONUTF8=1 uv tool run --from specify-cli specify.exe integration install claude)",
+      "Bash(PYTHONUTF8=1 uv tool run --from specify-cli specify.exe integration switch claude)",
+      "WebFetch(domain:guia.dev)",
+      "Bash(ls G:/Apps/MounTrack/README*)",
+      "Bash(powershell.exe -File .specify/scripts/powershell/setup-plan.ps1 -Json)",
+      "Bash(find G:/Apps/MounTrack -name jest.config.* -o -name .jest*)",
+      "Bash(powershell.exe -File .specify/scripts/powershell/update-agent-context.ps1 -AgentType claude)",
+      "Bash(powershell.exe -File .specify/scripts/powershell/check-prerequisites.ps1 -Json)",
+      "Bash(powershell.exe -File .specify/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks)",
+      "Bash(xargs grep:*)",
+      "Bash(find G:/Apps/MounTrack/src -name food-search.service.test*)",
+      "Bash(npm test:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(npx eslint:*)",
+      "Bash(grep -v \"^$\")",
+      "Bash(npx jest:*)"
+    ]
+  }
+}

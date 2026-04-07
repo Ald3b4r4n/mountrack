@@ -1,5 +1,24 @@
 const MERCADO_PAGO_API_BASE_URL = "https://api.mercadopago.com";
 
+const URL_SCHEME_PATTERN = /^[a-zA-Z][a-zA-Z\d+.-]*:\/\//;
+const HOSTNAME_PATTERN = /^[\w.-]+\.[A-Za-z]{2,}(?::\d+)?(?:\/.*)?$/;
+
+function coerceBaseUrlCandidate(value: string): string {
+  if (value.startsWith("//")) {
+    return `https:${value}`;
+  }
+
+  if (URL_SCHEME_PATTERN.test(value)) {
+    return value;
+  }
+
+  if (HOSTNAME_PATTERN.test(value)) {
+    return `https://${value}`;
+  }
+
+  return value;
+}
+
 function normalizeBaseUrl(value: string): string | null {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -7,7 +26,7 @@ function normalizeBaseUrl(value: string): string | null {
   }
 
   try {
-    const url = new URL(trimmed);
+    const url = new URL(coerceBaseUrlCandidate(trimmed));
     return url.origin.replace(/\/+$/, "");
   } catch {
     return null;

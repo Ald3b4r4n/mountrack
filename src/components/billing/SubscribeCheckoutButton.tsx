@@ -140,6 +140,10 @@ function resolveDisplayError(errorMessage?: string | null): string {
     return "O pagamento por cartão ainda não está disponível no momento.";
   }
 
+  if (normalized.includes("card token")) {
+    return "Use o formulário de cartão no app para concluir a assinatura.";
+  }
+
   if (normalized.includes("service unavailable")) {
     return "O checkout não está disponível agora. Tente novamente em instantes.";
   }
@@ -158,7 +162,6 @@ export function SubscribeCheckoutButton({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFormLoading, setIsFormLoading] = useState(false);
   const [isDirectFormReady, setIsDirectFormReady] = useState(false);
-  const [showDirectForm, setShowDirectForm] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sdkError, setSdkError] = useState<string | null>(null);
@@ -167,6 +170,17 @@ export function SubscribeCheckoutButton({
   const payerEmail = resolveCardholderEmail(
     typeof user?.email === "string" ? user.email : null,
     sandboxPayerEmail,
+  );
+  const directCheckoutUnavailableReason =
+    !loading && user
+      ? !mercadoPagoPublicKey.trim()
+        ? "O pagamento por cartão ainda não está disponível no momento."
+        : !payerEmail
+          ? "Não foi possível preparar o pagamento agora."
+          : null
+      : null;
+  const canUseDirectCheckout = Boolean(
+    user && sessionReady && !directCheckoutUnavailableReason,
   );
   const formPrefix = "subscribe-checkout";
 
@@ -184,7 +198,7 @@ export function SubscribeCheckoutButton({
     );
   }
 
-  async function requestCheckout(cardTokenId?: string): Promise<void> {
+  async function requestCheckout(cardTokenId: string): Promise<void> {
     const response = await fetch("/api/billing/checkout", {
       method: "POST",
       headers: {
@@ -205,42 +219,13 @@ export function SubscribeCheckoutButton({
     }
 
     if (data?.checkoutUrl) {
-      navigate(data.checkoutUrl);
+      setError(
+        "O checkout externo está desabilitado. Use o formulário de cartão no app.",
+      );
       return;
     }
 
     setMessage(resolveSuccessMessage(data?.subscriptionStatus));
-  }
-
-  async function handleHostedCheckout() {
-    setError(null);
-    setMessage(null);
-
-    if (!user) {
-      navigateToLogin();
-      return;
-    }
-
-    if (!sessionReady) {
-      setError("Sua sessão não está pronta. Faça login novamente para continuar.");
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      await requestCheckout();
-    } catch (requestError) {
-      console.error(
-        "Failed to create hosted billing checkout session",
-        requestError,
-      );
-      setError(
-        "Não foi possível iniciar o pagamento agora. Tente novamente em instantes.",
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
   }
 
   async function handleDirectCheckout(event: FormEvent<HTMLFormElement>) {
@@ -277,35 +262,11 @@ export function SubscribeCheckoutButton({
   }
 
   useEffect(() => {
-    if (!user || !sessionReady) {
+    if (!canUseDirectCheckout) {
       cardFormRef.current = null;
       setIsFormLoading(false);
       setIsDirectFormReady(false);
       setSdkError(null);
-      return;
-    }
-
-    if (!showDirectForm) {
-      cardFormRef.current = null;
-      setIsFormLoading(false);
-      setIsDirectFormReady(false);
-      setSdkError(null);
-      return;
-    }
-
-    if (!mercadoPagoPublicKey.trim()) {
-      cardFormRef.current = null;
-      setIsFormLoading(false);
-      setIsDirectFormReady(false);
-      setSdkError("O pagamento por cartão ainda não está disponível no momento.");
-      return;
-    }
-
-    if (!payerEmail) {
-      cardFormRef.current = null;
-      setIsFormLoading(false);
-      setIsDirectFormReady(false);
-      setSdkError("Não foi possível preparar o pagamento agora.");
       return;
     }
 
@@ -436,12 +397,10 @@ export function SubscribeCheckoutButton({
     };
   }, [
     amountCents,
+    canUseDirectCheckout,
     formPrefix,
     mercadoPagoPublicKey,
     payerEmail,
-    sessionReady,
-    showDirectForm,
-    user,
   ]);
 
   if (requiresLogin) {
@@ -463,49 +422,16 @@ export function SubscribeCheckoutButton({
     );
   }
 
-  const canUseDirectCheckout = Boolean(
-    mercadoPagoPublicKey.trim() && payerEmail && !sdkError,
-  );
-  const shouldRenderDirectForm = canUseDirectCheckout && showDirectForm;
+  const shouldRenderDirectForm = canUseDirectCheckout;
   const directButtonLabel = isSubmitting
     ? "Autorizando assinatura..."
     : isFormLoading
       ? "Carregando formulario seguro..."
       : "Autorizar assinatura";
+  const paymentFormError = sdkError ?? directCheckoutUnavailableReason;
 
   return (
     <div className={styles.root}>
-      <div className={styles.primaryActions}>
-        <button
-          type="button"
-          className={`btn-primary ${styles.fallbackButton}`}
-          onClick={handleHostedCheckout}
-          disabled={loading || isSubmitting}
-        >
-          {isSubmitting && !showDirectForm
-            ? "Preparando checkout..."
-            : "Pagar no Mercado Pago"}
-        </button>
-
-        {canUseDirectCheckout ? (
-          <button
-            type="button"
-            className={styles.altButton}
-            onClick={() => {
-              setShowDirectForm((current) => !current);
-              setError(null);
-              setMessage(null);
-            }}
-            disabled={isSubmitting}
-            aria-expanded={showDirectForm}
-          >
-            {showDirectForm
-              ? "Fechar formulário de cartão"
-              : "Digitar cartão aqui"}
-          </button>
-        ) : null}
-      </div>
-
       {shouldRenderDirectForm ? (
         <form
           id={`${formPrefix}__form`}
@@ -645,8 +571,8 @@ export function SubscribeCheckoutButton({
         </form>
       ) : null}
 
-      {sdkError ? (
-        <p className={`${styles.message} ${styles.messageError}`}>{sdkError}</p>
+      {paymentFormError ? (
+        <p className={`${styles.message} ${styles.messageError}`}>{paymentFormError}</p>
       ) : null}
       {error ? (
         <p className={`${styles.message} ${styles.messageError}`}>{error}</p>
@@ -655,14 +581,10 @@ export function SubscribeCheckoutButton({
         <p className={`${styles.message} ${styles.messageSuccess}`}>{message}</p>
       ) : null}
 
-      {shouldRenderDirectForm ? (
-          <p className={styles.footerNote}>Pagamento seguro via Mercado Pago.</p>
-      ) : (
-        <p className={styles.footerNote}>
-          Você será redirecionado para o ambiente do Mercado Pago para concluir
-          o pagamento.
-        </p>
-      )}
+      <p className={styles.footerNote}>
+        A liberação do app acontece somente após a confirmação do pagamento pelo
+        Mercado Pago.
+      </p>
     </div>
   );
 }

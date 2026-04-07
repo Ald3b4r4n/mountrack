@@ -1,263 +1,140 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DiaryPanel } from "@/components/nutrition/DiaryPanel";
-import type { MealDefinition } from "@/modules/nutrition/domain/types";
+import type { DiaryHistoryEntry } from "@/modules/nutrition/domain/types";
 
-const mealDefinitions: MealDefinition[] = [
-  { key: "breakfast", label: "Café da manhã", isDefault: true },
-  { key: "lunch", label: "Almoço", isDefault: true },
-  { key: "custom:ceia", label: "Ceia", isDefault: false },
-];
+const todayEntry: DiaryHistoryEntry = {
+  date: "2026-03-15",
+  itemCount: 3,
+  summary: {
+    date: "2026-03-15",
+    targetCalories: 2000,
+    targetWaterMl: 2200,
+    consumedCalories: 518,
+    remainingCalories: 1482,
+    waterIntakeMl: 1200,
+    meals: { breakfast: 185, lunch: 333 },
+    calories: 518,
+    protein: 54.8,
+    carbs: 47.72,
+    fat: 11.94,
+    fiber: 0,
+    sodium: 0,
+  },
+};
 
 function renderDiaryPanel({
-  activeDiaryView = "today",
-  recentlyLoggedFoodLabel = null,
-  activeDiaryItems = [
-    {
-      id: "item-1",
-      foodName: "Iogurte",
-      quantity: 40,
-      unit: "g",
-      calories: 26,
-    } as never,
-  ],
-  pagedDiaryItems = [
-    {
-      id: "item-1",
-      foodName: "Iogurte",
-      quantity: 40,
-      unit: "g",
-      calories: 26,
-    } as never,
-  ],
-  groupedDiaryItems = {
-    breakfast: [],
-    lunch: [],
-    "custom:ceia": [{ id: "item-1" } as never],
-  },
-  isHistoryLoading = false,
+  isMobileLayout = false,
+  todayEntry: today = todayEntry,
+  onAddToToday = jest.fn(),
   historyEntries = [],
   historyPage = 1,
   historyTotalPages = 1,
+  open,
 }: {
-  activeDiaryView?: "today" | "history";
-  recentlyLoggedFoodLabel?: string | null;
-  activeDiaryItems?: never[];
-  pagedDiaryItems?: never[];
-  groupedDiaryItems?: Record<string, never[]>;
-  isHistoryLoading?: boolean;
-  historyEntries?: never[];
+  isMobileLayout?: boolean;
+  todayEntry?: DiaryHistoryEntry;
+  onAddToToday?: jest.Mock;
+  historyEntries?: DiaryHistoryEntry[];
   historyPage?: number;
   historyTotalPages?: number;
+  open?: boolean;
 } = {}) {
-  const setActiveDiaryView = jest.fn();
-  const setDiaryPage = jest.fn();
-  const onOpenSearchForMeal = jest.fn();
-  const onOpenMealChooser = jest.fn();
   const loadHistory = jest.fn();
 
   render(
     <DiaryPanel
-      activeDiaryView={activeDiaryView}
-      setActiveDiaryView={setActiveDiaryView}
-      setDiaryPage={setDiaryPage}
-      summary={{
-        targetWaterMl: 2200,
-        waterIntakeMl: 1200,
-        meals: {
-          breakfast: 185,
-          lunch: 333,
-          "custom:ceia": 90,
-        },
-        protein: 54.8,
-        carbs: 47.72,
-        fat: 11.94,
-        consumedCalories: 518,
-      }}
-      waterRatio={55}
-      isMobileLayout
-      handleAdjustWater={jest.fn()}
-      isUpdatingWater={false}
-      mealDefinitions={mealDefinitions}
-      activeDiaryMeal="custom:ceia"
-      setActiveDiaryMeal={jest.fn()}
-      onOpenSearchForMeal={onOpenSearchForMeal}
-      onOpenMealChooser={onOpenMealChooser}
-      groupedDiaryItems={groupedDiaryItems}
-      activeDiaryItems={activeDiaryItems}
-      diaryPage={1}
-      diaryTotalPages={1}
-      isLoading={false}
-      pagedDiaryItems={pagedDiaryItems}
-      handleDeleteDiaryItem={jest.fn()}
-      isHistoryLoading={isHistoryLoading}
+      isMobileLayout={isMobileLayout}
+      todayEntry={today}
+      onAddToToday={onAddToToday}
+      isHistoryLoading={false}
       historyEntries={historyEntries}
       historyPage={historyPage}
       historyTotalPages={historyTotalPages}
       loadHistory={loadHistory}
-      onManageMeal={jest.fn()}
-      recentlyLoggedFoodLabel={recentlyLoggedFoodLabel}
+      open={open}
     />,
   );
 
-  return {
-    setActiveDiaryView,
-    setDiaryPage,
-    onOpenSearchForMeal,
-    onOpenMealChooser,
-    loadHistory,
-  };
+  return { loadHistory, onAddToToday };
 }
 
+beforeEach(() => {
+  global.fetch = jest.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ date: "2026-03-15", waterIntakeMl: 0, items: [] }),
+  });
+});
+
 describe("DiaryPanel", () => {
-  it("uses the mobile daybook hierarchy with a secondary history action", async () => {
-    const user = userEvent.setup();
-    const { setActiveDiaryView, setDiaryPage } = renderDiaryPanel();
+  it("shows today card with date and calorie summary when section is open", () => {
+    renderDiaryPanel({ open: true });
 
-    await user.click(screen.getByRole("button", { name: /Registro do dia/i }));
-
-    expect(screen.getByText(/^Log de$/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/Registros de dias anteriores/i),
-    ).toBeInTheDocument();
-    expect(screen.getAllByText(/^Ceia$/i).length).toBeGreaterThanOrEqual(2);
-    expect(
-      screen.queryByRole("button", { name: /^Almoço$/i }),
-    ).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: /^Histórico$/i }));
-
-    expect(setActiveDiaryView).toHaveBeenCalledWith("history");
-    expect(setDiaryPage).toHaveBeenCalledWith(1);
+    expect(screen.getByText(/Hoje/i)).toBeInTheDocument();
+    expect(screen.getByText(/15\/03\/2026/i)).toBeInTheDocument();
+    expect(screen.getByText(/518 kcal/i)).toBeInTheDocument();
+    expect(screen.getByText(/3 item\(ns\)/i)).toBeInTheDocument();
   });
 
-  it("offers a direct add-food action from the selected meal card on mobile", async () => {
+  it("calls onAddToToday when the add button on today card is clicked", async () => {
     const user = userEvent.setup();
-    const { onOpenSearchForMeal } = renderDiaryPanel();
+    const onAddToToday = jest.fn();
+    renderDiaryPanel({ open: true, onAddToToday });
 
-    await user.click(screen.getByRole("button", { name: /Registro do dia/i }));
-    await user.click(
-      screen.getByRole("button", { name: /Adicionar à refeição Ceia/i }),
-    );
+    await user.click(screen.getByRole("button", { name: /Adicionar item ao diário de hoje/i }));
 
-    expect(onOpenSearchForMeal).toHaveBeenCalledWith("custom:ceia");
+    expect(onAddToToday).toHaveBeenCalledTimes(1);
   });
 
-  it("lets the user jump back to meal selection from the selected meal card", async () => {
+  it("opens RetroactiveDiaryView when today card is clicked", async () => {
     const user = userEvent.setup();
-    const { onOpenMealChooser } = renderDiaryPanel();
+    renderDiaryPanel({ open: true });
 
-    await user.click(screen.getByRole("button", { name: /Registro do dia/i }));
-    await user.click(screen.getByRole("button", { name: /Trocar refeição/i }));
+    // The today card is an article with role="button"; click it directly
+    const todayCard = screen.getByText("15/03/2026").closest("article");
+    expect(todayCard).toBeInTheDocument();
+    await user.click(todayCard!);
 
-    expect(onOpenMealChooser).toHaveBeenCalledTimes(1);
+    // RetroactiveDiaryView opens — verify the dialog is rendered
+    expect(await screen.findByText(/Diário retroativo/i)).toBeInTheDocument();
   });
 
-  it("surfaces the latest logged item inside the selected meal card on mobile", async () => {
-    const user = userEvent.setup();
-    const { onOpenSearchForMeal } = renderDiaryPanel({
-      recentlyLoggedFoodLabel: "Banana prata",
-    });
-
-    await user.click(screen.getByRole("button", { name: /Registro do dia/i }));
-
-    expect(
-      screen.getAllByText(/Registrado agora/i).length,
-    ).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/Banana prata/i).length).toBeGreaterThanOrEqual(
-      1,
-    );
-
-    await user.click(
-      screen.getByRole("button", { name: /Adicionar à refeição Ceia/i }),
-    );
-
-    expect(onOpenSearchForMeal).toHaveBeenCalledWith("custom:ceia");
-  });
-
-  it("shows the compact empty state copy on mobile when the meal has no items", async () => {
-    const user = userEvent.setup();
+  it("shows history entries below today when section is open", () => {
     renderDiaryPanel({
-      activeDiaryItems: [],
-      pagedDiaryItems: [],
-      groupedDiaryItems: {
-        breakfast: [],
-        lunch: [],
-        "custom:ceia": [],
-      },
-    });
-
-    await user.click(screen.getByRole("button", { name: /Registro do dia/i }));
-
-    expect(screen.getByText(/Nada nesta refeição ainda/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        /Toque em Adicionar para lançar o primeiro item desta refeição./i,
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it("renders the compact history review cards on mobile", async () => {
-    const user = userEvent.setup();
-    renderDiaryPanel({
-      activeDiaryView: "history",
+      open: true,
       historyEntries: [
         {
           date: "2026-03-10",
-          itemCount: 3,
+          itemCount: 2,
           summary: {
+            date: "2026-03-10",
+            targetCalories: 2000,
+            targetWaterMl: 2200,
             consumedCalories: 420,
+            remainingCalories: 1580,
             waterIntakeMl: 1800,
-            protein: 42,
-            carbs: 55,
-            fat: 11,
+            meals: {},
+            calories: 420,
+            protein: 30,
+            carbs: 50,
+            fat: 10,
+            fiber: 0,
+            sodium: 0,
           },
-        } as never,
+        } as DiaryHistoryEntry,
       ],
     });
 
-    await user.click(
-      screen.getByRole("button", { name: /Histórico do diário/i }),
-    );
-
-    expect(screen.getByText(/Dias fechados/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/Consulte só os dias já concluídos./i),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/^3 item\(ns\)$/i)).toBeInTheDocument();
+    expect(screen.getByText(/10\/03\/2026/i)).toBeInTheDocument();
     expect(screen.getByText(/420 kcal/i)).toBeInTheDocument();
   });
 
-  it("uses compact pagination for the history view on mobile", async () => {
+  it("opens section when CollapsibleSection header is clicked", async () => {
     const user = userEvent.setup();
-    const { loadHistory } = renderDiaryPanel({
-      activeDiaryView: "history",
-      historyEntries: [
-        {
-          date: "2026-03-10",
-          itemCount: 1,
-          summary: {
-            consumedCalories: 200,
-            waterIntakeMl: 900,
-            protein: 12,
-            carbs: 20,
-            fat: 7,
-          },
-        } as never,
-      ],
-      historyPage: 2,
-      historyTotalPages: 3,
-    });
+    renderDiaryPanel();
 
-    await user.click(
-      screen.getByRole("button", { name: /Histórico do diário/i }),
-    );
-    expect(screen.getByText(/^Dias$/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Histórico/i }));
 
-    await user.click(
-      screen.getByRole("button", { name: /Próxima página do diário/i }),
-    );
-
-    expect(loadHistory).toHaveBeenCalledWith(3);
+    expect(screen.getByText(/Hoje/i)).toBeInTheDocument();
   });
 });

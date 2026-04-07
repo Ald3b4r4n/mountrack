@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Pencil, Trash2, X } from "lucide-react";
+import { ConfirmActionDialog } from "@/components/nutrition/ConfirmActionDialog";
 import { parseInputNumber } from "@/components/nutrition/nutrition-screen-helpers";
 import type {
   DiaryItemSnapshot,
@@ -15,6 +17,7 @@ interface MealHistoryDialogProps {
   meal: MealDefinition | null;
   calories: number;
   items: DiaryItemSnapshot[];
+  initialEditingItemId?: string | null;
   mealDefinitions: MealDefinition[];
   onClose: () => void;
   onOpenSearchForMeal?: (meal: MealType) => void;
@@ -22,8 +25,9 @@ interface MealHistoryDialogProps {
     itemId: string;
     quantity: number;
     mealType: MealType;
-  }) => Promise<void> | void;
+  }) => Promise<boolean | void> | boolean | void;
   onDeleteDiaryItem?: (itemId: string) => Promise<void> | void;
+  onEditSaved?: () => void;
 }
 
 function formatConsumedAt(consumedAt: string): string {
@@ -43,11 +47,13 @@ export function MealHistoryDialog({
   meal,
   calories,
   items,
+  initialEditingItemId,
   mealDefinitions,
   onClose,
   onOpenSearchForMeal,
   onUpdateDiaryItem,
   onDeleteDiaryItem,
+  onEditSaved,
 }: MealHistoryDialogProps) {
   const titleId = useId();
   const descriptionId = useId();
@@ -57,6 +63,10 @@ export function MealHistoryDialog({
   const [mealTypeDraft, setMealTypeDraft] = useState<MealType>("breakfast");
   const [error, setError] = useState<string | null>(null);
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
+  const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(
+    null,
+  );
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -64,10 +74,14 @@ export function MealHistoryDialog({
       setQuantityDraft("");
       setError(null);
       setPendingItemId(null);
+      setDeleteCandidateId(null);
+      setToastMessage(null);
       return;
     }
 
-    const frame = window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+    const frame = window.requestAnimationFrame(() =>
+      closeButtonRef.current?.focus(),
+    );
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         onClose();
@@ -81,20 +95,53 @@ export function MealHistoryDialog({
     };
   }, [onClose, open]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open || !meal) {
       return;
     }
 
-    setEditingItemId(null);
-    setQuantityDraft("");
-    setMealTypeDraft(meal.key);
+    const initialItem = initialEditingItemId
+      ? (items.find((item) => item.id === initialEditingItemId) ?? null)
+      : null;
+
+    if (initialItem) {
+      setEditingItemId(initialItem.id);
+      setQuantityDraft(String(initialItem.quantity));
+      setMealTypeDraft(initialItem.mealType);
+    } else {
+      setEditingItemId(null);
+      setQuantityDraft("");
+      setMealTypeDraft(meal.key);
+    }
+
     setError(null);
-  }, [meal, open]);
+  }, [initialEditingItemId, items, meal, open]);
+
+  useEffect(() => {
+    if (!toastMessage) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setToastMessage(null);
+    }, 2200);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [toastMessage]);
 
   if (!open || !meal) {
     return null;
   }
+
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const deleteCandidateName = deleteCandidateId
+    ? (items.find((item) => item.id === deleteCandidateId)?.foodName ?? null)
+    : null;
 
   function handleStartEditing(item: DiaryItemSnapshot) {
     setEditingItemId(item.id);
@@ -116,52 +163,82 @@ export function MealHistoryDialog({
 
     setPendingItemId(item.id);
     setError(null);
+
+    let saved = false;
     try {
-      await onUpdateDiaryItem({
+      const updateResult = await onUpdateDiaryItem({
         itemId: item.id,
         quantity: nextQuantity,
         mealType: mealTypeDraft,
       });
-      setEditingItemId(null);
-      setQuantityDraft("");
+
+      if (updateResult === false) {
+        setError("Nao foi possivel atualizar esse item agora.");
+        return;
+      }
+
+      saved = true;
+    } catch {
+      setError("Nao foi possivel atualizar esse item agora.");
     } finally {
       setPendingItemId(null);
     }
+
+    if (saved) {
+      setEditingItemId(null);
+      setQuantityDraft("");
+      onEditSaved?.();
+      onClose();
+    }
   }
 
-  async function handleDelete(itemId: string) {
-    if (!onDeleteDiaryItem) {
+  function handleDelete(itemId: string) {
+    if (!onDeleteDiaryItem || pendingItemId) {
       return;
     }
 
-    setPendingItemId(itemId);
+    setDeleteCandidateId(itemId);
+  }
+
+  async function confirmDelete() {
+    if (!onDeleteDiaryItem || !deleteCandidateId) {
+      return;
+    }
+
+    setPendingItemId(deleteCandidateId);
     setError(null);
     try {
-      await onDeleteDiaryItem(itemId);
-      if (editingItemId === itemId) {
+      await onDeleteDiaryItem(deleteCandidateId);
+      setToastMessage("Alimento removido do diário.");
+      if (editingItemId === deleteCandidateId) {
         setEditingItemId(null);
         setQuantityDraft("");
       }
     } finally {
       setPendingItemId(null);
+      setDeleteCandidateId(null);
     }
   }
 
-  return (
+  const dialogContent = (
     <div
       onClick={(event) => {
         if (event.target === event.currentTarget && !pendingItemId) {
           onClose();
         }
       }}
-      className="fixed inset-0 z-[85] grid place-items-center bg-[rgba(8,14,26,0.82)] p-4 backdrop-blur-[14px]"
+      className="fixed inset-0 z-[95] flex items-start justify-center overflow-y-auto bg-[rgba(8,14,26,0.82)] p-4 backdrop-blur-[14px] sm:items-center"
+      style={{
+        paddingTop: "calc(env(safe-area-inset-top, 0px) + 1rem)",
+        paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)",
+      }}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="glass-panel w-full max-w-[42rem] p-5"
+        className="glass-panel w-full max-w-[42rem] max-h-[min(88vh,44rem)] overflow-y-auto p-5"
       >
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -175,8 +252,8 @@ export function MealHistoryDialog({
               id={descriptionId}
               className="mt-1 text-[0.88rem] leading-6 text-[var(--text-secondary)]"
             >
-              {items.length} item(ns) registrados nesta refeicao hoje. Total atual:{" "}
-              {formatCalories(calories)}.
+              {items.length} item(ns) registrados nesta refeicao hoje. Total
+              atual: {formatCalories(calories)}.
             </p>
           </div>
           <button
@@ -204,7 +281,9 @@ export function MealHistoryDialog({
               Adicionar alimento
             </button>
           ) : null}
-          <span className="badge badge-success">{formatCalories(calories)}</span>
+          <span className="badge badge-success">
+            {formatCalories(calories)}
+          </span>
         </div>
 
         {error ? (
@@ -222,118 +301,165 @@ export function MealHistoryDialog({
               </p>
             </div>
           ) : (
-            items.map((item) => {
+            items.map((item, index) => {
               const isEditing = editingItemId === item.id;
               const isPending = pendingItemId === item.id;
 
               return (
-                <article
-                  key={item.id}
-                  className="glass-panel static-panel rounded-[1rem] bg-[#051120]/82 p-4"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <strong className="block text-[var(--text-primary)]">
-                        {item.foodName}
-                      </strong>
-                      <span className="mt-1 block text-[0.82rem] text-[var(--text-secondary)]">
-                        {item.quantity} {item.unit} · {formatCalories(item.calories)}
-                        {formatConsumedAt(item.consumedAt)
-                          ? ` · ${formatConsumedAt(item.consumedAt)}`
-                          : ""}
-                      </span>
+                <div key={item.id} className="grid gap-3">
+                  {index > 0 ? (
+                    <div
+                      className="h-px w-full bg-white/12"
+                      aria-hidden="true"
+                    />
+                  ) : null}
+
+                  <article className="glass-panel static-panel rounded-[1rem] bg-[#051120]/82 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <strong className="block break-words text-[var(--text-primary)]">
+                          {item.foodName}
+                        </strong>
+                        <span className="mt-1 block text-[0.82rem] text-[var(--text-secondary)]">
+                          {item.quantity} {item.unit} ·{" "}
+                          {formatCalories(item.calories)}
+                          {formatConsumedAt(item.consumedAt)
+                            ? ` · ${formatConsumedAt(item.consumedAt)}`
+                            : ""}
+                        </span>
+                      </div>
+                      {!isEditing ? (
+                        <div className="flex shrink-0 flex-wrap gap-2">
+                          {onUpdateDiaryItem ? (
+                            <button
+                              type="button"
+                              onClick={() => handleStartEditing(item)}
+                              className="btn-outline min-w-auto px-3 py-2 text-[0.78rem]"
+                            >
+                              <span className="inline-flex items-center gap-2">
+                                <Pencil size={14} />
+                                Editar
+                              </span>
+                            </button>
+                          ) : null}
+                          {onDeleteDiaryItem ? (
+                            <button
+                              type="button"
+                              onClick={() => void handleDelete(item.id)}
+                              className="btn-outline min-w-auto px-3 py-2 text-[0.78rem]"
+                              disabled={isPending}
+                            >
+                              <span className="inline-flex items-center gap-2">
+                                <Trash2 size={14} />
+                                Remover
+                              </span>
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </div>
-                    {!isEditing ? (
-                      <div className="flex shrink-0 flex-wrap gap-2">
-                        {onUpdateDiaryItem ? (
-                          <button
-                            type="button"
-                            onClick={() => handleStartEditing(item)}
-                            className="btn-outline min-w-auto px-3 py-2 text-[0.78rem]"
+
+                    {isEditing ? (
+                      <div className="mt-4 grid gap-3">
+                        <label className="grid gap-1.5">
+                          <span className="label">Quantidade</span>
+                          <input
+                            className="input-field"
+                            inputMode="decimal"
+                            type="number"
+                            min="0.1"
+                            step={
+                              item.unit === "serving" || item.unit === "unit"
+                                ? "0.1"
+                                : "1"
+                            }
+                            value={quantityDraft}
+                            onChange={(event) =>
+                              setQuantityDraft(event.target.value)
+                            }
+                          />
+                        </label>
+
+                        <label className="grid gap-1.5">
+                          <span className="label">Refeicao</span>
+                          <select
+                            className="input-field"
+                            value={mealTypeDraft}
+                            onChange={(event) =>
+                              setMealTypeDraft(event.target.value as MealType)
+                            }
                           >
-                            <span className="inline-flex items-center gap-2">
-                              <Pencil size={14} />
-                              Editar
-                            </span>
-                          </button>
-                        ) : null}
-                        {onDeleteDiaryItem ? (
+                            {mealDefinitions.map((definition) => (
+                              <option
+                                key={definition.key}
+                                value={definition.key}
+                              >
+                                {definition.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <div className="flex flex-wrap justify-end gap-2">
                           <button
                             type="button"
-                            onClick={() => void handleDelete(item.id)}
+                            onClick={() => {
+                              setEditingItemId(null);
+                              setQuantityDraft("");
+                              setError(null);
+                            }}
                             className="btn-outline min-w-auto px-3 py-2 text-[0.78rem]"
                             disabled={isPending}
                           >
-                            <span className="inline-flex items-center gap-2">
-                              <Trash2 size={14} />
-                              Remover
-                            </span>
+                            Cancelar
                           </button>
-                        ) : null}
+                          <button
+                            type="button"
+                            onClick={() => void handleSaveEdit(item)}
+                            className="btn-primary min-w-auto px-3 py-2 text-[0.78rem]"
+                            disabled={isPending}
+                          >
+                            {isPending ? "Salvando..." : "Salvar"}
+                          </button>
+                        </div>
                       </div>
                     ) : null}
-                  </div>
-
-                  {isEditing ? (
-                    <div className="mt-4 grid gap-3">
-                      <label className="grid gap-1.5">
-                        <span className="label">Quantidade</span>
-                        <input
-                          className="input-field"
-                          inputMode="decimal"
-                          type="number"
-                          min="0.1"
-                          step={item.unit === "serving" || item.unit === "unit" ? "0.1" : "1"}
-                          value={quantityDraft}
-                          onChange={(event) => setQuantityDraft(event.target.value)}
-                        />
-                      </label>
-
-                      <label className="grid gap-1.5">
-                        <span className="label">Refeicao</span>
-                        <select
-                          className="input-field"
-                          value={mealTypeDraft}
-                          onChange={(event) => setMealTypeDraft(event.target.value as MealType)}
-                        >
-                          {mealDefinitions.map((definition) => (
-                            <option key={definition.key} value={definition.key}>
-                              {definition.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingItemId(null);
-                            setQuantityDraft("");
-                            setError(null);
-                          }}
-                          className="btn-outline min-w-auto px-3 py-2 text-[0.78rem]"
-                          disabled={isPending}
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleSaveEdit(item)}
-                          className="btn-primary min-w-auto px-3 py-2 text-[0.78rem]"
-                          disabled={isPending}
-                        >
-                          {isPending ? "Salvando..." : "Salvar"}
-                        </button>
-                      </div>
-                    </div>
-                  ) : null}
-                </article>
+                  </article>
+                </div>
               );
             })
           )}
         </div>
       </div>
+
+      {toastMessage ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none fixed inset-x-0 bottom-5 z-[120] flex justify-center px-4"
+        >
+          <div className="rounded-full border border-[#34d399]/28 bg-[#041f1d]/95 px-4 py-2 text-[0.82rem] font-medium text-[#86efac] shadow-2xl">
+            {toastMessage}
+          </div>
+        </div>
+      ) : null}
+
+      <ConfirmActionDialog
+        open={Boolean(deleteCandidateId)}
+        title="Excluir alimento"
+        description="Tem certeza que deseja excluir este alimento?"
+        itemName={deleteCandidateName}
+        confirmLabel="Excluir"
+        isPending={pendingItemId === deleteCandidateId}
+        onCancel={() => {
+          if (!pendingItemId) {
+            setDeleteCandidateId(null);
+          }
+        }}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
+
+  return createPortal(dialogContent, document.body);
 }

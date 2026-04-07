@@ -469,4 +469,63 @@ describe("food search service", () => {
     );
     expect(results[0]?.id).toBe("frango-peito");
   });
+
+  // T007 — source filter: custom only
+  it("returns only custom-source foods when source option is custom", async () => {
+    const customFood: FoodItem = {
+      id: "custom-frango",
+      source: "custom",
+      name: "Frango personalizado",
+      baseUnit: "g",
+      confidenceScore: 1,
+      mealCategories: [],
+    };
+    const fatsecretFood: FoodItem = {
+      id: "fs-frango",
+      source: "fatsecret",
+      name: "Frango grelhado",
+      baseUnit: "g",
+      confidenceScore: 1,
+      mealCategories: [],
+    };
+
+    const results = await searchFoodsByQuery("frango", {
+      internalFoods: [customFood, fatsecretFood],
+      externalResults: [],
+      source: "custom",
+    });
+
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.every((r) => r.source === "custom")).toBe(true);
+  });
+
+  // T008 — source filter: all returns mixed sources
+  it("returns foods from all sources when source option is all", async () => {
+    const customFood: FoodItem = {
+      id: "custom-frango",
+      source: "custom",
+      name: "Frango custom",
+      baseUnit: "g",
+      confidenceScore: 1,
+      mealCategories: [],
+    };
+    const fatsecretFood: FoodItem = {
+      id: "fs-frango",
+      source: "fatsecret",
+      name: "Frango fatsecret",
+      baseUnit: "g",
+      confidenceScore: 1,
+      mealCategories: [],
+    };
+
+    const results = await searchFoodsByQuery("frango", {
+      internalFoods: [customFood, fatsecretFood],
+      externalResults: [],
+      source: "all",
+    });
+
+    const sources = results.map((r) => r.source);
+    expect(sources).toContain("custom");
+    expect(sources).toContain("fatsecret");
+  });
 });

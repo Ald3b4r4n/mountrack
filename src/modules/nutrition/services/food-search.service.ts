@@ -1,13 +1,16 @@
-import type { FoodItem } from "@/modules/nutrition/domain/types";
+import type { FoodItem, FoodSource } from "@/modules/nutrition/domain/types";
 import {
   findSupplementBrandProfile,
   matchesSupplementBrandText,
 } from "@/modules/nutrition/data/supplement-brands";
 
+export type FoodSourceFilter = FoodSource | "all";
+
 interface SearchFoodsOptions {
   internalFoods: FoodItem[];
   externalResults?: FoodItem[];
   limit?: number;
+  source?: FoodSourceFilter;
 }
 
 const STOP_WORDS = new Set([
@@ -285,11 +288,13 @@ function dedupeFoods(foods: FoodItem[]): FoodItem[] {
 
 export async function searchFoodsByQuery(
   query: string,
-  { internalFoods, externalResults = [], limit = 8 }: SearchFoodsOptions,
+  { internalFoods, externalResults = [], limit = 8, source = "all" }: SearchFoodsOptions,
 ): Promise<FoodItem[]> {
   const normalizedQuery = normalizeTerm(query);
   const queryTokens = getQueryTokens(query);
-  const combinedFoods = dedupeFoods([...internalFoods, ...externalResults]);
+  const allFoods = dedupeFoods([...internalFoods, ...externalResults]);
+  const combinedFoods =
+    source === "all" ? allFoods : allFoods.filter((food) => food.source === source);
   const brandProfile = findSupplementBrandProfile(query);
 
   const filteredFoods = combinedFoods.filter((food) => {

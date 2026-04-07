@@ -10,9 +10,9 @@ const AREA_ITEMS: Array<{
 }> = [
   {
     key: "today",
-    label: "Hoje",
+    label: "Histórico",
     icon: CalendarDays,
-    description: "Diário, água e histórico recente",
+    description: "Diário por data — adicione e edite",
   },
   {
     key: "search",
