@@ -232,7 +232,7 @@ export function SubscribeCheckoutButton({
     setError(null);
     setMessage(null);
 
-    if (!isDirectFormReady || isFormLoading || !cardFormRef.current) {
+    if (!cardFormRef.current) {
       setError(
         "O formulário de pagamento ainda está carregando. Tente novamente em alguns segundos.",
       );
@@ -566,12 +566,7 @@ export function SubscribeCheckoutButton({
           <button
             type="submit"
             className={`btn-primary ${styles.submitButton}`}
-            disabled={
-              !sessionReady ||
-              !isDirectFormReady ||
-              isSubmitting ||
-              isFormLoading
-            }
+            disabled={!sessionReady || isSubmitting}
           >
             {directButtonLabel}
           </button>

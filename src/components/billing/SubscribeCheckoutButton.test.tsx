@@ -310,4 +310,75 @@ describe("SubscribeCheckoutButton", () => {
       cardTokenId: "sync-token-123",
     });
   });
+
+  it("submits when the card form reference exists even if ready callback does not flip state", async () => {
+    const user = userEvent.setup();
+
+    useAuthMock.mockReturnValue({
+      user: { uid: "user-123", email: "user@example.com" },
+      loading: false,
+      sessionReady: true,
+      signInWithGoogle: jest.fn(),
+      signOut: jest.fn(),
+    } as never);
+
+    const noReadyCallbackCardFormMock = jest.fn(() => ({
+      getCardFormData: jest.fn(() => ({ token: "token-without-ready-flag" })),
+      unmount: jest.fn(),
+    }));
+
+    mercadoPagoConstructorMock.mockImplementationOnce(() => ({
+      cardForm: noReadyCallbackCardFormMock,
+    }));
+
+    jest.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        checkoutUrl: null,
+        flow: "direct",
+        subscriptionStatus: "authorized",
+      }),
+    } as Response);
+
+    render(
+      <SubscribeCheckoutButton
+        planCode="pro_monthly"
+        amountCents={1499}
+        mercadoPagoPublicKey="TEST-public-key"
+        sandboxPayerEmail="buyer@testuser.com"
+        navigate={assignMock}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(noReadyCallbackCardFormMock).toHaveBeenCalled();
+    });
+
+    await user.type(screen.getByLabelText("Nome do titular"), "APRO");
+    await user.type(
+      screen.getByLabelText("Número do documento"),
+      "12345678909",
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: /carregando formulario seguro|autorizar assinatura/i,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/billing/checkout",
+        expect.objectContaining({
+          method: "POST",
+        }),
+      );
+    });
+
+    expect(
+      JSON.parse(jest.mocked(global.fetch).mock.calls[0][1]?.body as string),
+    ).toEqual({
+      planCode: "pro_monthly",
+      cardTokenId: "token-without-ready-flag",
+    });
+  });
 });
