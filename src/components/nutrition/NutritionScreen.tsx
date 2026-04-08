@@ -143,16 +143,21 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     resultsVisible,
     searchQuery,
     barcodeQuery,
+    sourceFilter,
     selectedFood,
     isComposerOpen,
     lastSearchSource,
     message: searchMessage,
+    searchSuggestions,
     barcodeMissCode,
   } = sState;
   const {
     handleSearchQueryChange,
     handleBarcodeQueryChange,
     handleSearch,
+    handleSearchSuggestion,
+    handleSourceFilterChange,
+    setSearchMealContext,
     handleBarcodeLookup,
     resetSearchComposer,
     applyFoodSelection,
@@ -172,10 +177,8 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     mealType,
     activeArea,
     planningTab,
-    activeDiaryView,
     activeDiaryMeal,
     diaryPage,
-    todayMealsSectionOpen,
     todayDiarySectionOpen,
     isMobileLayout,
     scannerOpen,
@@ -227,12 +230,10 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
   }, [diaryItems, mealDefinitions]);
 
   const {
-    todayMealsSectionRef,
     todayDiarySectionRef,
     getActiveMealDefinition,
     handleChangeArea,
     focusTodayDashboard,
-    handleTodayMealsSectionOpenChange,
     handleTodayDiarySectionOpenChange,
     handleOpenConsumedSummary,
     announceDiarySuccess,
@@ -258,7 +259,6 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     mealType,
     historyPage,
     setMealType,
-    setCustomWaterOpen,
     setActiveDiaryMeal,
     setActiveArea,
     setActiveDiaryView,
@@ -269,6 +269,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     setCustomMealOpen,
     setEditingMeal,
     setMessage,
+    setSearchTargetDate,
     loadBrowserDashboard,
     hydrateDashboard,
     setDiaryMealDefinitions,
@@ -291,12 +292,6 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     setSearchTargetDate(targetDate.slice(0, 10));
     openSearchForMeal(nextMealType);
   };
-
-  useEffect(() => {
-    if (activeArea !== "search" && searchTargetDate) {
-      setSearchTargetDate(null);
-    }
-  }, [activeArea, searchTargetDate]);
 
   const {
     handleAddDiaryItem,
@@ -361,6 +356,10 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     loadHistory,
     resolveRequestError,
   });
+
+  useEffect(() => {
+    setSearchMealContext(mealType);
+  }, [mealType, setSearchMealContext]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 860px)");
@@ -556,18 +555,17 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     1,
     Math.ceil(activeDiaryItems.length / DIARY_PAGE_SIZE),
   );
-  const pagedDiaryItems = useMemo(() => {
-    const offset = (diaryPage - 1) * DIARY_PAGE_SIZE;
-    return activeDiaryItems.slice(offset, offset + DIARY_PAGE_SIZE);
-  }, [activeDiaryItems, diaryPage]);
 
   useEffect(() => {
+    if (diaryPage <= diaryTotalPages) {
+      return;
+    }
+
     dispatchUiState({
-      type: "update",
-      key: "diaryPage",
-      updater: (current) => Math.min(current as number, diaryTotalPages),
+      type: "patch",
+      value: { diaryPage: diaryTotalPages },
     });
-  }, [diaryTotalPages, dispatchUiState]);
+  }, [diaryPage, diaryTotalPages, dispatchUiState]);
 
   // Sync active meal with current hour without overriding manual meal changes.
   useEffect(() => {
@@ -711,7 +709,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     mealDefinitions,
     searchQuery,
     onSearchQueryChange: handleSearchQueryChange,
-    onSearch: () => void handleSearch(),
+    onSearch: () => void handleSearch(sourceFilter, {}, mealType),
     isSearching,
     isEnrichingExternal,
     barcodeQuery,
@@ -720,8 +718,14 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     onOpenScanner: () => setScannerOpen(true),
     searchSourceLabel,
     searchFeedback: searchMessage,
+    searchSuggestions,
     resultsVisible,
     searchResults,
+    activeSource: sourceFilter,
+    onSourceChange: handleSourceFilterChange,
+    onSearchSuggestion: (value: string) => {
+      void handleSearchSuggestion(value);
+    },
     resultState,
     onApplyFoodSelection: applyFoodSelection,
     barcodeMissCode,

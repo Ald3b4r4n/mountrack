@@ -155,15 +155,21 @@ describe("NutritionScreen", () => {
         resultsVisible: false,
         searchQuery: "",
         barcodeQuery: "",
+        sourceFilter: "all",
         selectedFood: null,
         isComposerOpen: false,
         lastSearchSource: "none",
         message: null,
+        searchSuggestions: [],
+        barcodeMissCode: null,
       },
       actions: {
         handleSearchQueryChange: jest.fn(),
         handleBarcodeQueryChange: jest.fn(),
         handleSearch: jest.fn(),
+        handleSearchSuggestion: jest.fn(),
+        handleSourceFilterChange: jest.fn(),
+        setSearchMealContext: jest.fn(),
         handleBarcodeLookup: jest.fn(async () => {}),
         resetSearchComposer: jest.fn(),
         applyFoodSelection: jest.fn(),
@@ -213,7 +219,9 @@ describe("NutritionScreen", () => {
     expect(await screen.findByText(/Almoço em foco/i)).toBeInTheDocument();
 
     // The "today" nav tab is now labelled "HISTÓRICO"
-    expect(screen.getByRole("button", { name: /Histórico/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Histórico/i }),
+    ).toBeInTheDocument();
   });
 
   it("prefers the last focused meal over the hour fallback", async () => {
