@@ -1,4 +1,4 @@
-import type { FoodItem } from "@/modules/nutrition/domain/types";
+import type { FoodItem, MealType } from "@/modules/nutrition/domain/types";
 import { buildNutritionBarcodeCandidates } from "@/modules/nutrition/barcode";
 import { findSupplementBrandProfile } from "@/modules/nutrition/data/supplement-brands";
 import {
@@ -30,6 +30,27 @@ import {
 import { searchUsdaFoods } from "@/modules/nutrition/providers/usda-food-data";
 
 const SEARCH_LIMIT = 50;
+const SOURCE_APPEND_LIMIT = 6;
+const DID_YOU_MEAN_LIMIT = 3;
+const DID_YOU_MEAN_POOL_LIMIT = 180;
+const SEARCH_STOP_WORDS = new Set([
+  "a",
+  "as",
+  "de",
+  "da",
+  "das",
+  "do",
+  "dos",
+  "e",
+  "em",
+  "para",
+  "por",
+]);
+
+const SEARCH_TOKEN_SYNONYMS: Record<string, string[]> = {
+  feijao: ["bean", "beans", "black", "pinto"],
+  feijoes: ["bean", "beans", "black", "pinto"],
+};
 
 function findBarcodeMatch(
   foods: FoodItem[],
@@ -46,6 +67,223 @@ function findBarcodeMatch(
         candidates.includes(candidate),
       );
     }) ?? null
+  );
+}
+
+function normalizeSearchText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function tokenizeBaseQuery(query: string): string[] {
+  return normalizeSearchText(query)
+    .split(/\s+/)
+    .filter((token) => token && !SEARCH_STOP_WORDS.has(token))
+    .filter((token) => token.length >= 3 || /^\d{4,}$/.test(token));
+}
+
+function expandQueryTokens(tokens: string[]): string[] {
+  const expanded = new Set(tokens);
+
+  for (const token of tokens) {
+    const aliases = SEARCH_TOKEN_SYNONYMS[token] ?? [];
+    for (const alias of aliases) {
+      expanded.add(alias);
+    }
+  }
+
+  return Array.from(expanded);
+}
+
+function tokenizeQuery(query: string): string[] {
+  return expandQueryTokens(tokenizeBaseQuery(query));
+}
+
+function computeLevenshteinDistance(left: string, right: string): number {
+  if (left === right) {
+    return 0;
+  }
+
+  if (!left.length) {
+    return right.length;
+  }
+
+  if (!right.length) {
+    return left.length;
+  }
+
+  const previous = Array.from(
+    { length: right.length + 1 },
+    (_, index) => index,
+  );
+
+  for (let row = 1; row <= left.length; row += 1) {
+    let diagonal = previous[0] ?? 0;
+    previous[0] = row;
+
+    for (let column = 1; column <= right.length; column += 1) {
+      const up = previous[column] ?? 0;
+      const insertion = (previous[column - 1] ?? 0) + 1;
+      const deletion = up + 1;
+      const substitution =
+        diagonal + (left[row - 1] === right[column - 1] ? 0 : 1);
+
+      diagonal = up;
+      previous[column] = Math.min(insertion, deletion, substitution);
+    }
+  }
+
+  return previous[right.length] ?? Math.max(left.length, right.length);
+}
+
+function deriveSuggestionDistance(
+  query: string,
+  candidateLabel: string,
+): number {
+  const normalizedQuery = normalizeSearchText(query);
+  const normalizedCandidate = normalizeSearchText(candidateLabel);
+
+  if (!normalizedQuery || !normalizedCandidate) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  if (normalizedCandidate.includes(normalizedQuery)) {
+    return 0;
+  }
+
+  const candidateTokens = normalizedCandidate.split(/\s+/).filter(Boolean);
+  const tokenDistances = candidateTokens
+    .filter((token) => token.length >= 3)
+    .map((token) => computeLevenshteinDistance(normalizedQuery, token));
+  const phraseDistance = computeLevenshteinDistance(
+    normalizedQuery,
+    normalizedCandidate,
+  );
+
+  return Math.min(phraseDistance, ...tokenDistances);
+}
+
+function buildDidYouMeanSuggestions(
+  query: string,
+  foods: FoodItem[],
+): string[] {
+  const normalizedQuery = normalizeSearchText(query);
+  if (normalizedQuery.length < 3) {
+    return [];
+  }
+
+  const maxDistance =
+    normalizedQuery.length >= 10 ? 3 : normalizedQuery.length >= 6 ? 2 : 1;
+  const seenLabels = new Set<string>();
+
+  const rankedSuggestions = foods
+    .map((food) => {
+      const label = (food.displayName ?? food.name).trim();
+      if (!label) {
+        return null;
+      }
+
+      const normalizedLabel = normalizeSearchText(label);
+      if (!normalizedLabel || normalizedLabel === normalizedQuery) {
+        return null;
+      }
+
+      const dedupeKey = `${food.source}::${normalizedLabel}`;
+      if (seenLabels.has(dedupeKey)) {
+        return null;
+      }
+      seenLabels.add(dedupeKey);
+
+      const distance = deriveSuggestionDistance(normalizedQuery, label);
+      if (!Number.isFinite(distance) || distance > maxDistance) {
+        return null;
+      }
+
+      const sourcePenalty = food.source === "internal" ? 0 : 0.15;
+      const confidencePenalty = Math.max(0, 1 - food.confidenceScore);
+      return {
+        label,
+        ranking: distance + sourcePenalty + confidencePenalty,
+      };
+    })
+    .filter((suggestion): suggestion is { label: string; ranking: number } =>
+      Boolean(suggestion),
+    )
+    .sort((left, right) => left.ranking - right.ranking)
+    .slice(0, DID_YOU_MEAN_POOL_LIMIT);
+
+  const uniqueLabels = new Set<string>();
+  const suggestions: string[] = [];
+
+  for (const candidate of rankedSuggestions) {
+    const comparable = normalizeSearchText(candidate.label);
+    if (uniqueLabels.has(comparable)) {
+      continue;
+    }
+
+    uniqueLabels.add(comparable);
+    suggestions.push(candidate.label);
+
+    if (suggestions.length >= DID_YOU_MEAN_LIMIT) {
+      break;
+    }
+  }
+
+  return suggestions;
+}
+
+function isLooselyRelevantSourceCandidate(
+  food: FoodItem,
+  query: string,
+): boolean {
+  const baseQueryTokens = tokenizeBaseQuery(query);
+  const queryTokens = tokenizeQuery(query);
+  const normalizedQuery = normalizeSearchText(query);
+  const searchable = normalizeSearchText(
+    [food.displayName ?? food.name, food.brand ?? "", ...(food.tags ?? [])]
+      .join(" ")
+      .trim(),
+  );
+
+  if (!searchable) {
+    return false;
+  }
+
+  if (normalizedQuery && searchable.includes(normalizedQuery)) {
+    return true;
+  }
+
+  if (!queryTokens.length) {
+    return false;
+  }
+
+  const uniqueTokens = Array.from(new Set(queryTokens));
+  const matchingCount = uniqueTokens.filter((token) =>
+    searchable.includes(token),
+  ).length;
+
+  if (baseQueryTokens.length <= 1) {
+    return matchingCount >= 1;
+  }
+
+  if (matchingCount >= 2) {
+    return true;
+  }
+
+  return Boolean(baseQueryTokens[0] && searchable.includes(baseQueryTokens[0]));
+}
+
+function filterRelevantSourceCandidates(
+  sourceCandidates: FoodItem[],
+  query: string,
+): FoodItem[] {
+  return sourceCandidates.filter((candidate) =>
+    isLooselyRelevantSourceCandidate(candidate, query),
   );
 }
 
@@ -104,6 +342,43 @@ function appendUniqueFoods(
   return merged;
 }
 
+function filterFoodsBySource(
+  foods: FoodItem[],
+  sourceFilter: FoodSourceFilter,
+): FoodItem[] {
+  if (sourceFilter === "all") {
+    return foods;
+  }
+
+  return foods.filter((food) => food.source === sourceFilter);
+}
+
+function buildHybridResults(
+  rankedFoods: FoodItem[],
+  sourceCandidates: FoodItem[],
+  query: string,
+): FoodItem[] {
+  const rankedSlice = rankedFoods.slice(0, SEARCH_LIMIT);
+  const rankedIds = new Set(rankedSlice.map((food) => food.id));
+  const relevantSourceCandidates = filterRelevantSourceCandidates(
+    sourceCandidates,
+    query,
+  ).filter((candidate) => !rankedIds.has(candidate.id));
+
+  if (rankedSlice.length) {
+    return appendUniqueFoods(
+      rankedSlice,
+      relevantSourceCandidates.slice(0, SOURCE_APPEND_LIMIT),
+    ).slice(0, SEARCH_LIMIT);
+  }
+
+  if (relevantSourceCandidates.length) {
+    return relevantSourceCandidates.slice(0, SEARCH_LIMIT);
+  }
+
+  return sourceCandidates.slice(0, SEARCH_LIMIT);
+}
+
 function resolveCatalogSource(results: FoodItem[]): string {
   const primaryResult = results[0];
   if (!primaryResult) {
@@ -133,7 +408,13 @@ export async function searchNutritionCatalog(
   userId: string,
   query: string,
   sourceFilter: FoodSourceFilter = "all",
-): Promise<{ results: FoodItem[]; source: string; externalPending: boolean }> {
+  mealType: MealType | null = null,
+): Promise<{
+  results: FoodItem[];
+  source: string;
+  externalPending: boolean;
+  didYouMean?: string[];
+}> {
   if (!query.trim()) {
     return { results: [], source: "none", externalPending: false };
   }
@@ -148,21 +429,33 @@ export async function searchNutritionCatalog(
   // If FatSecret has good results, return immediately
   // OFF and USDA run in background (fire-and-forget) for deduplication
   if (fatSecretResults.length > 0) {
+    const fatSecretCandidates = filterFoodsBySource(
+      fatSecretResults,
+      sourceFilter,
+    );
+
     const fatSecretPrimaryResults = await searchFoodsByQuery(query, {
-      internalFoods: fatSecretResults,
+      internalFoods: fatSecretCandidates,
       limit: SEARCH_LIMIT,
+      mealType,
     });
 
     const localLastResults = await searchFoodsByQuery(query, {
       internalFoods: catalogFoods,
       limit: SEARCH_LIMIT,
       source: sourceFilter,
+      mealType,
     });
 
-    const prioritizedResults = appendUniqueFoods(
-      sourceFilter === "all" ? fatSecretPrimaryResults : [],
+    const rankedResults = appendUniqueFoods(
+      fatSecretPrimaryResults,
       localLastResults,
-    ).slice(0, SEARCH_LIMIT);
+    );
+    const prioritizedResults = buildHybridResults(
+      rankedResults,
+      fatSecretCandidates,
+      query,
+    );
 
     // Upsert FatSecret results immediately
     await upsertFoods(fatSecretResults);
@@ -186,6 +479,13 @@ export async function searchNutritionCatalog(
       results: prioritizedResults,
       source: "fatsecret-primary",
       externalPending: false,
+      didYouMean:
+        prioritizedResults.length > 0
+          ? undefined
+          : buildDidYouMeanSuggestions(query, [
+              ...fatSecretCandidates,
+              ...catalogFoods,
+            ]),
     };
   }
 
@@ -200,33 +500,51 @@ export async function searchNutritionCatalog(
     await upsertFoods(externalResults);
   }
 
+  const filteredExternalResults = filterFoodsBySource(
+    externalResults,
+    sourceFilter,
+  );
+
   const secondaryExternalResults = await searchFoodsByQuery(query, {
-    internalFoods: [...offResults, ...usdaResults],
+    internalFoods: filteredExternalResults,
     limit: SEARCH_LIMIT,
+    mealType,
   });
 
   const localLastResults = await searchFoodsByQuery(query, {
     internalFoods: catalogFoods,
     limit: SEARCH_LIMIT,
     source: sourceFilter,
+    mealType,
   });
 
-  const prioritizedResults = appendUniqueFoods(
-    sourceFilter === "all" ? secondaryExternalResults : [],
+  const rankedResults = appendUniqueFoods(
+    secondaryExternalResults,
     localLastResults,
-  ).slice(0, SEARCH_LIMIT);
+  );
+  const prioritizedResults = buildHybridResults(
+    rankedResults,
+    filteredExternalResults,
+    query,
+  );
 
   const externalPending = shouldEnrichFromExternal(
     query,
     prioritizedResults,
     Boolean(requestedBrand),
   );
+  const didYouMeanSuggestions = buildDidYouMeanSuggestions(query, [
+    ...catalogFoods,
+    ...filteredExternalResults,
+  ]);
 
   if (prioritizedResults.length || !externalPending) {
     return {
       results: prioritizedResults,
       source: resolveCatalogSource(prioritizedResults),
       externalPending,
+      didYouMean:
+        prioritizedResults.length > 0 ? undefined : didYouMeanSuggestions,
     };
   }
 
@@ -236,6 +554,7 @@ export async function searchNutritionCatalog(
     results: [],
     source: "none",
     externalPending: true,
+    didYouMean: didYouMeanSuggestions,
   };
 }
 

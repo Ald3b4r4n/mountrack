@@ -58,7 +58,12 @@ describe("GET /api/nutrition/foods/search", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(searchNutritionCatalogMock).toHaveBeenCalledWith("user-123", "banana", "all");
+    expect(searchNutritionCatalogMock).toHaveBeenCalledWith(
+      "user-123",
+      "banana",
+      "all",
+      null,
+    );
     await expect(response.json()).resolves.toEqual({
       results: [{ id: "food-1", name: "Banana prata" }],
       source: "catalog",
@@ -69,7 +74,9 @@ describe("GET /api/nutrition/foods/search", () => {
   // T009 — invalid source value must return 400
   it("returns 400 for an invalid source filter value", async () => {
     const response = await GET(
-      new Request("http://localhost/api/nutrition/foods/search?q=banana&source=invalid_source"),
+      new Request(
+        "http://localhost/api/nutrition/foods/search?q=banana&source=invalid_source",
+      ),
     );
 
     expect(response.status).toBe(400);
@@ -85,10 +92,71 @@ describe("GET /api/nutrition/foods/search", () => {
     } as never);
 
     const response = await GET(
-      new Request("http://localhost/api/nutrition/foods/search?q=frango&source=custom"),
+      new Request(
+        "http://localhost/api/nutrition/foods/search?q=frango&source=custom",
+      ),
     );
 
     expect(response.status).toBe(200);
-    expect(searchNutritionCatalogMock).toHaveBeenCalledWith("user-123", "frango", "custom");
+    expect(searchNutritionCatalogMock).toHaveBeenCalledWith(
+      "user-123",
+      "frango",
+      "custom",
+      null,
+    );
+  });
+
+  it("passes mealType context to catalog search when provided", async () => {
+    searchNutritionCatalogMock.mockResolvedValue({
+      results: [],
+      source: "none",
+      externalPending: false,
+    } as never);
+
+    const response = await GET(
+      new Request(
+        "http://localhost/api/nutrition/foods/search?q=ovos&mealType=breakfast",
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(searchNutritionCatalogMock).toHaveBeenCalledWith(
+      "user-123",
+      "ovos",
+      "all",
+      "breakfast",
+    );
+  });
+
+  it("returns 400 when mealType query param is invalid", async () => {
+    const response = await GET(
+      new Request(
+        "http://localhost/api/nutrition/foods/search?q=ovos&mealType=brunch",
+      ),
+    );
+
+    expect(response.status).toBe(400);
+    expect(searchNutritionCatalogMock).not.toHaveBeenCalled();
+  });
+
+  it("includes didYouMean suggestions when search service provides them", async () => {
+    searchNutritionCatalogMock.mockResolvedValue({
+      results: [],
+      source: "none",
+      externalPending: true,
+      didYouMean: ["Feijao carioca cozido", "Feijao preto cozido"],
+    } as never);
+
+    const response = await GET(
+      new Request("http://localhost/api/nutrition/foods/search?q=fejao"),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      results: [],
+      source: "none",
+      externalPending: true,
+      didYouMean: ["Feijao carioca cozido", "Feijao preto cozido"],
+    });
   });
 });

@@ -6,9 +6,7 @@ import type {
   NutritionTotals,
   NutritionUnit,
 } from "@/modules/nutrition/domain/types";
-import {
-  EmptyState,
-} from "./CommonUI";
+import { EmptyState } from "./CommonUI";
 import {
   formatCalories,
   formatFoodSourceLabel,
@@ -18,13 +16,17 @@ import {
 import { FoodSearchMobileComposerDialog } from "./FoodSearchMobileComposerDialog";
 import { FoodSearchResultsSection } from "./FoodSearchResultsSection";
 import { FoodSearchSetupPanel } from "./FoodSearchSetupPanel";
+import type { FoodSourceFilter } from "./SourceFilterChips";
 
 type SearchMode = "name" | "barcode" | "custom";
 type FoodSelectionOptions = {
   openComposer?: boolean;
   hideResults?: boolean;
 };
-type SelectedFoodTotals = Pick<NutritionTotals, "calories" | "protein" | "carbs" | "fat">;
+type SelectedFoodTotals = Pick<
+  NutritionTotals,
+  "calories" | "protein" | "carbs" | "fat"
+>;
 
 interface FoodSearchPanelProps {
   storageMode: string;
@@ -41,10 +43,17 @@ interface FoodSearchPanelProps {
   onOpenScanner: () => void;
   searchSourceLabel: string | null;
   searchFeedback: string | null;
+  searchSuggestions?: string[];
   resultsVisible: boolean;
   searchResults: FoodItem[];
+  activeSource?: FoodSourceFilter;
+  onSourceChange?: (source: FoodSourceFilter) => void;
+  onSearchSuggestion?: (value: string) => void;
   resultState: { title: string; text: string };
-  onApplyFoodSelection: (food: FoodItem, options?: FoodSelectionOptions) => void;
+  onApplyFoodSelection: (
+    food: FoodItem,
+    options?: FoodSelectionOptions,
+  ) => void;
   barcodeMissCode?: string | null;
   onBarcodeMissAddManually?: () => void;
   onCustomFoodOpen: () => void;
@@ -107,7 +116,9 @@ function ComposerBody({
     <div className="grid gap-4">
       {/* Food identity */}
       <div>
-        <strong className="block text-[1rem]">{getFoodLabel(selectedFood)}</strong>
+        <strong className="block text-[1rem]">
+          {getFoodLabel(selectedFood)}
+        </strong>
         <span className="mt-0.5 block text-[0.82rem] text-[var(--text-secondary)]">
           {selectedFood.brand ? `${selectedFood.brand} · ` : ""}
           {formatFoodSourceLabel(selectedFood.source)}
@@ -120,7 +131,9 @@ function ComposerBody({
       {/* Quantity + Unit + Meal row */}
       <div className="grid grid-cols-3 gap-2.5">
         <label className="grid gap-1">
-          <span className="text-[0.75rem] font-medium text-[var(--text-muted)]">Quantidade</span>
+          <span className="text-[0.75rem] font-medium text-[var(--text-muted)]">
+            Quantidade
+          </span>
           <input
             className="input-field text-center"
             value={quantity}
@@ -129,11 +142,15 @@ function ComposerBody({
           />
         </label>
         <label className="grid gap-1">
-          <span className="text-[0.75rem] font-medium text-[var(--text-muted)]">Unidade</span>
+          <span className="text-[0.75rem] font-medium text-[var(--text-muted)]">
+            Unidade
+          </span>
           <select
             className="input-field"
             value={unit}
-            onChange={(event) => onUnitChange(event.target.value as NutritionUnit)}
+            onChange={(event) =>
+              onUnitChange(event.target.value as NutritionUnit)
+            }
           >
             <option value="g">Gramas</option>
             <option value="ml">Mililitros</option>
@@ -142,11 +159,15 @@ function ComposerBody({
           </select>
         </label>
         <label className="grid gap-1">
-          <span className="text-[0.75rem] font-medium text-[var(--text-muted)]">Refeição</span>
+          <span className="text-[0.75rem] font-medium text-[var(--text-muted)]">
+            Refeição
+          </span>
           <select
             className="input-field"
             value={mealType}
-            onChange={(event) => onMealTypeChange(event.target.value as MealType)}
+            onChange={(event) =>
+              onMealTypeChange(event.target.value as MealType)
+            }
           >
             {mealOptions.map((option) => (
               <option key={option.key} value={option.key}>
@@ -161,7 +182,9 @@ function ComposerBody({
       {selectedFoodTotals ? (
         <div className="rounded-xl border border-[var(--border-glass)] bg-[#020b1c]/50">
           <div className="flex items-center justify-between border-b border-[var(--border-glass)] px-4 py-2.5">
-            <span className="text-[0.82rem] font-medium text-[var(--text-primary)]">Calorias</span>
+            <span className="text-[0.82rem] font-medium text-[var(--text-primary)]">
+              Calorias
+            </span>
             <span className="text-[0.95rem] font-semibold text-[#34d399]">
               {selectedFoodTotals.calories.toFixed(0)} kcal
             </span>
@@ -172,19 +195,25 @@ function ComposerBody({
             </span>
           ) : null}
           <div className="flex items-center justify-between border-b border-[var(--border-glass)] px-4 py-2.5">
-            <span className="text-[0.82rem] text-[var(--text-secondary)]">Proteína</span>
+            <span className="text-[0.82rem] text-[var(--text-secondary)]">
+              Proteína
+            </span>
             <span className="text-[0.88rem] font-medium text-[#34d399]">
               {formatGrams(selectedFoodTotals.protein)}
             </span>
           </div>
           <div className="flex items-center justify-between border-b border-[var(--border-glass)] px-4 py-2.5">
-            <span className="text-[0.82rem] text-[var(--text-secondary)]">Carboidratos</span>
+            <span className="text-[0.82rem] text-[var(--text-secondary)]">
+              Carboidratos
+            </span>
             <span className="text-[0.88rem] font-medium text-[#22d3ee]">
               {formatGrams(selectedFoodTotals.carbs)}
             </span>
           </div>
           <div className="flex items-center justify-between px-4 py-2.5">
-            <span className="text-[0.82rem] text-[var(--text-secondary)]">Gorduras</span>
+            <span className="text-[0.82rem] text-[var(--text-secondary)]">
+              Gorduras
+            </span>
             <span className="text-[0.88rem] font-medium text-[#fb7185]">
               {formatGrams(selectedFoodTotals.fat)}
             </span>
@@ -198,7 +227,11 @@ function ComposerBody({
 
       {/* CTA */}
       {showActionButton ? (
-        <button type="button" onClick={onAddDiaryItem} className="btn-primary w-full">
+        <button
+          type="button"
+          onClick={onAddDiaryItem}
+          className="btn-primary w-full"
+        >
           Adicionar ao diário
         </button>
       ) : null}
@@ -222,8 +255,12 @@ export function FoodSearchPanel({
   onOpenScanner,
   searchSourceLabel,
   searchFeedback,
+  searchSuggestions = [],
   resultsVisible,
   searchResults,
+  activeSource,
+  onSourceChange,
+  onSearchSuggestion,
   resultState,
   barcodeMissCode,
   onBarcodeMissAddManually,
@@ -316,7 +353,9 @@ export function FoodSearchPanel({
       : null;
 
   const hasVisibleResults = resultsVisible && searchResults.length > 0;
-  const activeMealLabel = mealOptions.find((option) => option.key === mealType)?.label ?? String(mealType);
+  const activeMealLabel =
+    mealOptions.find((option) => option.key === mealType)?.label ??
+    String(mealType);
   const hasSearchSession =
     isSearching ||
     searchSourceLabel !== null ||
@@ -410,7 +449,11 @@ export function FoodSearchPanel({
         {barcodeMissCode && onBarcodeMissAddManually ? (
           <div className="rounded-xl border border-[var(--border-glass)] bg-[var(--bg-surface)] px-4 py-3">
             <p className="mb-2 text-[0.84rem] text-[var(--text-secondary)]">
-              Código <span className="font-medium text-[var(--text-primary)]">{barcodeMissCode}</span> não encontrado no catálogo.
+              Código{" "}
+              <span className="font-medium text-[var(--text-primary)]">
+                {barcodeMissCode}
+              </span>{" "}
+              não encontrado no catálogo.
             </p>
             <button
               type="button"
@@ -425,6 +468,8 @@ export function FoodSearchPanel({
         <FoodSearchResultsSection
           isMobileLayout={isMobileLayout}
           hasSearchSession={hasSearchSession}
+          activeSource={activeSource}
+          onSourceChange={onSourceChange}
           selectedFood={selectedFood}
           isComposerOpen={isComposerOpen}
           activeMealLabel={activeMealLabel}
@@ -433,9 +478,11 @@ export function FoodSearchPanel({
           resultsPanelRef={resultsPanelRef}
           hasVisibleResults={hasVisibleResults}
           searchResults={searchResults}
+          searchSuggestions={searchSuggestions}
           resultEmptyState={resultEmptyState}
           isEnrichingExternal={isEnrichingExternal}
           searchSourceLabel={searchSourceLabel}
+          onSearchSuggestion={onSearchSuggestion}
           onCustomFoodOpen={onCustomFoodOpen}
           onEditCustomFood={onEditCustomFood}
           onClearSearch={onClearSearch}

@@ -32,43 +32,78 @@ interface UsdaFoodSearchItem {
   publicationDate?: string;
 }
 
+type FatSecretScalar =
+  | string
+  | number
+  | {
+      value?: string | number;
+    };
+
 interface FatSecretFoodCandidate {
-  food_id?: string | number;
-  food_name?: string;
-  food_type?: string;
-  brand_name?: string;
-  food_url?: string;
-  barcode?: string;
-  serving_description?: string;
+  food_id?: FatSecretScalar;
+  food_name?: FatSecretScalar;
+  food_type?: FatSecretScalar;
+  brand_name?: FatSecretScalar;
+  food_url?: FatSecretScalar;
+  barcode?: FatSecretScalar;
+  serving_description?: FatSecretScalar;
   servings?: {
     serving?:
       | {
-          metric_serving_amount?: string | number;
-          metric_serving_unit?: string;
-          calories?: string | number;
-          protein?: string | number;
-          carbohydrate?: string | number;
-          fat?: string | number;
-          fiber?: string | number;
-          sodium?: string | number;
+          metric_serving_amount?: FatSecretScalar;
+          metric_serving_unit?: FatSecretScalar;
+          calories?: FatSecretScalar;
+          protein?: FatSecretScalar;
+          carbohydrate?: FatSecretScalar;
+          fat?: FatSecretScalar;
+          fiber?: FatSecretScalar;
+          sodium?: FatSecretScalar;
         }
       | Array<{
-          metric_serving_amount?: string | number;
-          metric_serving_unit?: string;
-          calories?: string | number;
-          protein?: string | number;
-          carbohydrate?: string | number;
-          fat?: string | number;
-          fiber?: string | number;
-          sodium?: string | number;
+          metric_serving_amount?: FatSecretScalar;
+          metric_serving_unit?: FatSecretScalar;
+          calories?: FatSecretScalar;
+          protein?: FatSecretScalar;
+          carbohydrate?: FatSecretScalar;
+          fat?: FatSecretScalar;
+          fiber?: FatSecretScalar;
+          sodium?: FatSecretScalar;
         }>;
   };
-  food_description?: string;
+  food_description?: FatSecretScalar;
 }
 
-function toNumber(value: number | string | undefined): number | undefined {
-  if (value === undefined) return undefined;
-  const parsed = Number(value);
+function readFatSecretScalar(
+  value: FatSecretScalar | undefined,
+): string | number | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (typeof value === "object") {
+    return value.value;
+  }
+
+  return value;
+}
+
+function toText(value: FatSecretScalar | undefined): string | undefined {
+  const scalar = readFatSecretScalar(value);
+  if (scalar === undefined || scalar === null) {
+    return undefined;
+  }
+
+  const text = String(scalar).trim();
+  return text || undefined;
+}
+
+function toNumber(value: FatSecretScalar | undefined): number | undefined {
+  const scalar = readFatSecretScalar(value);
+  if (scalar === undefined || scalar === null || scalar === "") {
+    return undefined;
+  }
+
+  const parsed = Number(scalar);
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
@@ -146,7 +181,8 @@ function readFatSecretServing(food: FatSecretFoodCandidate): {
   const servingPayload = food.servings?.serving;
   const serving = Array.isArray(servingPayload)
     ? (servingPayload.find(
-        (item) => String(item.metric_serving_unit ?? "").toLowerCase() === "g",
+        (item) =>
+          (toText(item.metric_serving_unit) ?? "").toLowerCase() === "g",
       ) ?? servingPayload[0])
     : servingPayload;
 
@@ -182,12 +218,12 @@ function readFatSecretServing(food: FatSecretFoodCandidate): {
         toNumber(serving.sodium) != null
           ? Number((Number(serving.sodium) * scale).toFixed(2))
           : undefined,
-      servingDescription: food.serving_description,
+      servingDescription: toText(food.serving_description),
       servingGrams: metricServingAmount,
     };
   }
 
-  const description = food.food_description ?? "";
+  const description = toText(food.food_description) ?? "";
   const macroMatch = description.match(
     /Calories:\s*([\d.,]+)kcal\s*\|\s*Fat:\s*([\d.,]+)g\s*\|\s*Carbs:\s*([\d.,]+)g\s*\|\s*Protein:\s*([\d.,]+)g/i,
   );
@@ -304,17 +340,18 @@ export function normalizeUsdaFood(food: UsdaFoodSearchItem): FoodItem | null {
 export function normalizeFatSecretFood(
   food: FatSecretFoodCandidate,
 ): FoodItem | null {
-  const name = repairMojibake(food.food_name?.trim());
-  const sourceId = String(food.food_id ?? "").trim();
+  const name = repairMojibake(toText(food.food_name));
+  const sourceId = toText(food.food_id) ?? "";
 
   if (!name || !sourceId) {
     return null;
   }
 
   const macros = readFatSecretServing(food);
-  const tags = [repairMojibake(food.food_type ?? "") ?? "", "fatsecret"].filter(
-    Boolean,
-  );
+  const tags = [
+    repairMojibake(toText(food.food_type) ?? "") ?? "",
+    "fatsecret",
+  ].filter(Boolean);
   const classification = inferFoodClassification(name, tags);
 
   const normalizedFood: FoodItem = {
@@ -323,8 +360,8 @@ export function normalizeFatSecretFood(
     sourceId,
     name,
     displayName: name,
-    brand: repairMojibake(food.brand_name?.trim()) || undefined,
-    barcode: food.barcode?.trim() || undefined,
+    brand: repairMojibake(toText(food.brand_name)) || undefined,
+    barcode: toText(food.barcode) || undefined,
     baseUnit: "g",
     servingDescription: macros.servingDescription,
     servingGrams: macros.servingGrams,
@@ -337,7 +374,7 @@ export function normalizeFatSecretFood(
     confidenceScore: 0.88,
     locale: "pt-BR",
     countryCode: "BR",
-    isBranded: Boolean(food.brand_name),
+    isBranded: Boolean(toText(food.brand_name)),
     ...classification,
   };
 

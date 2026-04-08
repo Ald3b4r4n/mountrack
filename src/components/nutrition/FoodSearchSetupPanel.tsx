@@ -1,5 +1,7 @@
 import { Search, ScanLine, Plus } from "lucide-react";
 
+type SearchMode = "name" | "barcode" | "custom";
+
 interface FoodSearchSetupPanelProps {
   storageSummary: string;
   searchActivitySummary: string | null;
@@ -8,8 +10,8 @@ interface FoodSearchSetupPanelProps {
   activeMealLabel: string;
   searchCatalogBadge: string;
   isEnrichingExternal: boolean;
-  searchMode: "name" | "barcode" | "custom";
-  onSearchModeChange: (mode: "name" | "barcode" | "custom") => void;
+  searchMode: SearchMode;
+  onSearchModeChange: (mode: SearchMode) => void;
   searchQuery: string;
   onSearchQueryChange: (val: string) => void;
   onSearch: () => void;

@@ -8,7 +8,11 @@ import {
   authorizedNutritionFetch,
   getNutritionErrorMessage,
 } from "@/modules/nutrition/client";
-import type { FoodItem } from "@/modules/nutrition/domain/types";
+import type {
+  FoodItem,
+  FoodSource,
+  MealType,
+} from "@/modules/nutrition/domain/types";
 import { getFoodLabel } from "@/modules/nutrition/ui-helpers";
 import {
   resolveUiStorageMode,
@@ -29,6 +33,29 @@ type NutritionSearchPayload = {
   results?: FoodItem[];
   source?: NutritionSearchSource;
   externalPending?: boolean;
+  didYouMean?: string[];
+};
+
+export type NutritionSearchFilter = "all" | FoodSource;
+
+type SearchCacheEntry = {
+  results: FoodItem[];
+  source: NutritionSearchSource;
+  didYouMean: string[];
+  cachedAt: number;
+};
+
+const SEARCH_CACHE_TTL_MS = 60_000;
+const REMOTE_SOURCE_FILTERS = new Set<NutritionSearchFilter>([
+  "all",
+  "fatsecret",
+  "openfoodfacts",
+  "usda",
+]);
+
+type HandleSearchOptions = {
+  preferCache?: boolean;
+  keepCurrentResults?: boolean;
 };
 
 type NutritionSearchUser =
@@ -66,6 +93,8 @@ export function useNutritionSearch(
   const [searchQuery, setSearchQuery] = useState("");
   const [barcodeQuery, setBarcodeQuery] = useState("");
   const [searchResults, setSearchResults] = useState<FoodItem[]>([]);
+  const [sourceFilter, setSourceFilter] =
+    useState<NutritionSearchFilter>("all");
   const [lastSearchSource, setLastSearchSource] =
     useState<NutritionSearchSource>(null);
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
@@ -74,12 +103,14 @@ export function useNutritionSearch(
   const [isSearching, setIsSearching] = useState(false);
   const [isEnrichingExternal, setIsEnrichingExternal] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
   const [barcodeMissCode, setBarcodeMissCode] = useState<string | null>(null);
   const [storageMode, setStorageMode] =
     useState<NutritionUiStorageMode>("checking");
   const searchRequestIdRef = useRef(0);
+  const searchMealContextRef = useRef<MealType | null>(null);
   const selectedFoodRef = useRef<FoodItem | null>(null);
-  const searchCacheRef = useRef<Map<string, FoodItem[]>>(new Map());
+  const searchCacheRef = useRef<Map<string, SearchCacheEntry>>(new Map());
 
   useEffect(() => {
     selectedFoodRef.current = selectedFood;
@@ -101,6 +132,7 @@ export function useNutritionSearch(
     setSearchResults([]);
     setLastSearchSource(null);
     setResultsVisible(false);
+    setSearchSuggestions([]);
   }
 
   function clearSelectedFood() {
@@ -122,6 +154,7 @@ export function useNutritionSearch(
     searchRequestIdRef.current += 1;
     setIsEnrichingExternal(false);
     setBarcodeMissCode(null);
+    setSearchSuggestions([]);
     setSearchQuery(value);
     if (searchResults.length || selectedFood) {
       clearSearchResults();
@@ -133,6 +166,7 @@ export function useNutritionSearch(
   function handleBarcodeQueryChange(value: string) {
     searchRequestIdRef.current += 1;
     setIsEnrichingExternal(false);
+    setSearchSuggestions([]);
     setBarcodeQuery(value);
     if (searchResults.length || selectedFood) {
       clearSearchResults();
@@ -141,10 +175,45 @@ export function useNutritionSearch(
     setMessage(null);
   }
 
-  async function requestSearch(query: string): Promise<Response> {
+  function buildSearchCacheKey(
+    query: string,
+    source: NutritionSearchFilter,
+  ): string {
+    return `${source}::${query}`;
+  }
+
+  function getFreshCacheEntry(
+    cacheKey: string,
+    preferCache: boolean,
+  ): SearchCacheEntry | null {
+    const cachedEntry = searchCacheRef.current.get(cacheKey);
+    if (!cachedEntry) {
+      return null;
+    }
+
+    const shouldUseCache = preferCache || process.env.NODE_ENV === "production";
+    if (!shouldUseCache) {
+      return null;
+    }
+
+    const isFresh = Date.now() - cachedEntry.cachedAt <= SEARCH_CACHE_TTL_MS;
+    return isFresh ? cachedEntry : null;
+  }
+
+  async function requestSearch(
+    query: string,
+    source: NutritionSearchFilter,
+    mealType: MealType | null,
+  ): Promise<Response> {
+    const sourceParam =
+      source === "all" ? "" : `&source=${encodeURIComponent(source)}`;
+    const mealTypeParam = mealType
+      ? `&mealType=${encodeURIComponent(mealType)}`
+      : "";
+
     return authorizedNutritionFetch(
       activeUser as Exclude<NutritionSearchUser, null>,
-      `/api/nutrition/foods/search?q=${encodeURIComponent(query)}`,
+      `/api/nutrition/foods/search?q=${encodeURIComponent(query)}${sourceParam}${mealTypeParam}`,
     );
   }
 
@@ -162,18 +231,36 @@ export function useNutritionSearch(
     return { results, nextSource };
   }
 
-  async function handleSearch() {
+  async function handleSearch(
+    nextSource: NutritionSearchFilter = sourceFilter,
+    options: HandleSearchOptions = {},
+    mealTypeContext?: MealType | null,
+    queryOverride?: string,
+  ) {
     if (!activeUser) return;
 
-    const query = searchQuery.trim();
+    if (mealTypeContext !== undefined) {
+      searchMealContextRef.current = mealTypeContext;
+    }
+
+    const query = (queryOverride ?? searchQuery).trim();
     if (!query) {
       resetSearchComposer();
       return;
     }
 
-    const cached = searchCacheRef.current.get(query);
-    if (cached) {
-      applySearchPayload({ results: cached });
+    const cacheKey = buildSearchCacheKey(query, nextSource);
+
+    const cachedEntry = getFreshCacheEntry(
+      cacheKey,
+      Boolean(options.preferCache),
+    );
+    if (cachedEntry) {
+      applySearchPayload({
+        results: cachedEntry.results,
+        source: cachedEntry.source,
+      });
+      setSearchSuggestions(cachedEntry.didYouMean);
       return;
     }
 
@@ -182,10 +269,18 @@ export function useNutritionSearch(
     setIsSearching(true);
     setIsEnrichingExternal(false);
     setMessage(null);
-    resetSearchComposer();
+    setSearchSuggestions([]);
+
+    if (!options.keepCurrentResults) {
+      resetSearchComposer();
+    }
 
     try {
-      const response = await requestSearch(query);
+      const response = await requestSearch(
+        query,
+        nextSource,
+        searchMealContextRef.current,
+      );
       if (searchRequestIdRef.current !== requestId) {
         return;
       }
@@ -200,11 +295,20 @@ export function useNutritionSearch(
 
       setStorageMode(resolveUiStorageMode(response, canUseBrowserPersistence));
       const payload = (await response.json()) as NutritionSearchPayload;
+      const didYouMeanSuggestions =
+        payload.didYouMean
+          ?.map((value) => value.trim())
+          .filter(Boolean)
+          .slice(0, 3) ?? [];
       const { results } = applySearchPayload(payload);
+      setSearchSuggestions(results.length ? [] : didYouMeanSuggestions);
 
-      if (results.length > 0) {
-        searchCacheRef.current.set(query, results);
-      }
+      searchCacheRef.current.set(cacheKey, {
+        results,
+        source: payload.source ?? (results.length ? "catalog" : "none"),
+        didYouMean: didYouMeanSuggestions,
+        cachedAt: Date.now(),
+      });
 
       if (results.length === 1) {
         setSelectedFood(results[0]);
@@ -213,16 +317,28 @@ export function useNutritionSearch(
       } else if (payload.externalPending) {
         setIsEnrichingExternal(true);
         if (!results.length) {
-          setMessage(
-            "Ainda não achei esse item no catálogo. Vou complementar as referências em segundo plano.",
-          );
+          if (didYouMeanSuggestions.length > 0) {
+            setMessage(
+              `Ainda não achei esse item no catálogo. Você quis dizer: ${didYouMeanSuggestions.join(" | ")}?`,
+            );
+          } else {
+            setMessage(
+              "Ainda não achei esse item no catálogo. Vou complementar as referências em segundo plano.",
+            );
+          }
         } else {
           setMessage(
             "Resultados prontos. Se faltar algo, novas referências entram em segundo plano.",
           );
         }
       } else if (!results.length) {
-        setMessage("Não encontrei esse alimento por enquanto.");
+        if (didYouMeanSuggestions.length > 0) {
+          setMessage(
+            `Não encontrei esse alimento por enquanto. Você quis dizer: ${didYouMeanSuggestions.join(" | ")}?`,
+          );
+        } else {
+          setMessage("Não encontrei esse alimento por enquanto.");
+        }
       }
     } catch {
       setMessage(
@@ -235,6 +351,71 @@ export function useNutritionSearch(
         setIsSearching(false);
       }
     }
+  }
+
+  function handleSourceFilterChange(nextSource: NutritionSearchFilter) {
+    if (nextSource === sourceFilter) {
+      return;
+    }
+
+    setSourceFilter(nextSource);
+    setMessage(null);
+
+    if (!activeUser || !searchQuery.trim()) {
+      return;
+    }
+
+    if (REMOTE_SOURCE_FILTERS.has(nextSource)) {
+      void handleSearch(nextSource, {
+        preferCache: true,
+        keepCurrentResults: true,
+      });
+      return;
+    }
+
+    if (sourceFilter === "all") {
+      return;
+    }
+
+    const allCacheKey = buildSearchCacheKey(searchQuery.trim(), "all");
+    const allCachedEntry = getFreshCacheEntry(allCacheKey, true);
+    if (allCachedEntry) {
+      applySearchPayload({
+        results: allCachedEntry.results,
+        source: allCachedEntry.source,
+      });
+      setSearchSuggestions(allCachedEntry.didYouMean);
+      return;
+    }
+
+    void handleSearch("all", {
+      preferCache: true,
+      keepCurrentResults: true,
+    });
+  }
+
+  function setSearchMealContext(mealType: MealType | null) {
+    searchMealContextRef.current = mealType;
+  }
+
+  async function handleSearchSuggestion(suggestion: string) {
+    const nextQuery = suggestion.trim();
+    if (!nextQuery) {
+      return;
+    }
+
+    setSearchQuery(nextQuery);
+    setMessage(null);
+    if (sourceFilter !== "all") {
+      setSourceFilter("all");
+    }
+
+    await handleSearch(
+      "all",
+      { keepCurrentResults: false },
+      searchMealContextRef.current,
+      nextQuery,
+    );
   }
 
   async function handleBarcodeLookup(code: string) {
@@ -260,6 +441,7 @@ export function useNutritionSearch(
     searchRequestIdRef.current = requestId;
     setIsSearching(true);
     setIsEnrichingExternal(false);
+    setSearchSuggestions([]);
     setMessage(null);
     resetSearchComposer();
 
@@ -369,6 +551,7 @@ export function useNutritionSearch(
       searchQuery,
       barcodeQuery,
       searchResults,
+      sourceFilter,
       lastSearchSource,
       selectedFood,
       isComposerOpen,
@@ -376,12 +559,14 @@ export function useNutritionSearch(
       isSearching,
       isEnrichingExternal,
       message,
+      searchSuggestions,
       barcodeMissCode,
       storageMode,
     },
     setters: {
       setSearchQuery,
       setBarcodeQuery,
+      setSourceFilter,
       setSelectedFood,
       setResultsVisible,
       setMessage,
@@ -393,6 +578,9 @@ export function useNutritionSearch(
       handleSearchQueryChange,
       handleBarcodeQueryChange,
       handleSearch,
+      handleSearchSuggestion,
+      handleSourceFilterChange,
+      setSearchMealContext,
       handleBarcodeLookup,
       resetSearchComposer,
       clearSearchResults,

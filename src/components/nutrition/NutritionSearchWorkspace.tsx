@@ -1,6 +1,7 @@
 import { FoodSearchPanel } from "@/components/nutrition/FoodSearchPanel";
 import type {
   FoodItem,
+  FoodSource,
   MealDefinition,
   MealType,
   NutritionTotals,
@@ -22,8 +23,12 @@ interface NutritionSearchWorkspaceProps {
   onOpenScanner: () => void;
   searchSourceLabel: string | null;
   searchFeedback: string | null;
+  searchSuggestions: string[];
   resultsVisible: boolean;
   searchResults: FoodItem[];
+  activeSource: "all" | FoodSource;
+  onSourceChange: (source: "all" | FoodSource) => void;
+  onSearchSuggestion: (value: string) => void;
   resultState: { title: string; text: string };
   barcodeMissCode?: string | null;
   onBarcodeMissAddManually?: () => void;
@@ -69,8 +74,12 @@ export function NutritionSearchWorkspace({
   onOpenScanner,
   searchSourceLabel,
   searchFeedback,
+  searchSuggestions,
   resultsVisible,
   searchResults,
+  activeSource,
+  onSourceChange,
+  onSearchSuggestion,
   resultState,
   barcodeMissCode,
   onBarcodeMissAddManually,
@@ -111,8 +120,12 @@ export function NutritionSearchWorkspace({
       onOpenScanner={onOpenScanner}
       searchSourceLabel={searchSourceLabel}
       searchFeedback={searchFeedback}
+      searchSuggestions={searchSuggestions}
       resultsVisible={resultsVisible}
       searchResults={searchResults}
+      activeSource={activeSource}
+      onSourceChange={onSourceChange}
+      onSearchSuggestion={onSearchSuggestion}
       resultState={resultState}
       barcodeMissCode={barcodeMissCode}
       onBarcodeMissAddManually={onBarcodeMissAddManually}

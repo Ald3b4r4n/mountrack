@@ -1,13 +1,21 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import { Check, Pencil } from "lucide-react";
 import type { FoodItem, NutritionGoal } from "@/modules/nutrition/domain/types";
-import { formatCalories, formatFoodSourceLabel, getFoodLabel } from "@/modules/nutrition/ui-helpers";
-import { SourceFilterChips, type FoodSourceFilter } from "@/components/nutrition/SourceFilterChips";
+import {
+  formatFoodSourceLabel,
+  getFoodLabel,
+} from "@/modules/nutrition/ui-helpers";
+import {
+  SourceFilterChips,
+  type FoodSourceFilter,
+} from "@/components/nutrition/SourceFilterChips";
 
 interface FoodSearchResultsSectionProps {
   isMobileLayout: boolean;
   hasSearchSession: boolean;
+  activeSource?: FoodSourceFilter;
+  onSourceChange?: (source: FoodSourceFilter) => void;
   selectedFood: FoodItem | null;
   isComposerOpen: boolean;
   activeMealLabel: string;
@@ -16,9 +24,11 @@ interface FoodSearchResultsSectionProps {
   resultsPanelRef: RefObject<HTMLDivElement | null>;
   hasVisibleResults: boolean;
   searchResults: FoodItem[];
+  searchSuggestions: string[];
   resultEmptyState: { title: string; text: string };
   isEnrichingExternal: boolean;
   searchSourceLabel: string | null;
+  onSearchSuggestion?: (value: string) => void;
   nutritionGoal?: NutritionGoal | null;
   onCustomFoodOpen: () => void;
   onEditCustomFood?: (food: FoodItem) => void;
@@ -28,9 +38,38 @@ interface FoodSearchResultsSectionProps {
   composerContent: ReactNode;
 }
 
+function resolveFoodQualityBadge(food: FoodItem): {
+  label: string;
+  toneClass: string;
+} {
+  const completeness = food.completenessScore ?? null;
+  const confidence = food.confidenceScore;
+
+  if ((completeness != null && completeness >= 0.85) || confidence >= 1.6) {
+    return {
+      label: "Completo",
+      toneClass: "text-[#34d399]",
+    };
+  }
+
+  if ((completeness != null && completeness >= 0.6) || confidence >= 1.0) {
+    return {
+      label: "Bom",
+      toneClass: "text-[#22d3ee]",
+    };
+  }
+
+  return {
+    label: "Estimado",
+    toneClass: "text-[var(--text-muted)]",
+  };
+}
+
 export function FoodSearchResultsSection({
   isMobileLayout,
   hasSearchSession,
+  activeSource: controlledActiveSource,
+  onSourceChange,
   selectedFood,
   isComposerOpen,
   activeMealLabel,
@@ -39,26 +78,60 @@ export function FoodSearchResultsSection({
   resultsPanelRef,
   hasVisibleResults,
   searchResults,
+  searchSuggestions,
   resultEmptyState,
   isEnrichingExternal,
+  onSearchSuggestion,
   nutritionGoal,
-  onCustomFoodOpen,
   onEditCustomFood,
   onClearSearch,
   onSelectFood,
   onReopenSearchResults,
   composerContent,
 }: FoodSearchResultsSectionProps) {
-  const [activeSource, setActiveSource] = useState<FoodSourceFilter>("all");
+  const [localActiveSource, setLocalActiveSource] =
+    useState<FoodSourceFilter>("all");
+  const activeSource = controlledActiveSource ?? localActiveSource;
+  const handleSourceChange = onSourceChange ?? setLocalActiveSource;
 
-  const availableSources: FoodSourceFilter[] = ["all", ...Array.from(
-    new Set(searchResults.map((food) => food.source)),
-  )];
+  const availableSources = useMemo<FoodSourceFilter[]>(
+    () => [
+      "all",
+      ...Array.from(new Set(searchResults.map((food) => food.source))),
+    ],
+    [searchResults],
+  );
+
+  useEffect(() => {
+    if (activeSource === "all") {
+      return;
+    }
+
+    if (!availableSources.includes(activeSource)) {
+      handleSourceChange("all");
+    }
+  }, [activeSource, availableSources, handleSourceChange]);
 
   const visibleResults =
     activeSource === "all"
       ? searchResults
       : searchResults.filter((food) => food.source === activeSource);
+  const expandableSourceEntries = useMemo(
+    () =>
+      availableSources
+        .filter(
+          (source): source is Exclude<FoodSourceFilter, "all"> =>
+            source !== "all",
+        )
+        .map((source) => ({
+          source,
+          count: searchResults.filter((food) => food.source === source).length,
+        }))
+        .sort((left, right) => right.count - left.count),
+    [availableSources, searchResults],
+  );
+  const sourceExploreTarget =
+    activeSource === "all" ? expandableSourceEntries[0] : null;
 
   if (!hasSearchSession) {
     return null;
@@ -72,14 +145,20 @@ export function FoodSearchResultsSection({
           <span className="text-[0.72rem] font-medium uppercase tracking-wider text-[#34d399]">
             Pronto para registrar
           </span>
-          <strong className="mt-1.5 block text-[0.95rem]">{getFoodLabel(selectedFood)}</strong>
+          <strong className="mt-1.5 block text-[0.95rem]">
+            {getFoodLabel(selectedFood)}
+          </strong>
           {selectedFood.brand ? (
             <span className="mt-0.5 block text-[0.82rem] text-[var(--text-secondary)]">
               {selectedFood.brand}
             </span>
           ) : null}
           <div className="mt-3 flex gap-2">
-            <button type="button" onClick={onOpenComposer} className="btn-primary px-4 py-2 text-[0.88rem]">
+            <button
+              type="button"
+              onClick={onOpenComposer}
+              className="btn-primary px-4 py-2 text-[0.88rem]"
+            >
               Registrar em {activeMealLabel}
             </button>
             <button
@@ -96,20 +175,26 @@ export function FoodSearchResultsSection({
       <div
         ref={resultsPanelRef}
         className={`grid gap-4 ${
-          isMobileLayout ? "grid-cols-1" : "grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]"
+          isMobileLayout
+            ? "grid-cols-1"
+            : "grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]"
         }`}
       >
         {/* Results list */}
         <div>
           <div className="mb-2 flex items-center justify-between">
             <span className="text-[0.78rem] font-medium uppercase tracking-wider text-[var(--text-muted)]">
-              {hasVisibleResults ? `${visibleResults.length} resultado${visibleResults.length !== 1 ? "s" : ""}` : "Resultados"}
+              {hasVisibleResults
+                ? `${visibleResults.length} resultado${visibleResults.length !== 1 ? "s" : ""}`
+                : "Resultados"}
             </span>
             <div className="flex gap-2">
               {isEnrichingExternal ? (
-                <span className="text-[0.75rem] text-[var(--accent-primary)] animate-pulse">Complementando</span>
+                <span className="text-[0.75rem] text-[var(--accent-primary)] animate-pulse">
+                  Complementando
+                </span>
               ) : null}
-              {(searchResults.length > 0 || selectedFood) ? (
+              {searchResults.length > 0 || selectedFood ? (
                 <button
                   type="button"
                   onClick={onClearSearch}
@@ -124,19 +209,55 @@ export function FoodSearchResultsSection({
           {hasVisibleResults ? (
             <SourceFilterChips
               activeSource={activeSource}
-              onChange={setActiveSource}
+              onChange={handleSourceChange}
               availableSources={availableSources}
             />
+          ) : null}
+
+          {sourceExploreTarget ? (
+            <button
+              type="button"
+              onClick={() => handleSourceChange(sourceExploreTarget.source)}
+              className="mb-2 text-[0.78rem] text-[var(--accent-primary)] transition-colors hover:text-[#34d399]"
+            >
+              Ver mais da fonte{" "}
+              {formatFoodSourceLabel(sourceExploreTarget.source, {
+                compact: true,
+              })}
+            </button>
+          ) : null}
+
+          {searchSuggestions.length > 0 && onSearchSuggestion ? (
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <span className="text-[0.75rem] text-[var(--text-muted)]">
+                Você quis dizer:
+              </span>
+              {searchSuggestions.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => onSearchSuggestion(suggestion)}
+                  className="rounded-full border border-[var(--border-glass)] px-2.5 py-1 text-[0.74rem] text-[var(--text-secondary)] transition-colors hover:border-[#34d399]/40 hover:text-[#34d399]"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
           ) : null}
 
           <div className="grid max-h-[min(52vh,480px)] gap-1 overflow-y-auto">
             {hasVisibleResults ? (
               visibleResults.map((food) => {
                 const kcal = food.caloriesPer100;
-                const kcalLabel = kcal == null ? "--" : `${kcal.toFixed(0)} kcal`;
+                const kcalLabel =
+                  kcal == null ? "--" : `${kcal.toFixed(0)} kcal`;
+                const qualityBadge = resolveFoodQualityBadge(food);
                 const idrPercent =
                   nutritionGoal && kcal != null && food.servingGrams
-                    ? Math.round((kcal * food.servingGrams) / nutritionGoal.targetCalories)
+                    ? Math.round(
+                        (kcal * food.servingGrams) /
+                          nutritionGoal.targetCalories,
+                      )
                     : null;
                 const isSelected = selectedFood?.id === food.id;
                 const isCustom = food.source === "custom";
@@ -160,7 +281,9 @@ export function FoodSearchResultsSection({
                             : "border-[var(--text-muted)]/40"
                         }`}
                       >
-                        {isSelected ? <Check size={14} strokeWidth={3} /> : null}
+                        {isSelected ? (
+                          <Check size={14} strokeWidth={3} />
+                        ) : null}
                       </div>
 
                       {/* Food info */}
@@ -175,8 +298,15 @@ export function FoodSearchResultsSection({
                               : `${formatFoodSourceLabel(food.source, { compact: true })}`}
                           </span>
                           {idrPercent != null ? (
-                            <span className="shrink-0 text-[var(--text-muted)]">IDR {idrPercent}%</span>
+                            <span className="shrink-0 text-[var(--text-muted)]">
+                              IDR {idrPercent}%
+                            </span>
                           ) : null}
+                          <span
+                            className={`shrink-0 ${qualityBadge.toneClass}`}
+                          >
+                            {qualityBadge.label}
+                          </span>
                           <span className="shrink-0 font-medium text-[var(--text-secondary)]">
                             {kcalLabel}
                           </span>
@@ -199,7 +329,9 @@ export function FoodSearchResultsSection({
               })
             ) : (
               <div className="py-8 text-center">
-                <p className="text-[0.88rem] text-[var(--text-secondary)]">{resultEmptyState.text}</p>
+                <p className="text-[0.88rem] text-[var(--text-secondary)]">
+                  {resultEmptyState.text}
+                </p>
               </div>
             )}
           </div>

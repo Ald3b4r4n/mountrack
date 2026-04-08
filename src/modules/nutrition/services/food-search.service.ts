@@ -1,4 +1,8 @@
-import type { FoodItem, FoodSource } from "@/modules/nutrition/domain/types";
+import type {
+  FoodItem,
+  FoodSource,
+  MealType,
+} from "@/modules/nutrition/domain/types";
 import {
   findSupplementBrandProfile,
   matchesSupplementBrandText,
@@ -11,6 +15,7 @@ interface SearchFoodsOptions {
   externalResults?: FoodItem[];
   limit?: number;
   source?: FoodSourceFilter;
+  mealType?: MealType | null;
 }
 
 const STOP_WORDS = new Set([
@@ -125,6 +130,85 @@ function countTextTokenMatches(haystack: string, tokens: string[]): number {
   ).length;
 }
 
+function computeLevenshteinDistance(left: string, right: string): number {
+  if (left === right) {
+    return 0;
+  }
+
+  if (!left.length) {
+    return right.length;
+  }
+
+  if (!right.length) {
+    return left.length;
+  }
+
+  const previous = Array.from(
+    { length: right.length + 1 },
+    (_, index) => index,
+  );
+
+  for (let row = 1; row <= left.length; row += 1) {
+    let diagonal = previous[0] ?? 0;
+    previous[0] = row;
+
+    for (let column = 1; column <= right.length; column += 1) {
+      const up = previous[column] ?? 0;
+      const insertion = (previous[column - 1] ?? 0) + 1;
+      const deletion = up + 1;
+      const substitution =
+        diagonal + (left[row - 1] === right[column - 1] ? 0 : 1);
+
+      diagonal = up;
+      previous[column] = Math.min(insertion, deletion, substitution);
+    }
+  }
+
+  return previous[right.length] ?? Math.max(left.length, right.length);
+}
+
+function isTypoCloseToken(token: string, word: string): boolean {
+  if (token.length < 4 || word.length < 4) {
+    return false;
+  }
+
+  const maxDistance = token.length >= 7 ? 2 : 1;
+  if (Math.abs(token.length - word.length) > maxDistance) {
+    return false;
+  }
+
+  return computeLevenshteinDistance(token, word) <= maxDistance;
+}
+
+function countFuzzyTokenMatches(haystack: string, tokens: string[]): number {
+  const words = tokenizeSearchText(haystack);
+  if (!words.length || !tokens.length) {
+    return 0;
+  }
+
+  const uniqueTokens = tokens.filter(
+    (token, index) => token.length >= 4 && tokens.indexOf(token) === index,
+  );
+
+  return uniqueTokens.filter((token) => {
+    if (tokenMatchesWords(words, token)) {
+      return false;
+    }
+
+    return words.some((word) => isTypoCloseToken(token, word));
+  }).length;
+}
+
+function resolveDefaultMealType(
+  mealType: MealType | null | undefined,
+): FoodItem["mealCategories"][number] | null {
+  if (!mealType || mealType.startsWith("custom:")) {
+    return null;
+  }
+
+  return mealType;
+}
+
 export function hasStrongFoodSearchResult(
   query: string,
   food: FoodItem | null | undefined,
@@ -198,9 +282,14 @@ export function hasStrongFoodSearchResult(
   return false;
 }
 
-function computeFoodScore(food: FoodItem, rawQuery: string): number {
+function computeFoodScore(
+  food: FoodItem,
+  rawQuery: string,
+  mealType: MealType | null,
+): number {
   const query = normalizeTerm(rawQuery);
   const queryTokens = getQueryTokens(rawQuery);
+  const defaultMealType = resolveDefaultMealType(mealType);
   const primaryQueryToken = queryTokens[0] ?? "";
   const normalizedName = normalizeTerm(food.displayName ?? food.name);
   const normalizedBrand = normalizeTerm(food.brand ?? "");
@@ -240,6 +329,12 @@ function computeFoodScore(food: FoodItem, rawQuery: string): number {
   if (hasTextTokenMatch(normalizedBrand, queryTokens)) score += 45;
   if (normalizedTags.some((tag) => hasTextTokenMatch(tag, queryTokens)))
     score += 55;
+  if (countFuzzyTokenMatches(normalizedName, queryTokens) > 0) score += 35;
+  if (countFuzzyTokenMatches(normalizedBrand, queryTokens) > 0) score += 18;
+  if (
+    normalizedTags.some((tag) => countFuzzyTokenMatches(tag, queryTokens) > 0)
+  )
+    score += 15;
   if (query.includes("prote") && food.category === "protein") score += 70;
   if (query.includes("barra") && /(barra|bar)/.test(normalizedName))
     score += 70;
@@ -251,6 +346,13 @@ function computeFoodScore(food: FoodItem, rawQuery: string): number {
   if (food.source === "internal")
     score -= brandProfile && matchesRequestedBrand ? 0 : 35;
   if (food.source === "usda") score -= 12;
+  if (defaultMealType) {
+    if (food.mealCategories.includes(defaultMealType)) {
+      score += 55;
+    } else if (food.mealCategories.length > 0) {
+      score -= 10;
+    }
+  }
   if (brandProfile) {
     if (matchesRequestedBrand) {
       score += food.source === "internal" ? 420 : 220;
@@ -288,13 +390,21 @@ function dedupeFoods(foods: FoodItem[]): FoodItem[] {
 
 export async function searchFoodsByQuery(
   query: string,
-  { internalFoods, externalResults = [], limit = 8, source = "all" }: SearchFoodsOptions,
+  {
+    internalFoods,
+    externalResults = [],
+    limit = 8,
+    source = "all",
+    mealType = null,
+  }: SearchFoodsOptions,
 ): Promise<FoodItem[]> {
   const normalizedQuery = normalizeTerm(query);
   const queryTokens = getQueryTokens(query);
   const allFoods = dedupeFoods([...internalFoods, ...externalResults]);
   const combinedFoods =
-    source === "all" ? allFoods : allFoods.filter((food) => food.source === source);
+    source === "all"
+      ? allFoods
+      : allFoods.filter((food) => food.source === source);
   const brandProfile = findSupplementBrandProfile(query);
 
   const filteredFoods = combinedFoods.filter((food) => {
@@ -314,6 +424,12 @@ export async function searchFoodsByQuery(
 
     const hasTokenMatch =
       queryTokens.length > 0 && matchingTokenCount >= minimumTokenMatches;
+    const fuzzyTokenMatchCount = countFuzzyTokenMatches(
+      searchableText,
+      queryTokens,
+    );
+    const hasFuzzyTokenMatch =
+      queryTokens.length > 0 && fuzzyTokenMatchCount >= 1;
     const hasNameTokenMatch =
       queryTokens.length > 0 &&
       countTextTokenMatches(normalizedName, queryTokens) > 0;
@@ -352,12 +468,16 @@ export async function searchFoodsByQuery(
       normalizedBrand.includes(normalizedQuery) ||
       normalizedTags.some((tag) => tag.includes(normalizedQuery)) ||
       hasTokenMatch ||
+      hasFuzzyTokenMatch ||
       matchesProteinIntent
     );
   });
 
   const rankedFoods = filteredFoods
-    .map((food) => ({ food, score: computeFoodScore(food, query) }))
+    .map((food) => ({
+      food,
+      score: computeFoodScore(food, query, mealType),
+    }))
     .sort((left, right) => right.score - left.score)
     .map(({ food }) => food);
 

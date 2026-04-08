@@ -19,6 +19,55 @@ describe("food search service", () => {
     expect(results[0]?.name.toLowerCase()).toContain("banana");
   });
 
+  it("recovers common misspellings with fuzzy token matching", async () => {
+    const results = await searchFoodsByQuery("fejao", {
+      internalFoods: [
+        {
+          id: "feijao-carioca",
+          source: "internal",
+          name: "Feijao carioca cozido",
+          displayName: "Feijao carioca cozido",
+          baseUnit: "g",
+          confidenceScore: 0.95,
+          mealCategories: [],
+        },
+      ],
+      externalResults: [],
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.id).toBe("feijao-carioca");
+  });
+
+  it("boosts results that match the active meal context", async () => {
+    const results = await searchFoodsByQuery("ovos", {
+      internalFoods: [
+        {
+          id: "ovos-mexidos",
+          source: "internal",
+          name: "Ovos mexidos",
+          displayName: "Ovos mexidos",
+          baseUnit: "g",
+          confidenceScore: 0.92,
+          mealCategories: ["breakfast"],
+        },
+        {
+          id: "ovos-cozidos-jantar",
+          source: "internal",
+          name: "Ovos cozidos",
+          displayName: "Ovos cozidos",
+          baseUnit: "g",
+          confidenceScore: 1.1,
+          mealCategories: ["dinner"],
+        },
+      ],
+      externalResults: [],
+      mealType: "breakfast",
+    });
+
+    expect(results[0]?.id).toBe("ovos-mexidos");
+  });
+
   it("returns barcode exact match when available", async () => {
     const results = await searchFoodsByQuery("7891000100103", {
       internalFoods: SEARCHABLE_FOODS,

@@ -4,6 +4,15 @@ import { normalizeFatSecretFood } from "@/modules/nutrition/normalizers/normaliz
 const FATSECRET_TOKEN_URL = "https://oauth.fatsecret.com/connect/token";
 const FATSECRET_API_URL = "https://platform.fatsecret.com/rest/server.api";
 const FATSECRET_TIMEOUT_MS = 2400;
+const FATSECRET_SEARCH_PAGE_SIZE = 25;
+const FATSECRET_SEARCH_TARGET_RESULTS = 8;
+const FATSECRET_SEARCH_RETURN_LIMIT = 20;
+const FATSECRET_PAGE_ONE_FALLBACK_THRESHOLD = 1;
+
+type FatSecretSearchPass = {
+  label: string;
+  extraParams: Record<string, string>;
+};
 
 function getFatSecretProxyConfig(): {
   baseUrl: string;
@@ -181,6 +190,85 @@ function parseFoodsFromPayload(payload: unknown): FoodItem[] {
     .filter((food): food is FoodItem => Boolean(food));
 }
 
+function dedupeFoodsById(foods: FoodItem[]): FoodItem[] {
+  const seen = new Set<string>();
+  return foods.filter((food) => {
+    if (seen.has(food.id)) {
+      return false;
+    }
+
+    seen.add(food.id);
+    return true;
+  });
+}
+
+function normalizeSearchExpression(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function buildSearchExpressions(query: string): string[] {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  const normalized = normalizeSearchExpression(trimmed);
+  const expressions = new Set<string>([trimmed]);
+
+  if (normalized) {
+    expressions.add(normalized);
+  }
+
+  const normalizedTokens = normalized
+    ? normalized.split(/\s+/).filter(Boolean)
+    : [];
+  const hasBeanIntent = normalizedTokens.some(
+    (token) => token === "feijao" || token === "feijoes",
+  );
+
+  if (hasBeanIntent) {
+    expressions.add("beans");
+    expressions.add("black beans");
+    expressions.add("pinto beans");
+  }
+
+  return Array.from(expressions);
+}
+
+function resolvePreferredLocaleParams(): Record<string, string> {
+  const language = process.env.FATSECRET_SEARCH_LANGUAGE?.trim() || "pt";
+  const region = process.env.FATSECRET_SEARCH_REGION?.trim() || "BR";
+
+  const params: Record<string, string> = {};
+  if (language) {
+    params.language = language;
+  }
+
+  if (region) {
+    params.region = region;
+  }
+
+  return params;
+}
+
+function buildSearchPasses(): FatSecretSearchPass[] {
+  const localeParams = resolvePreferredLocaleParams();
+  const hasLocaleHints = Object.keys(localeParams).length > 0;
+
+  if (!hasLocaleHints) {
+    return [{ label: "default", extraParams: {} }];
+  }
+
+  return [
+    { label: "localized", extraParams: localeParams },
+    { label: "default", extraParams: {} },
+  ];
+}
+
 async function callFatSecretApi(
   method: string,
   params: Record<string, string>,
@@ -274,38 +362,81 @@ async function callFatSecretApi(
 }
 
 export async function searchFatSecretFoods(query: string): Promise<FoodItem[]> {
-  if (!query.trim()) {
+  const trimmedQuery = query.trim();
+  if (!trimmedQuery) {
     return [];
   }
 
-  console.log(`[FatSecret] Searching for: "${query}"`);
+  const searchExpressions = buildSearchExpressions(trimmedQuery);
+  const searchPasses = buildSearchPasses();
+  let mergedResults: FoodItem[] = [];
 
-  const payload = await callFatSecretApi("foods.search.v3", {
-    search_expression: query.trim(),
-    max_results: "8",
-    page_number: "0",
-  });
+  console.log(
+    `[FatSecret] Searching for: "${trimmedQuery}" (${searchExpressions.join(", ")})`,
+  );
 
-  if (payload) {
+  const collectMethodResults = async (
+    method: "foods.search.v3" | "foods.search",
+    expression: string,
+    searchPass: FatSecretSearchPass,
+    pageNumber = 0,
+  ): Promise<void> => {
+    const payload = await callFatSecretApi(method, {
+      search_expression: expression,
+      max_results: String(FATSECRET_SEARCH_PAGE_SIZE),
+      page_number: String(pageNumber),
+      ...searchPass.extraParams,
+    });
     const foods = parseFoodsFromPayload(payload);
-    if (foods.length) {
-      console.log(`[FatSecret] Found ${foods.length} foods for "${query}"`);
-      return foods;
+
+    if (!foods.length) {
+      console.log(
+        `[FatSecret] ${method}(${searchPass.label}) expression="${expression}" page=${pageNumber} -> 0`,
+      );
+      return;
+    }
+
+    mergedResults = dedupeFoodsById([...mergedResults, ...foods]);
+    console.log(
+      `[FatSecret] ${method}(${searchPass.label}) expression="${expression}" page=${pageNumber} -> +${foods.length} (unique=${mergedResults.length})`,
+    );
+  };
+
+  for (const expression of searchExpressions) {
+    for (const searchPass of searchPasses) {
+      await collectMethodResults("foods.search.v3", expression, searchPass, 0);
+      await collectMethodResults("foods.search", expression, searchPass, 0);
+
+      if (mergedResults.length >= FATSECRET_SEARCH_TARGET_RESULTS) {
+        break;
+      }
+    }
+
+    if (mergedResults.length >= FATSECRET_SEARCH_TARGET_RESULTS) {
+      break;
     }
   }
 
-  console.log(`[FatSecret] Fallback search for: "${query}"`);
-  const fallbackPayload = await callFatSecretApi("foods.search", {
-    search_expression: query.trim(),
-    max_results: "8",
-    page_number: "0",
-  });
+  if (mergedResults.length <= FATSECRET_PAGE_ONE_FALLBACK_THRESHOLD) {
+    for (const expression of searchExpressions) {
+      for (const searchPass of searchPasses) {
+        await collectMethodResults("foods.search", expression, searchPass, 1);
+        if (mergedResults.length > FATSECRET_PAGE_ONE_FALLBACK_THRESHOLD) {
+          break;
+        }
+      }
 
-  const fallbackResults = parseFoodsFromPayload(fallbackPayload);
+      if (mergedResults.length > FATSECRET_PAGE_ONE_FALLBACK_THRESHOLD) {
+        break;
+      }
+    }
+  }
+
+  const results = mergedResults.slice(0, FATSECRET_SEARCH_RETURN_LIMIT);
   console.log(
-    `[FatSecret] Fallback found ${fallbackResults.length} foods for "${query}"`,
+    `[FatSecret] Returning ${results.length} foods for "${trimmedQuery}"`,
   );
-  return fallbackResults;
+  return results;
 }
 
 function normalizeBarcodeCandidate(value: string): string {

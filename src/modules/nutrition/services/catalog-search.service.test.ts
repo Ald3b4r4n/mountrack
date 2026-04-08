@@ -154,6 +154,144 @@ describe("catalog search service", () => {
     expect(mockedSearchFatSecretFoods).toHaveBeenCalledWith("banana prata");
   });
 
+  it("returns current FatSecret results when source filter is fatsecret", async () => {
+    mockedSearchFatSecretFoods.mockResolvedValue([
+      makeFood("fatsecret-feijao", {
+        source: "fatsecret",
+        name: "Feijao carioca cozido",
+        displayName: "Feijao carioca cozido",
+        confidenceScore: 1.6,
+      }),
+    ]);
+
+    const result = await searchNutritionCatalog(
+      "user-a",
+      "feijao",
+      "fatsecret",
+    );
+
+    expect(result.source).toBe("fatsecret-primary");
+    expect(result.results.map((item) => item.id)).toContain("fatsecret-feijao");
+  });
+
+  it("applies meal context ranking when searching local catalog", async () => {
+    mockedSearchFatSecretFoods.mockResolvedValue([]);
+    mockedListAccessibleFoods.mockResolvedValue([
+      makeFood("local-ovos-mexidos", {
+        source: "internal",
+        name: "Ovos mexidos",
+        displayName: "Ovos mexidos",
+        confidenceScore: 0.95,
+        mealCategories: ["breakfast"],
+      }),
+      makeFood("local-ovos-cozidos", {
+        source: "internal",
+        name: "Ovos cozidos",
+        displayName: "Ovos cozidos",
+        confidenceScore: 1.05,
+        mealCategories: ["dinner"],
+      }),
+    ]);
+
+    const result = await searchNutritionCatalog(
+      "user-a",
+      "ovos",
+      "all",
+      "breakfast",
+    );
+
+    expect(result.results[0]?.id).toBe("local-ovos-mexidos");
+  });
+
+  it("falls back to raw FatSecret candidates when ranking removes every item", async () => {
+    mockedSearchFatSecretFoods.mockResolvedValue([
+      makeFood("fatsecret-raw-only", {
+        source: "fatsecret",
+        name: "Bean cooked",
+        displayName: "Bean cooked",
+        confidenceScore: 0.8,
+      }),
+    ]);
+
+    const result = await searchNutritionCatalog("user-a", "feijao");
+
+    expect(result.source).toBe("fatsecret-primary");
+    expect(result.results.map((item) => item.id)).toContain(
+      "fatsecret-raw-only",
+    );
+  });
+
+  it("does not append unrelated FatSecret candidates when local ranked results already exist", async () => {
+    mockedSearchFatSecretFoods.mockResolvedValue([
+      makeFood("fatsecret-rice", {
+        source: "fatsecret",
+        name: "Rice Vermicelli",
+        displayName: "Rice Vermicelli",
+      }),
+    ]);
+    mockedListAccessibleFoods.mockResolvedValue([
+      makeFood("local-feijao", {
+        source: "internal",
+        name: "Feijao carioca cozido",
+        displayName: "Feijao carioca cozido",
+      }),
+    ]);
+
+    const result = await searchNutritionCatalog("user-a", "feijao");
+
+    expect(result.results.map((item) => item.id)).toContain("local-feijao");
+    expect(result.results.map((item) => item.id)).not.toContain(
+      "fatsecret-rice",
+    );
+  });
+
+  it("appends loosely relevant FatSecret candidates when local ranking dominates multi-token query", async () => {
+    mockedSearchFatSecretFoods.mockResolvedValue([
+      makeFood("fatsecret-feijao", {
+        source: "fatsecret",
+        name: "Feijao",
+        displayName: "Feijao",
+      }),
+    ]);
+    mockedListAccessibleFoods.mockResolvedValue([
+      makeFood("local-feijao-corda", {
+        source: "internal",
+        name: "Feijao de corda cozido",
+        displayName: "Feijao de corda cozido",
+      }),
+    ]);
+
+    const result = await searchNutritionCatalog("user-a", "feijao de corda");
+
+    expect(result.results.map((item) => item.id)).toContain(
+      "local-feijao-corda",
+    );
+    expect(result.results.map((item) => item.id)).toContain("fatsecret-feijao");
+  });
+
+  it("treats english bean aliases as relevant for portuguese feijao query", async () => {
+    mockedSearchFatSecretFoods.mockResolvedValue([
+      makeFood("fatsecret-black-beans", {
+        source: "fatsecret",
+        name: "Black Beans",
+        displayName: "Black Beans",
+      }),
+    ]);
+    mockedListAccessibleFoods.mockResolvedValue([
+      makeFood("local-feijao-1", {
+        source: "internal",
+        name: "Feijao carioca cozido",
+        displayName: "Feijao carioca cozido",
+      }),
+    ]);
+
+    const result = await searchNutritionCatalog("user-a", "feijao");
+
+    expect(result.results.map((item) => item.id)).toContain(
+      "fatsecret-black-beans",
+    );
+  });
+
   it("returns more than 8 merged results when available", async () => {
     mockedSearchFatSecretFoods.mockResolvedValue(
       Array.from({ length: 12 }, (_, index) =>
@@ -216,6 +354,22 @@ describe("catalog search service", () => {
     expect(mockedSearchFatSecretFoods).toHaveBeenCalled();
     expect(mockedSearchOpenFoodFacts).toHaveBeenCalled();
     expect(mockedSearchUsdaFoods).toHaveBeenCalled();
+  });
+
+  it("returns did-you-mean suggestions when query has a near-miss typo", async () => {
+    mockedListAccessibleFoods.mockResolvedValue([
+      makeFood("local-feijao-carioca", {
+        source: "internal",
+        name: "Feijao carioca cozido",
+        displayName: "Feijao carioca cozido",
+      }),
+    ]);
+
+    const result = await searchNutritionCatalog("user-a", "fejao", "fatsecret");
+
+    expect(result.results).toHaveLength(0);
+    expect(result.didYouMean?.length).toBeGreaterThan(0);
+    expect(result.didYouMean?.[0]?.toLowerCase()).toContain("feijao");
   });
 
   it("labels tbca foods as catalog results when they are already local", async () => {
