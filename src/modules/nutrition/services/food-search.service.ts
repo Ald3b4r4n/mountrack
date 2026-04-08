@@ -199,10 +199,25 @@ function countFuzzyTokenMatches(haystack: string, tokens: string[]): number {
   }).length;
 }
 
+const DEFAULT_MEAL_TYPES: readonly FoodItem["mealCategories"][number][] = [
+  "breakfast",
+  "lunch",
+  "dinner",
+  "snack",
+];
+
+function isDefaultMealTypeValue(
+  mealType: MealType,
+): mealType is FoodItem["mealCategories"][number] {
+  return DEFAULT_MEAL_TYPES.includes(
+    mealType as FoodItem["mealCategories"][number],
+  );
+}
+
 function resolveDefaultMealType(
   mealType: MealType | null | undefined,
 ): FoodItem["mealCategories"][number] | null {
-  if (!mealType || mealType.startsWith("custom:")) {
+  if (!mealType || !isDefaultMealTypeValue(mealType)) {
     return null;
   }
 
