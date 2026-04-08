@@ -72,9 +72,6 @@ interface NutritionScreenFlowsDeps {
       | ((current: DiarySuccessFeedback | null) => DiarySuccessFeedback | null),
   ) => void;
   setCustomMealOpen: (value: boolean | ((current: boolean) => boolean)) => void;
-  setCustomWaterOpen: (
-    value: boolean | ((current: boolean) => boolean),
-  ) => void;
   setEditingMeal: (
     value:
       | MealDefinition
@@ -82,6 +79,9 @@ interface NutritionScreenFlowsDeps {
       | ((current: MealDefinition | null) => MealDefinition | null),
   ) => void;
   setMessage: (
+    value: string | null | ((current: string | null) => string | null),
+  ) => void;
+  setSearchTargetDate?: (
     value: string | null | ((current: string | null) => string | null),
   ) => void;
   loadBrowserDashboard: () => NutritionDashboardSnapshot | null;
@@ -123,9 +123,9 @@ export function useNutritionScreenFlows({
   setTodayDiarySectionOpen,
   setDiarySuccessFeedback,
   setCustomMealOpen,
-  setCustomWaterOpen,
   setEditingMeal,
   setMessage,
+  setSearchTargetDate,
   loadBrowserDashboard,
   hydrateDashboard,
   setDiaryMealDefinitions,
@@ -154,6 +154,10 @@ export function useNutritionScreenFlows({
   ) {
     if (nextArea !== "today") {
       setDiarySuccessFeedback(null);
+    }
+
+    if (nextArea !== "search") {
+      setSearchTargetDate?.(null);
     }
 
     setActiveArea(nextArea);
