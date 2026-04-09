@@ -26,11 +26,15 @@ import { resolveServerAppAccessFromToken } from "@/modules/billing/auth/server-a
 
 const verifyFirebaseIdTokenMock = jest.mocked(verifyFirebaseIdToken);
 const bootstrapBillingOwnerMock = jest.mocked(bootstrapBillingOwner);
-const ensureBillingTrialEntitlementMock = jest.mocked(ensureBillingTrialEntitlement);
+const ensureBillingTrialEntitlementMock = jest.mocked(
+  ensureBillingTrialEntitlement,
+);
 const getBillingAccessSnapshotMock = jest.mocked(getBillingAccessSnapshot);
 const getBillingPlanByIdMock = jest.mocked(getBillingPlanById);
 const getBillingStorageResponseMock = jest.mocked(getBillingStorageResponse);
-const getLatestBillingSubscriptionForUserMock = jest.mocked(getLatestBillingSubscriptionForUser);
+const getLatestBillingSubscriptionForUserMock = jest.mocked(
+  getLatestBillingSubscriptionForUser,
+);
 const originalBootstrapOwnerEmail = process.env.BOOTSTRAP_OWNER_EMAIL;
 const originalBootstrapAdminEmails = process.env.BOOTSTRAP_ADMIN_EMAILS;
 const originalNodeEnv = process.env.NODE_ENV;
@@ -83,6 +87,28 @@ describe("server-access", () => {
     expect(ensureBillingTrialEntitlementMock).not.toHaveBeenCalled();
   });
 
+  it("returns null when Firebase auth infrastructure is unavailable", async () => {
+    verifyFirebaseIdTokenMock.mockRejectedValue(new Error("AUTH_UNAVAILABLE"));
+
+    await expect(
+      resolveServerAppAccessFromToken("firebase-session-token"),
+    ).resolves.toBeNull();
+
+    expect(bootstrapBillingOwnerMock).not.toHaveBeenCalled();
+    expect(ensureBillingTrialEntitlementMock).not.toHaveBeenCalled();
+  });
+
+  it("returns null when token verification fails unexpectedly", async () => {
+    verifyFirebaseIdTokenMock.mockRejectedValue(new Error("fetch failed"));
+
+    await expect(
+      resolveServerAppAccessFromToken("firebase-session-token"),
+    ).resolves.toBeNull();
+
+    expect(bootstrapBillingOwnerMock).not.toHaveBeenCalled();
+    expect(ensureBillingTrialEntitlementMock).not.toHaveBeenCalled();
+  });
+
   it("allows access when the billing snapshot resolves to an allowed entitlement", async () => {
     getBillingAccessSnapshotMock.mockResolvedValue({
       entitlementStatus: "trialing",
@@ -93,7 +119,10 @@ describe("server-access", () => {
     });
 
     await expect(
-      resolveServerAppAccessFromToken("firebase-session-token", new Date("2026-03-15T12:00:00.000Z")),
+      resolveServerAppAccessFromToken(
+        "firebase-session-token",
+        new Date("2026-03-15T12:00:00.000Z"),
+      ),
     ).resolves.toEqual({
       user: {
         uid: "user-123",
@@ -107,7 +136,10 @@ describe("server-access", () => {
       subscription: null,
     });
 
-    expect(bootstrapBillingOwnerMock).toHaveBeenCalledWith("user-123", "owner@mountrack.app");
+    expect(bootstrapBillingOwnerMock).toHaveBeenCalledWith(
+      "user-123",
+      "owner@mountrack.app",
+    );
     expect(ensureBillingTrialEntitlementMock).toHaveBeenCalledWith(
       "user-123",
       new Date("2026-03-15T12:00:00.000Z"),
@@ -129,7 +161,9 @@ describe("server-access", () => {
       roles: ["user"],
     });
 
-    await expect(resolveServerAppAccessFromToken("firebase-session-token")).resolves.toEqual({
+    await expect(
+      resolveServerAppAccessFromToken("firebase-session-token"),
+    ).resolves.toEqual({
       user: {
         uid: "user-123",
         email: "owner@mountrack.app",
@@ -152,7 +186,9 @@ describe("server-access", () => {
       roles: ["owner", "admin"],
     });
 
-    await expect(resolveServerAppAccessFromToken("firebase-session-token")).resolves.toEqual({
+    await expect(
+      resolveServerAppAccessFromToken("firebase-session-token"),
+    ).resolves.toEqual({
       user: {
         uid: "user-123",
         email: "owner@mountrack.app",
@@ -169,7 +205,9 @@ describe("server-access", () => {
   it("allows access in non-production when billing storage is unavailable", async () => {
     getBillingStorageResponseMock.mockReturnValue("unavailable");
 
-    await expect(resolveServerAppAccessFromToken("firebase-session-token")).resolves.toEqual({
+    await expect(
+      resolveServerAppAccessFromToken("firebase-session-token"),
+    ).resolves.toEqual({
       user: {
         uid: "user-123",
         email: "owner@mountrack.app",
@@ -191,7 +229,9 @@ describe("server-access", () => {
     mutableEnv.NODE_ENV = "production";
     getBillingStorageResponseMock.mockReturnValue("unavailable");
 
-    await expect(resolveServerAppAccessFromToken("firebase-session-token")).resolves.toEqual({
+    await expect(
+      resolveServerAppAccessFromToken("firebase-session-token"),
+    ).resolves.toEqual({
       user: {
         uid: "user-123",
         email: "owner@mountrack.app",
@@ -203,5 +243,33 @@ describe("server-access", () => {
       entitlementEndsAt: null,
       subscription: null,
     });
+  });
+
+  it("falls back to blocked access instead of throwing when billing snapshot resolution fails", async () => {
+    mutableEnv.NODE_ENV = "production";
+    getBillingAccessSnapshotMock.mockRejectedValue(
+      new Error("connect ECONNREFUSED"),
+    );
+
+    await expect(
+      resolveServerAppAccessFromToken("firebase-session-token"),
+    ).resolves.toEqual({
+      user: {
+        uid: "user-123",
+        email: "owner@mountrack.app",
+      },
+      roles: [],
+      accessAllowed: false,
+      effectiveStatus: "missing",
+      entitlementStartsAt: null,
+      entitlementEndsAt: null,
+      subscription: null,
+    });
+
+    expect(bootstrapBillingOwnerMock).toHaveBeenCalledWith(
+      "user-123",
+      "owner@mountrack.app",
+    );
+    expect(ensureBillingTrialEntitlementMock).toHaveBeenCalled();
   });
 });
