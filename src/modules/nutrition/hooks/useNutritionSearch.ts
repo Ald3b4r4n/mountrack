@@ -144,6 +144,8 @@ export function useNutritionSearch(
     clearSearchResults();
     clearSelectedFood();
     setIsEnrichingExternal(false);
+    setBarcodeMissCode(null);
+    setMessage(null);
     if (clearInputs) {
       setSearchQuery("");
       setBarcodeQuery("");
@@ -430,10 +432,10 @@ export function useNutritionSearch(
     setBarcodeQuery(normalizedCode ?? rawCode);
 
     if (!normalizedCode) {
+      resetSearchComposer();
       setMessage(
         `Leia ou digite um código de barras numérico válido.${buildBarcodeDebugMessage(rawCode, normalizedCode, candidates, "invalid")}`,
       );
-      resetSearchComposer();
       return;
     }
 

@@ -140,6 +140,32 @@ describe("useNutritionSearch barcode flow", () => {
     expect(result.current.state.barcodeMissCode).toBeNull();
   });
 
+  it("clears barcode feedback when composer is reset after adding an item", async () => {
+    authorizedNutritionFetchMock.mockResolvedValue(
+      createMockResponse({ item: null, source: "none" }, 404),
+    );
+
+    const { result } = renderHook(() => useNutritionSearch(authUser, false));
+
+    await act(async () => {
+      await result.current.actions.handleBarcodeLookup("7891000100103");
+    });
+
+    await waitFor(() => {
+      expect(result.current.state.message).toContain("código de barras");
+      expect(result.current.state.barcodeMissCode).toBe("7891000100103");
+    });
+
+    act(() => {
+      result.current.actions.resetSearchComposer(true);
+    });
+
+    expect(result.current.state.message).toBeNull();
+    expect(result.current.state.barcodeMissCode).toBeNull();
+    expect(result.current.state.searchQuery).toBe("");
+    expect(result.current.state.barcodeQuery).toBe("");
+  });
+
   it("requests server-side source filtering when source filter changes", async () => {
     authorizedNutritionFetchMock.mockResolvedValue(
       createMockResponse(
