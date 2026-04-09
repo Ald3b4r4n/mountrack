@@ -1,6 +1,9 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import type { AppRole, BillingSubscriptionSnapshot } from "@/modules/billing/domain/types";
+import type {
+  AppRole,
+  BillingSubscriptionSnapshot,
+} from "@/modules/billing/domain/types";
 import {
   hasPrivilegedAccessBypassRole,
   resolveAccessDecision,
@@ -29,10 +32,29 @@ export interface ServerAppAccessContext {
   effectiveStatus: string;
   entitlementStartsAt: string | null;
   entitlementEndsAt: string | null;
-  subscription: (BillingSubscriptionSnapshot & {
-    planName: string | null;
-    planCode: string | null;
-  }) | null;
+  subscription:
+    | (BillingSubscriptionSnapshot & {
+        planName: string | null;
+        planCode: string | null;
+      })
+    | null;
+}
+
+function buildStorageUnavailableAccess(
+  user: ServerSessionUser,
+  bootstrapRoles: AppRole[],
+): ServerAppAccessContext {
+  const operatorOverride = hasPrivilegedAccessBypassRole(bootstrapRoles);
+
+  return {
+    user,
+    roles: bootstrapRoles,
+    accessAllowed: operatorOverride || process.env.NODE_ENV !== "production",
+    effectiveStatus: operatorOverride ? "operator_override" : "missing",
+    entitlementStartsAt: null,
+    entitlementEndsAt: null,
+    subscription: null,
+  };
 }
 
 function coerceEmail(value: unknown): string | undefined {
@@ -42,7 +64,8 @@ function coerceEmail(value: unknown): string | undefined {
 function isInvalidSessionError(error: unknown): boolean {
   if (
     error instanceof Error &&
-    (error.message === "UNAUTHORIZED" || error.message === "auth/invalid-id-token")
+    (error.message === "UNAUTHORIZED" ||
+      error.message === "auth/invalid-id-token")
   ) {
     return true;
   }
@@ -64,6 +87,10 @@ function isInvalidSessionError(error: unknown): boolean {
   );
 }
 
+function isAuthUnavailableError(error: unknown): boolean {
+  return error instanceof Error && error.message === "AUTH_UNAVAILABLE";
+}
+
 export async function resolveServerAppAccessFromToken(
   sessionToken: string | null,
   now = new Date(),
@@ -77,11 +104,12 @@ export async function resolveServerAppAccessFromToken(
   try {
     decodedToken = await verifyFirebaseIdToken(sessionToken);
   } catch (error) {
-    if (isInvalidSessionError(error)) {
+    if (isInvalidSessionError(error) || isAuthUnavailableError(error)) {
       return null;
     }
 
-    throw error;
+    console.error("Failed to verify Firebase session token", error);
+    return null;
   }
 
   const user = {
@@ -90,59 +118,56 @@ export async function resolveServerAppAccessFromToken(
   };
   const bootstrapRoles = getBootstrapRolesForEmail(user.email);
 
-  if (getBillingStorageResponse() === "unavailable") {
-    const operatorOverride = hasPrivilegedAccessBypassRole(bootstrapRoles);
+  try {
+    if (getBillingStorageResponse() === "unavailable") {
+      return buildStorageUnavailableAccess(user, bootstrapRoles);
+    }
+
+    if (user.email) {
+      await bootstrapBillingOwner(user.uid, user.email);
+    }
+
+    await ensureBillingTrialEntitlement(user.uid, now);
+
+    const [snapshot, subscription] = await Promise.all([
+      getBillingAccessSnapshot(user.uid, now),
+      getLatestBillingSubscriptionForUser(user.uid, now),
+    ]);
+    const decision = resolveAccessDecision({
+      entitlementStatus: snapshot.entitlementStatus,
+      manualGrant: snapshot.manualGrant,
+      now,
+    });
+    const roles = Array.from(
+      new Set<AppRole>([...snapshot.roles, ...bootstrapRoles]),
+    );
+    const operatorOverride =
+      hasPrivilegedAccessBypassRole(roles) && !decision.accessAllowed;
+    const plan = subscription?.planId
+      ? await getBillingPlanById(subscription.planId)
+      : null;
 
     return {
       user,
-      roles: bootstrapRoles,
-      accessAllowed: operatorOverride || process.env.NODE_ENV !== "production",
-      effectiveStatus: operatorOverride ? "operator_override" : "missing",
-      entitlementStartsAt: null,
-      entitlementEndsAt: null,
-      subscription: null,
+      roles,
+      accessAllowed: operatorOverride || decision.accessAllowed,
+      effectiveStatus: operatorOverride
+        ? "operator_override"
+        : decision.effectiveStatus,
+      entitlementStartsAt: snapshot.entitlementStartsAt,
+      entitlementEndsAt: snapshot.entitlementEndsAt,
+      subscription: subscription
+        ? {
+            ...subscription,
+            planName: plan?.name ?? null,
+            planCode: plan?.code ?? null,
+          }
+        : null,
     };
+  } catch (error) {
+    console.error("Failed to resolve server billing access context", error);
+    return buildStorageUnavailableAccess(user, bootstrapRoles);
   }
-
-  if (user.email) {
-    await bootstrapBillingOwner(user.uid, user.email);
-  }
-
-  await ensureBillingTrialEntitlement(user.uid, now);
-
-  const [snapshot, subscription] = await Promise.all([
-    getBillingAccessSnapshot(user.uid, now),
-    getLatestBillingSubscriptionForUser(user.uid, now),
-  ]);
-  const decision = resolveAccessDecision({
-    entitlementStatus: snapshot.entitlementStatus,
-    manualGrant: snapshot.manualGrant,
-    now,
-  });
-  const roles = Array.from(
-    new Set<AppRole>([...snapshot.roles, ...bootstrapRoles]),
-  );
-  const operatorOverride =
-    hasPrivilegedAccessBypassRole(roles) && !decision.accessAllowed;
-  const plan = subscription?.planId
-    ? await getBillingPlanById(subscription.planId)
-    : null;
-
-  return {
-    user,
-    roles,
-    accessAllowed: operatorOverride || decision.accessAllowed,
-    effectiveStatus: operatorOverride ? "operator_override" : decision.effectiveStatus,
-    entitlementStartsAt: snapshot.entitlementStartsAt,
-    entitlementEndsAt: snapshot.entitlementEndsAt,
-    subscription: subscription
-      ? {
-          ...subscription,
-          planName: plan?.name ?? null,
-          planCode: plan?.code ?? null,
-        }
-      : null,
-  };
 }
 
 export async function readServerAppAccess(
