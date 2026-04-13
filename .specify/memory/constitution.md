@@ -1,21 +1,28 @@
 <!--
 Sync Impact Report
 ===================
-- Version change: 0.0.0 → 1.0.0
-- Bump rationale: MAJOR — initial constitution ratification
+- Version change: 1.0.0 -> 1.1.0
+- Bump rationale: MINOR - expanded governance with README-per-feature,
+  repository-aligned technical documentation, and explicit quality gates.
+- Modified principles:
+  - Clean Code -> Clean Code e simplicidade
+  - Test-Driven Development (TDD) -> TDD obrigatorio
+  - Technical Documentation -> Documentacao tecnica viva
 - Added principles:
-  - I. Clean Code
-  - II. Test-Driven Development (TDD)
-  - III. Technical Documentation
+  - README atualizado por feature
+  - Boas praticas de engenharia
 - Added sections:
-  - Code Quality Standards
-  - Development Workflow
-  - Governance
+  - Quality Gates
 - Removed sections: none
 - Templates requiring updates:
-  - .specify/templates/plan-template.md — ✅ compatible (Constitution Check section already generic)
-  - .specify/templates/spec-template.md — ✅ compatible (no constitution-specific references)
-  - .specify/templates/tasks-template.md — ✅ compatible (test-first guidance aligns with TDD principle)
+  - .specify/templates/plan-template.md - updated
+  - .specify/templates/spec-template.md - updated
+  - .specify/templates/tasks-template.md - updated
+  - .specify/templates/agent-file-template.md - updated
+  - .specify/templates/checklist-template.md - updated
+- Runtime guidance updated:
+  - README.md - updated
+  - CLAUDE.md - updated
 - Follow-up TODOs: none
 -->
 
@@ -23,151 +30,189 @@ Sync Impact Report
 
 ## Core Principles
 
-### I. Clean Code
+### I. TDD obrigatorio
 
-Code MUST be written for humans first, machines second.
-Every module, function, and variable MUST communicate its intent
-clearly through naming and structure alone.
+Toda nova funcionalidade, correcao de bug e alteracao comportamental DEVE seguir
+o ciclo Red-Green-Refactor. Nenhum codigo de producao DEVE ser escrito sem um
+teste automatizado que descreva o comportamento esperado e falhe antes da
+implementacao.
 
-- Functions MUST do one thing, do it well, and do it only.
-- Functions MUST NOT exceed 20 lines unless justified in a
-  complexity tracking record.
-- Names MUST be descriptive and unambiguous: prefer
-  `calculateDailyCalories` over `calc` or `process`.
-- Magic numbers and hardcoded strings MUST be extracted into
-  named constants.
-- Dead code, commented-out code, and unused imports MUST be
-  removed — version control is the archive.
-- Code duplication MUST be eliminated when the same logic
-  appears three or more times; fewer than three occurrences
-  SHOULD remain inline to avoid premature abstraction.
-- Files MUST have a single, clear responsibility. When a file
-  grows beyond 300 lines, evaluate whether it can be split.
-- Nesting depth MUST NOT exceed 3 levels; use early returns,
-  guard clauses, or extraction to reduce complexity.
-- Side effects MUST be explicit and isolated — pure functions
-  are preferred wherever possible.
+- Red: o teste DEVE ser criado primeiro e sua falha inicial DEVE ser verificavel.
+- Green: a implementacao DEVE conter apenas o necessario para o teste passar.
+- Refactor: a melhoria estrutural DEVE manter a suite verde durante a alteracao.
+- Testes unitarios DEVEM cobrir regras puras, validacoes, casos de borda e
+  estados vazios.
+- Testes de integracao DEVEM cobrir rotas de API, persistencia, webhooks,
+  autenticacao/autorizacao e integracoes externas quando o contrato mudar.
+- Testes de UI ou smoke tests DEVEM cobrir fluxos mobile-first criticos quando a
+  experiencia do usuario mudar.
+- Mocks DEVEM ser usados apenas para isolar limites externos lentos,
+  indisponiveis ou cobrados. Contratos internos DEVEM preferir implementacoes
+  reais ou fixtures controladas.
+- Uma alteracao sem teste automatizado DEVE registrar a justificativa tecnica no
+  plano da feature e compensar com verificacao manual documentada.
 
-**Rationale**: Clean code reduces onboarding time, minimizes
-bugs introduced during maintenance, and ensures the codebase
-remains sustainable as the team and product grow.
+**Rationale**: TDD transforma comportamento esperado em contrato executavel,
+reduz regressao em fluxos sensiveis de saude, billing e autenticacao, e mantem a
+base pronta para refatoracoes pequenas e seguras.
 
-### II. Test-Driven Development (TDD)
+### II. Clean Code e simplicidade
 
-All new functionality MUST follow the Red-Green-Refactor cycle.
-No production code may be written without a failing test that
-justifies its existence.
+Codigo DEVE ser escrito para manutencao por humanos. A solucao mais simples que
+preserva correcao, seguranca e testabilidade DEVE vencer alternativas mais
+abstratas.
 
-- **Red**: Write a test that describes the expected behavior.
-  The test MUST fail before any implementation begins.
-- **Green**: Write the minimum code necessary to make the test
-  pass. No more, no less.
-- **Refactor**: Improve the code while keeping all tests green.
-  Refactoring without test coverage is prohibited.
-- Tests MUST be independent — no test may depend on the
-  execution order or state of another test.
-- Test names MUST describe the scenario and expected outcome
-  (e.g., `should return zero when no meals are logged`).
-- Unit tests MUST cover edge cases: null/undefined inputs,
-  empty collections, boundary values.
-- Integration tests MUST be written for: database operations,
-  API endpoint contracts, and cross-module interactions.
-- Test coverage MUST NOT be gamed — writing tests after
-  implementation to inflate coverage numbers violates this
-  principle.
-- Mocks SHOULD be used sparingly; prefer real implementations
-  when feasible (especially for database interactions).
+- Nomes DEVEM comunicar intencao de dominio com clareza.
+- Funcoes DEVEM ter responsabilidade unica e tamanho suficiente para leitura sem
+  navegacao excessiva.
+- Modulos DEVEM manter alta coesao e baixo acoplamento.
+- Regras de negocio DEVEM ficar separadas de adaptadores, componentes visuais,
+  rotas HTTP, jobs e acessos a provedores externos.
+- Duplicacao DEVE ser removida quando representar a mesma regra de negocio em
+  tres ou mais locais. Menos que isso PODE permanecer explicito para evitar
+  abstracao prematura.
+- Codigo morto, comentarios obsoletos, imports nao usados e flags temporarias
+  sem plano de remocao DEVEM ser removidos.
+- Erros DEVEM ser tratados de forma explicita, com propagacao ou log util.
+  Capturas silenciosas sao proibidas.
+- Tipos TypeScript DEVEM preservar seguranca. Uso de `any` DEVE ser raro,
+  localizado e justificado.
 
-**Rationale**: TDD produces code that is correct by
-construction, provides living documentation of behavior, and
-enables fearless refactoring. Writing tests first forces
-better API design and prevents over-engineering.
+**Rationale**: O produto combina UI, dados clinicos/operacionais, billing e
+integracoes externas. Codigo simples e coeso reduz custo de mudanca e torna
+regressoes mais faceis de detectar.
 
-### III. Technical Documentation
+### III. Documentacao tecnica viva
 
-Documentation MUST be treated as a first-class deliverable,
-maintained in the `Documentation/` folder at the project root.
-Documentation MUST be written before or alongside
-implementation — never deferred as an afterthought.
+Documentacao tecnica DEVE evoluir junto com o codigo. Toda decisao, contrato,
+procedimento operacional ou integracao que afete manutencao DEVE estar
+documentada em `docs/`, `specs/` ou no artefato tecnico mais proximo.
 
-- All documentation MUST reside in `Documentation/` using
-  Markdown format, organized by topic.
-- Documentation MUST cover these areas:
-  1. **Project objective** — technical description with links
-     to business context.
-  2. **Architecture and stack** — brief descriptions of
-     patterns, dependencies, languages, and frameworks.
-  3. **Setup and execution** — environment configuration,
-     build tools, and local setup commands.
-  4. **Changes and testing** — Git workflows, automated
-     testing procedures, quality validation.
-  5. **Deployment and monitoring** — deployment processes and
-     observability procedures.
-- Documentation MUST be updated whenever the code it describes
-  changes. A PR that changes documented behavior without
-  updating the corresponding documentation MUST NOT be merged.
-- Avoid documenting volatile implementation details (class
-  diagrams, internal method signatures) — these become stale
-  quickly. Focus on decisions, contracts, and usage.
-- Link to existing sources instead of duplicating information.
-  Reference dependency files (package.json, configs) rather
-  than listing versions manually.
-- README.md at the project root serves as the entry point and
-  MUST link to relevant documentation in `Documentation/`.
+- `docs/` DEVE concentrar orientacoes tecnicas duradouras.
+- `specs/` DEVE registrar contexto, plano, contratos, modelo de dados, quickstart
+  e tarefas de cada feature planejada pelo Spec Kit.
+- Documentacao DEVE ser atualizada no mesmo PR que altera o comportamento,
+  contrato, setup, deploy, observabilidade, billing, seguranca ou integracao que
+  ela descreve.
+- Documentos DEVEM apontar para arquivos fonte e comandos reais em vez de copiar
+  listas volateis de dependencias.
+- Decisoes de arquitetura com trade-off relevante DEVEM registrar a opcao
+  escolhida, alternativas rejeitadas e motivo.
+- Documentacao obsoleta DEVE ser corrigida ou removida antes do merge.
 
-**Rationale**: Documentation preserves institutional knowledge,
-reduces repeated questions, and ensures that information held
-by individuals becomes accessible to the entire team. Treating
-documentation like code (write first, keep current, review in
-PRs) prevents knowledge silos and documentation rot.
+**Rationale**: A documentacao e parte do sistema. Quando fica defasada, o time
+perde rastreabilidade, opera integracoes sensiveis com risco maior e aumenta o
+tempo necessario para novas features.
+
+### IV. README atualizado por feature
+
+`README.md` e o ponto de entrada do projeto e DEVE refletir o estado atual do
+produto. Toda nova feature DEVE incluir uma decisao explicita de impacto no
+README: atualizar o arquivo quando houver mudanca visivel ou registrar no PR que
+nenhuma alteracao e necessaria.
+
+- README.md DEVE ser atualizado quando a feature alterar capacidades do produto,
+  fluxos principais, scripts, variaveis de ambiente, setup local, deploy,
+  integracoes, arquitetura de alto nivel, prints ou estado atual do projeto.
+- O README DEVE linkar para documentacao detalhada em `docs/` quando o assunto
+  exigir profundidade tecnica.
+- O README NAO DEVE duplicar guias longos, contratos extensos ou runbooks. Ele
+  DEVE orientar o leitor para a fonte tecnica correta.
+- Cada PR de feature DEVE declarar "README atualizado" ou "README sem alteracao
+  necessaria" com justificativa objetiva.
+
+**Rationale**: O README e usado para onboarding, operacao local, demonstracao e
+handoff. Mantendo-o sincronizado por feature, o projeto evita divergencia entre o
+produto real e sua documentacao de entrada.
+
+### V. Boas praticas de engenharia
+
+Toda alteracao DEVE proteger correcao, seguranca, testabilidade e
+manutenibilidade antes de velocidade. Boas praticas sao requisitos de entrega,
+nao preferencias opcionais.
+
+- Segredos, tokens e credenciais NAO DEVEM ser commitados.
+- Validacao de entrada DEVE existir em limites publicos: rotas, webhooks, forms,
+  jobs e scripts operacionais.
+- Alteracoes em autenticacao, autorizacao, billing, dados pessoais, webhooks ou
+  operacao administrativa DEVEM incluir revisao de seguranca e regressao
+  especifica.
+- Dependencias novas DEVEM ter proposito claro, manutencao ativa e custo
+  justificado contra implementacao local simples.
+- APIs e componentes compartilhados DEVEM manter compatibilidade ou registrar
+  migracao clara.
+- Performance mobile-first DEVE ser preservada em fluxos recorrentes do usuario.
+- A branch principal DEVE permanecer buildavel, testavel e apta a deploy.
+
+**Rationale**: MounTrack opera dados e fluxos sensiveis. Boas praticas reduzem
+risco de incidentes, melhoram previsibilidade de entrega e preservam confianca no
+produto durante evolucao incremental.
 
 ## Code Quality Standards
 
-- TypeScript strict mode MUST be enabled; `any` type usage
-  MUST be justified and minimized.
-- ESLint MUST pass with zero warnings before merge.
-- Consistent formatting MUST be enforced via automated tools
-  (Prettier or equivalent).
-- Dependencies MUST be kept up to date; security
-  vulnerabilities flagged by audit tools MUST be addressed
-  within one sprint.
-- Error handling MUST be explicit — silent catches (`catch {}`)
-  are prohibited. Errors MUST be logged or propagated.
-- API responses MUST follow consistent patterns for success
-  and error states.
+- TypeScript strict mode DEVE permanecer habilitado.
+- `npm test` DEVE passar antes de concluir alteracoes relevantes.
+- `npm run lint` DEVE passar antes de merge.
+- `npm run build` DEVE passar antes de release, deploy ou mudanca em rotas,
+  configuracao, dependencias, autenticacao, billing ou integracoes.
+- `npm audit --audit-level=high` DEVE ser executado quando dependencias forem
+  alteradas; vulnerabilidades altas ou criticas DEVEM ser tratadas ou
+  justificadas com mitigacao documentada.
+- Rotas de API DEVEM retornar formatos consistentes de sucesso e erro.
+- Logs DEVEM apoiar diagnostico sem expor dados sensiveis.
+- Refatoracoes DEVEM ser pequenas, cobertas por testes e separadas de mudancas de
+  comportamento quando possivel.
 
 ## Development Workflow
 
-- Every feature MUST be developed in a dedicated branch.
-- Commits MUST be atomic and descriptive — each commit
-  represents a single logical change.
-- Pull requests MUST include:
-  1. A clear description of what changed and why.
-  2. Evidence that tests pass (CI green).
-  3. Documentation updates if applicable.
-- Code review MUST verify compliance with this constitution
-  before approval.
-- The `main`/`master` branch MUST always be deployable.
+- Cada feature DEVE iniciar por spec/plan/tasks ou por uma descricao tecnica
+  equivalente quando o escopo for pequeno.
+- Riscos de arquitetura, seguranca, integracao e manutencao DEVEM ser expostos
+  antes da implementacao.
+- Tarefas DEVEM ser pequenas e ordenadas para validar uma historia de usuario por
+  vez.
+- Commits e PRs DEVEM representar mudancas logicas e revisaveis.
+- PRs DEVEM incluir resumo, testes executados, impacto em documentacao, impacto
+  no README e riscos residuais.
+- Revisao de codigo DEVE verificar aderencia a esta constituicao antes de
+  aprovacao.
+- Violacoes da constituicao DEVEM ser corrigidas antes do merge ou registradas
+  como excecao temporaria com dono, motivo e prazo.
+
+## Quality Gates
+
+Cada plano de feature e cada PR DEVEM responder, com evidencias objetivas:
+
+1. Quais testes falharam antes da implementacao?
+2. Quais testes e checks passaram apos a implementacao?
+3. Quais documentos em `docs/` ou `specs/` foram atualizados?
+4. O `README.md` foi atualizado ou a ausencia de impacto foi justificada?
+5. Quais riscos de seguranca, dados, billing, autenticacao ou integracao foram
+   avaliados?
+6. A solucao mantem responsabilidades separadas e evita abstracao prematura?
+
+Uma feature NAO DEVE avancar para implementacao se o plano nao passar nos gates
+de TDD, documentacao e riscos. Uma feature NAO DEVE ser concluida se os checks
+aplicaveis nao forem executados ou justificados.
 
 ## Governance
 
-This constitution is the authoritative reference for all
-development practices in MounTrack. It supersedes informal
-conventions, tribal knowledge, and ad-hoc decisions.
+Esta constituicao e a referencia autoritativa para praticas de desenvolvimento
+do MounTrack. Ela prevalece sobre convencoes informais quando houver conflito.
 
-- **Amendments**: Any change to this constitution MUST be
-  documented with rationale, reviewed by the team, and
-  accompanied by a version bump and migration plan for
-  affected code.
-- **Versioning**: This constitution follows semantic versioning:
-  - MAJOR: Principle removed, redefined, or made incompatible.
-  - MINOR: New principle or section added, material expansion.
-  - PATCH: Wording clarification, typo fix, non-semantic change.
-- **Compliance**: All pull requests and code reviews MUST
-  verify adherence to these principles. Violations MUST be
-  flagged and resolved before merge.
-- **Guidance**: For runtime development guidance and
-  agent-specific instructions, refer to `CLAUDE.md` or
-  equivalent configuration files.
+- Amendments: qualquer alteracao nesta constituicao DEVE incluir racional,
+  impacto em templates, impacto em docs de orientacao e bump de versao.
+- Versionamento: esta constituicao usa semantic versioning.
+  - MAJOR: principio removido, redefinido de forma incompatibilizante ou regra de
+    governanca quebrada.
+  - MINOR: novo principio, nova secao ou expansao material de regra existente.
+  - PATCH: ajuste de texto, clareza ou correcao sem mudanca semantica.
+- Compliance: todo plano, tarefa, PR e review DEVE verificar aderencia aos
+  principios vigentes.
+- Excecoes: excecoes DEVEM ser explicitas, temporarias, rastreaveis e aprovadas
+  no contexto da feature.
+- Orientacao operacional: `README.md`, `docs/`, `CLAUDE.md` e arquivos
+  equivalentes de agentes DEVEM apontar para esta constituicao quando tratarem de
+  processo de engenharia.
 
-**Version**: 1.0.0 | **Ratified**: 2026-04-06 | **Last Amended**: 2026-04-06
+**Version**: 1.1.0 | **Ratified**: 2026-04-06 | **Last Amended**: 2026-04-13

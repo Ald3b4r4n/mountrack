@@ -17,6 +17,10 @@ interface MealSwitchDialogProps {
   onSelectMeal: (meal: MealType) => void;
   onCreateMeal: () => void;
   onManageMeal: (meal: MealDefinition) => void;
+  title?: string;
+  description?: string;
+  selectLabel?: string;
+  showMealManagement?: boolean;
 }
 
 export function MealSwitchDialog({
@@ -29,6 +33,10 @@ export function MealSwitchDialog({
   onSelectMeal,
   onCreateMeal,
   onManageMeal,
+  title = "Trocar refeição em foco",
+  description,
+  selectLabel = "Selecionar",
+  showMealManagement = true,
 }: MealSwitchDialogProps) {
   const titleId = useId();
   const descriptionId = useId();
@@ -84,14 +92,14 @@ export function MealSwitchDialog({
       >
         <div className="mb-3">
           <h3 id={titleId} style={{ fontSize: "1.08rem", fontWeight: 700 }}>
-            Trocar refeição em foco
+            {title}
           </h3>
           <p
             id={descriptionId}
             style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}
           >
-            Refeição atual: {activeMealDefinition.label}. Escolha outra refeição
-            para continuar registrando.
+            {description ??
+              `Refeição atual: ${activeMealDefinition.label}. Escolha outra refeição para continuar registrando.`}
           </p>
         </div>
 
@@ -118,7 +126,7 @@ export function MealSwitchDialog({
                     {formatCalories(mealCalories[meal.key] ?? 0)}
                   </span>
                 </span>
-                <span className="badge badge-success">Selecionar</span>
+                <span className="badge badge-success">{selectLabel}</span>
               </button>
             ))
           ) : (
@@ -128,35 +136,37 @@ export function MealSwitchDialog({
           )}
         </div>
 
-        <div className="mt-3 grid gap-2 rounded-[0.9rem] border border-white/10 bg-[#061326]/65 p-3">
-          <button
-            type="button"
-            onClick={onCreateMeal}
-            className="btn-outline w-full justify-center gap-2"
-            style={{ display: "inline-flex", alignItems: "center" }}
-          >
-            <PlusCircle size={16} />
-            Criar refeição
-          </button>
-          {customMeals.length > 0 ? (
-            customMeals.map((meal) => (
-              <button
-                key={`manage-${meal.key}`}
-                type="button"
-                onClick={() => onManageMeal(meal)}
-                className="btn-outline w-full justify-center gap-2"
-                style={{ display: "inline-flex", alignItems: "center" }}
-              >
-                <Settings2 size={16} />
-                Gerenciar {meal.label}
-              </button>
-            ))
-          ) : (
-            <p className="text-[0.78rem] text-[var(--text-secondary)]">
-              Crie uma refeição extra para habilitar exclusao/edicao.
-            </p>
-          )}
-        </div>
+        {showMealManagement ? (
+          <div className="mt-3 grid gap-2 rounded-[0.9rem] border border-white/10 bg-[#061326]/65 p-3">
+            <button
+              type="button"
+              onClick={onCreateMeal}
+              className="btn-outline w-full justify-center gap-2"
+              style={{ display: "inline-flex", alignItems: "center" }}
+            >
+              <PlusCircle size={16} />
+              Criar refeição
+            </button>
+            {customMeals.length > 0 ? (
+              customMeals.map((meal) => (
+                <button
+                  key={`manage-${meal.key}`}
+                  type="button"
+                  onClick={() => onManageMeal(meal)}
+                  className="btn-outline w-full justify-center gap-2"
+                  style={{ display: "inline-flex", alignItems: "center" }}
+                >
+                  <Settings2 size={16} />
+                  Gerenciar {meal.label}
+                </button>
+              ))
+            ) : (
+              <p className="text-[0.78rem] text-[var(--text-secondary)]">
+                Crie uma refeição extra para habilitar exclusao/edicao.
+              </p>
+            )}
+          </div>
+        ) : null}
 
         <div className="mt-3 flex justify-end">
           <button type="button" onClick={onClose} className="btn-outline">

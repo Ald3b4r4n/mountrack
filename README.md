@@ -62,6 +62,8 @@ O objetivo é reduzir fricção para o usuário final e, ao mesmo tempo, entrega
 - metas de calorias, proteína, carboidratos e gordura;
 - controle de água;
 - busca e cadastro de alimentos;
+- atalhos para registrar alimentos consumidos recentemente;
+- cópia de alimentos entre refeições sem alterar o item original;
 - integração com catálogo nutricional e atribuição compatível com FatSecret.
 
 ### Billing e operação
@@ -274,6 +276,22 @@ npx eslint src --ext .ts,.tsx
 npx tsc --noEmit --pretty false
 npm audit --audit-level=high
 ```
+
+---
+
+## Governança de Engenharia
+
+As práticas obrigatórias do projeto estão definidas em
+[`.specify/memory/constitution.md`](.specify/memory/constitution.md).
+
+Toda nova feature deve sair com:
+
+- testes escritos antes da implementação, seguindo Red-Green-Refactor;
+- documentação técnica atualizada em `docs/` ou `specs/` quando houver impacto;
+- `README.md` atualizado quando mudar capacidades do produto, setup, scripts,
+  variáveis de ambiente, integrações, arquitetura, prints ou estado do projeto;
+- checks aplicáveis executados: `npm test`, `npm run lint`, `npm run build` e
+  `npm audit --audit-level=high` quando dependências mudarem.
 
 ---
 

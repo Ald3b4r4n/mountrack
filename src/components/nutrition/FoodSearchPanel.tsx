@@ -5,6 +5,7 @@ import type {
   MealType,
   NutritionTotals,
   NutritionUnit,
+  RecentConsumedFood,
 } from "@/modules/nutrition/domain/types";
 import { EmptyState } from "./CommonUI";
 import {
@@ -75,6 +76,9 @@ interface FoodSearchPanelProps {
   onMealTypeChange: (val: MealType) => void;
   onAddDiaryItem: () => void;
   searchCatalogBadge: string;
+  recentFoods?: RecentConsumedFood[];
+  isLoadingRecentFoods?: boolean;
+  onRegisterRecentFood?: (food: RecentConsumedFood) => void;
 }
 
 function ComposerBody({
@@ -239,6 +243,68 @@ function ComposerBody({
   );
 }
 
+function RecentFoodsSection({
+  recentFoods,
+  isLoading,
+  onRegisterRecentFood,
+}: {
+  recentFoods: RecentConsumedFood[];
+  isLoading: boolean;
+  onRegisterRecentFood?: (food: RecentConsumedFood) => void;
+}) {
+  if (!isLoading && recentFoods.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="grid min-w-0 max-w-full gap-2 overflow-hidden rounded-[1rem] border border-[var(--border-glass)] bg-[#020b1c]/45 p-3">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+        <h3 className="min-w-0 truncate text-[0.88rem] font-semibold text-[var(--text-primary)]">
+          Consumidos recentemente
+        </h3>
+        {isLoading ? (
+          <span className="text-[0.76rem] text-[var(--text-secondary)]">
+            Carregando...
+          </span>
+        ) : null}
+      </div>
+
+      {recentFoods.length > 0 ? (
+        <div className="grid min-w-0 max-w-full gap-2 sm:grid-cols-2">
+          {recentFoods.map((food) => (
+            <article
+              key={food.sourceItemId}
+              className="min-w-0 max-w-full overflow-hidden rounded-[0.85rem] border border-white/8 bg-[#061326]/72 p-3"
+            >
+              <div className="flex min-w-0 max-w-full flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                <div className="min-w-0 max-w-full">
+                  <strong className="block max-w-full truncate text-[0.9rem] text-[var(--text-primary)]">
+                    {food.foodName}
+                  </strong>
+                  <span className="mt-1 block max-w-full truncate text-[0.76rem] text-[var(--text-secondary)]">
+                    {food.quantity} {food.unit} · {formatCalories(food.calories)}
+                    {food.lastMealLabel ? ` · ${food.lastMealLabel}` : ""}
+                  </span>
+                </div>
+                {onRegisterRecentFood ? (
+                  <button
+                    type="button"
+                    onClick={() => onRegisterRecentFood(food)}
+                    aria-label={`Registrar ${food.foodName}`}
+                    className="btn-outline w-full shrink-0 justify-center rounded-[0.75rem] px-3 py-1.5 text-[0.78rem] sm:w-auto"
+                  >
+                    Registrar
+                  </button>
+                ) : null}
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 export function FoodSearchPanel({
   storageMode,
   isMobileLayout,
@@ -283,6 +349,9 @@ export function FoodSearchPanel({
   onMealTypeChange,
   onAddDiaryItem,
   searchCatalogBadge,
+  recentFoods = [],
+  isLoadingRecentFoods = false,
+  onRegisterRecentFood,
 }: FoodSearchPanelProps) {
   const [searchMode, setSearchMode] = useState<SearchMode>("name");
   const composerScrollRef = useRef<HTMLDivElement | null>(null);
@@ -463,6 +532,14 @@ export function FoodSearchPanel({
               Adicionar Manualmente
             </button>
           </div>
+        ) : null}
+
+        {!selectedFood ? (
+          <RecentFoodsSection
+            recentFoods={recentFoods}
+            isLoading={isLoadingRecentFoods}
+            onRegisterRecentFood={onRegisterRecentFood}
+          />
         ) : null}
 
         <FoodSearchResultsSection

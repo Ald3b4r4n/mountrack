@@ -29,6 +29,7 @@ interface TodayWorkspaceProps {
     mealType: MealType;
   }) => Promise<void> | void;
   onDeleteDiaryItem?: (itemId: string) => Promise<void> | void;
+  onCopyDiaryItem?: (item: DiaryItemSnapshot) => void;
   onManageMeal?: (meal: MealDefinition) => void;
   onAddMeal: () => void;
   children: ReactNode;
@@ -177,6 +178,7 @@ export function TodayWorkspace({
   onOpenSearchForMeal,
   onUpdateDiaryItem,
   onDeleteDiaryItem,
+  onCopyDiaryItem,
   onManageMeal,
   onAddMeal,
   children,
@@ -277,6 +279,7 @@ export function TodayWorkspace({
         onOpenSearchForMeal={onOpenSearchForMeal}
         onUpdateDiaryItem={onUpdateDiaryItem}
         onDeleteDiaryItem={onDeleteDiaryItem}
+        onCopyDiaryItem={onCopyDiaryItem}
       />
     </section>
   );

@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Pencil, Trash2, X } from "lucide-react";
+import { Copy, Pencil, Trash2, X } from "lucide-react";
 import { ConfirmActionDialog } from "@/components/nutrition/ConfirmActionDialog";
 import { parseInputNumber } from "@/components/nutrition/nutrition-screen-helpers";
 import type {
@@ -27,6 +27,7 @@ interface MealHistoryDialogProps {
     mealType: MealType;
   }) => Promise<boolean | void> | boolean | void;
   onDeleteDiaryItem?: (itemId: string) => Promise<void> | void;
+  onCopyDiaryItem?: (item: DiaryItemSnapshot) => void;
   onEditSaved?: () => void;
 }
 
@@ -53,6 +54,7 @@ export function MealHistoryDialog({
   onOpenSearchForMeal,
   onUpdateDiaryItem,
   onDeleteDiaryItem,
+  onCopyDiaryItem,
   onEditSaved,
 }: MealHistoryDialogProps) {
   const titleId = useId();
@@ -200,6 +202,15 @@ export function MealHistoryDialog({
     setDeleteCandidateId(itemId);
   }
 
+  function handleCopy(item: DiaryItemSnapshot) {
+    if (!onCopyDiaryItem || pendingItemId) {
+      return;
+    }
+
+    onCopyDiaryItem(item);
+    onClose();
+  }
+
   async function confirmDelete() {
     if (!onDeleteDiaryItem || !deleteCandidateId) {
       return;
@@ -339,6 +350,19 @@ export function MealHistoryDialog({
                               <span className="inline-flex items-center gap-2">
                                 <Pencil size={14} />
                                 Editar
+                              </span>
+                            </button>
+                          ) : null}
+                          {onCopyDiaryItem ? (
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(item)}
+                              className="btn-outline min-w-auto px-3 py-2 text-[0.78rem]"
+                              disabled={isPending}
+                            >
+                              <span className="inline-flex items-center gap-2">
+                                <Copy size={14} />
+                                Copiar
                               </span>
                             </button>
                           ) : null}

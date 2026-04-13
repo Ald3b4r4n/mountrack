@@ -114,6 +114,18 @@
 - **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
 - **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
 
+## Documentation & README Impact *(mandatory)*
+
+<!--
+  ACTION REQUIRED: Every feature must record documentation impact. Update README.md
+  when product capabilities, setup, scripts, env vars, integrations, architecture,
+  screenshots, or project status change. If README.md is not changed, explain why.
+-->
+
+- **Technical Documentation**: [docs/specs files that must change, or "No technical docs impact because..."]
+- **README Impact**: [README.md update required because..., or "README not changed because..."]
+- **Test Evidence Expected**: [Automated tests that must be written first and the command that proves behavior]
+
 ## Assumptions
 
 <!--

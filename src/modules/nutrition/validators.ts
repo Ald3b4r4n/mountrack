@@ -140,6 +140,20 @@ export const historyQuerySchema = z.object({
   excludeDate: diaryDateStringSchema.optional().catch(undefined),
 });
 
+export const recentFoodsQuerySchema = z.object({
+  limit: z.preprocess(
+    (value) => (value == null || value === "" ? undefined : value),
+    z.coerce.number().int().min(1).max(12).default(8),
+  ),
+});
+
+export const copyDiaryItemSchema = z.object({
+  targetDate: diaryDateStringSchema,
+  targetMealType: mealTypeSchema,
+  targetMealLabel: z.string().trim().min(1).max(40).optional(),
+  consumedAt: z.string().datetime().optional(),
+});
+
 export const barcodeLookupParamsSchema = z.object({
   code: z.string().trim().regex(NUTRITION_BARCODE_REGEX),
 });

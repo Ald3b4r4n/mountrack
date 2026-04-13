@@ -6,12 +6,14 @@ import { INTERNAL_FOODS } from "@/modules/nutrition/data/internal-foods";
 import { SUPPLEMENT_FOODS } from "@/modules/nutrition/data/supplement-foods";
 import { TACO_FOODS } from "@/modules/nutrition/data/taco-foods";
 import type {
+  DiaryItemCopyRequest,
   DiaryItemSnapshot,
   FoodBaseUnit,
   FoodItem,
   MealDefinition,
   MealPlan,
   NutritionGoal,
+  RecentConsumedFood,
 } from "@/modules/nutrition/domain/types";
 import { getDefaultMealDefinitions, getMealLabel } from "@/modules/nutrition/meal-helpers";
 import {
@@ -208,6 +210,10 @@ interface ListDiaryHistoryOptions {
   limit?: number;
   offset?: number;
   excludeDate?: string;
+}
+
+interface ListRecentConsumedFoodsOptions {
+  limit?: number;
 }
 
 interface CustomFoodRow {
@@ -535,6 +541,75 @@ function ensureMealDefinitions(
   }
 
   return definitions;
+}
+
+function normalizeRecentFoodsLimit(limit = 8): number {
+  if (!Number.isFinite(limit)) {
+    return 8;
+  }
+
+  return Math.min(Math.max(Math.trunc(limit), 1), 12);
+}
+
+function toRecentConsumedFood(item: DiaryItemSnapshot): RecentConsumedFood | null {
+  if (!item.foodId || !item.foodName) {
+    return null;
+  }
+
+  return {
+    sourceItemId: item.id,
+    foodId: item.foodId,
+    foodName: item.foodName,
+    quantity: item.quantity,
+    unit: item.unit,
+    calories: item.calories,
+    lastConsumedAt: item.consumedAt,
+    lastMealType: item.mealType,
+    lastMealLabel: item.mealLabel,
+  };
+}
+
+function buildRecentConsumedFoods(
+  items: DiaryItemSnapshot[],
+  limit: number,
+): RecentConsumedFood[] {
+  const seenFoodIds = new Set<string>();
+  const recentFoods: RecentConsumedFood[] = [];
+
+  const sortedItems = [...items].sort((left, right) => right.consumedAt.localeCompare(left.consumedAt));
+  for (const item of sortedItems) {
+    if (seenFoodIds.has(item.foodId)) {
+      continue;
+    }
+
+    const recentFood = toRecentConsumedFood(item);
+    if (!recentFood) {
+      continue;
+    }
+
+    seenFoodIds.add(item.foodId);
+    recentFoods.push(recentFood);
+    if (recentFoods.length >= limit) {
+      break;
+    }
+  }
+
+  return recentFoods;
+}
+
+function buildCopiedDiaryItem(
+  userId: string,
+  sourceItem: DiaryItemSnapshot,
+  input: DiaryItemCopyRequest,
+): DiaryItemSnapshot {
+  return {
+    ...sourceItem,
+    id: crypto.randomUUID(),
+    diaryId: `${userId}:${input.targetDate}`,
+    mealType: input.targetMealType,
+    mealLabel: input.targetMealLabel,
+    consumedAt: input.consumedAt ?? new Date().toISOString(),
+  };
 }
 
 function getPool(): Pool {
@@ -1391,6 +1466,41 @@ export async function listDiaryHistory(
   };
 }
 
+export async function listRecentConsumedFoods(
+  userId: string,
+  { limit = 8 }: ListRecentConsumedFoodsOptions = {},
+): Promise<RecentConsumedFood[]> {
+  const normalizedLimit = normalizeRecentFoodsLimit(limit);
+
+  if (!hasDatabaseUrl()) {
+    const store = getNutritionMemoryStore();
+    const items = Array.from(store.diaries.values())
+      .filter((diary) => diary.userId === userId)
+      .flatMap((diary) => diary.items);
+
+    return buildRecentConsumedFoods(items, normalizedLimit);
+  }
+
+  await ensureSchema();
+  const fetchLimit = Math.max(normalizedLimit * 20, 40);
+  const itemsResult = await getPool().query<{ payload: DiaryItemSnapshot }>(
+    `
+    select item.payload
+    from nutrition_diary_items item
+    inner join nutrition_diaries diary on diary.id = item.diary_id
+    where diary.user_id = $1
+    order by item.consumed_at desc
+    limit $2
+    `,
+    [userId, fetchLimit],
+  );
+
+  return buildRecentConsumedFoods(
+    itemsResult.rows.map((row) => row.payload),
+    normalizedLimit,
+  );
+}
+
 export async function findDiaryItemById(
   userId: string,
   itemId: string,
@@ -1424,6 +1534,33 @@ export async function findDiaryItemById(
   );
 
   return itemResult.rows[0]?.payload ?? null;
+}
+
+export async function copyDiaryItem(
+  userId: string,
+  sourceItemId: string,
+  input: DiaryItemCopyRequest,
+  targetCalories: number,
+  targetWaterMl: number,
+): Promise<{ diary: DiaryRecord; item: DiaryItemSnapshot } | null> {
+  const sourceItem = await findDiaryItemById(userId, sourceItemId);
+  if (!sourceItem) {
+    return null;
+  }
+
+  const copiedItem = buildCopiedDiaryItem(userId, sourceItem, input);
+  const diary = await saveDiaryItem(
+    userId,
+    input.targetDate,
+    targetCalories,
+    targetWaterMl,
+    copiedItem,
+  );
+
+  return {
+    diary,
+    item: diary.items.find((item) => item.id === copiedItem.id) ?? copiedItem,
+  };
 }
 
 export async function replaceDiaryItem(userId: string, itemId: string, nextItem: DiaryItemSnapshot): Promise<DiaryRecord | null> {

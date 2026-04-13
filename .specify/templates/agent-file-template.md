@@ -16,6 +16,13 @@ Auto-generated from all feature plans. Last updated: [DATE]
 
 [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES]
 
+## Constitution Gates
+
+Follow `.specify/memory/constitution.md`: write failing tests before
+implementation, keep technical documentation current in `docs/` or `specs/`,
+update `README.md` for each feature impact, and run the relevant project checks
+before closing work.
+
 ## Code Style
 
 [LANGUAGE-SPECIFIC, ONLY FOR LANGUAGES IN USE]

@@ -31,7 +31,25 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+Answer each gate with PASS/FAIL and concrete evidence from this plan. Any FAIL
+must be listed in Complexity Tracking with a mitigation, owner, and review point.
+
+- **TDD**: Identify the automated tests that will be written before production
+  code and the command(s) that will prove the initial red state.
+- **Documentation**: Identify impacted files under `docs/` or `specs/`, or state
+  why no technical documentation changes are needed.
+- **README**: State whether `README.md` must change for this feature. If not,
+  explain why the feature does not affect product capabilities, setup, scripts,
+  environment variables, integrations, architecture, screenshots, or project
+  status.
+- **Clean Code**: Confirm responsibilities remain separated across UI,
+  services, adapters, jobs, routes, and data access. Note any complexity that
+  requires justification.
+- **Security & Integration**: Identify impacts to auth, billing, webhooks,
+  personal data, admin operations, external APIs, secrets, or permissions.
+- **Quality Checks**: List expected validation commands, including `npm test`,
+  `npm run lint`, `npm run build` when applicable, and
+  `npm audit --audit-level=high` when dependencies change.
 
 ## Project Structure
 

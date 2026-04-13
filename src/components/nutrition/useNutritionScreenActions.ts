@@ -1,5 +1,6 @@
 import {
   clearNutritionMealPlanFromBrowser,
+  copyNutritionDiaryItemInBrowser,
   removeNutritionDiaryItemFromBrowser,
   replaceNutritionDiaryItemInBrowser,
   saveNutritionDiaryItemToBrowser,
@@ -106,6 +107,7 @@ interface NutritionScreenActionsDeps {
     response: Response,
     fallbackMessage: string,
   ) => Promise<string>;
+  loadRecentFoods?: () => Promise<void> | void;
 }
 
 export function useNutritionScreenActions({
@@ -159,6 +161,7 @@ export function useNutritionScreenActions({
   loadDashboard,
   loadHistory,
   resolveRequestError,
+  loadRecentFoods,
 }: NutritionScreenActionsDeps) {
   function scaleDiaryItemSnapshotQuantity(
     currentItem: ReturnType<typeof createDiaryItemSnapshot>,
@@ -256,6 +259,7 @@ export function useNutritionScreenActions({
         const browserHistory = loadBrowserHistory(1);
         if (browserDashboard) hydrateDashboard(browserDashboard);
         if (browserHistory) hydrateHistory(browserHistory);
+        void loadRecentFoods?.();
 
         if (targetDate === today) {
           focusTodayDashboard();
@@ -315,6 +319,7 @@ export function useNutritionScreenActions({
         setSearchTargetDate?.(null);
       }
       await Promise.all([loadDashboard(), loadHistory(1)]);
+      void loadRecentFoods?.();
     } catch {
       setMessage(
         (current) => current ?? "Não foi possível registrar esse alimento.",
@@ -359,6 +364,114 @@ export function useNutritionScreenActions({
       setMessage(
         (current) => current ?? "Não foi possível remover esse item do diário.",
       );
+    }
+  }
+
+  async function handleCopyDiaryItem({
+    itemId,
+    targetMealType,
+    targetDate,
+    successMessage,
+  }: {
+    itemId: string;
+    targetMealType: MealType;
+    targetDate?: string | null;
+    successMessage?: string;
+  }): Promise<boolean> {
+    if (!activeUser) return false;
+
+    const resolvedTargetDate = targetDate ?? searchTargetDate ?? today;
+    const targetMealDefinition = getActiveMealDefinition(targetMealType);
+    const consumedAt = new Date().toISOString();
+
+    try {
+      if (storageMode === "volatile" && canUseBrowserPersistence) {
+        const copiedItem = copyNutritionDiaryItemInBrowser(
+          activeUser.uid,
+          itemId,
+          {
+            ...goal,
+            userId: activeUser.uid,
+            targetWaterMl: goal.targetWaterMl ?? DEFAULT_WATER_TARGET,
+          },
+          {
+            targetDate: resolvedTargetDate,
+            targetMealType,
+            targetMealLabel: targetMealDefinition.label,
+            consumedAt,
+          },
+        );
+
+        if (!copiedItem) {
+          setMessage("Não foi possível copiar esse alimento agora.");
+          return false;
+        }
+
+        const browserDashboard = loadBrowserDashboard();
+        const browserHistory = loadBrowserHistory(resolvedTargetDate === today ? 1 : historyPage);
+        if (browserDashboard) hydrateDashboard(browserDashboard);
+        if (browserHistory) hydrateHistory(browserHistory);
+        void loadRecentFoods?.();
+
+        if (resolvedTargetDate === today) {
+          setActiveDiaryMeal(targetMealType);
+          setHistoryPage(1);
+          focusTodayDashboard();
+        } else {
+          handleChangeArea("today");
+        }
+
+        const messageText =
+          successMessage ?? `Alimento copiado para ${targetMealDefinition.label}.`;
+        setMessage(messageText);
+        toast.success(messageText);
+        return true;
+      }
+
+      const response = await authorizedNutritionFetch(
+        activeUser,
+        `/api/nutrition/diary-items/${itemId}/copy`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            targetDate: resolvedTargetDate,
+            targetMealType,
+            targetMealLabel: targetMealDefinition.label,
+            consumedAt,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        await resolveRequestError(
+          response,
+          "Não foi possível copiar esse alimento agora.",
+        );
+        return false;
+      }
+
+      if (resolvedTargetDate === today) {
+        setActiveDiaryMeal(targetMealType);
+        setHistoryPage(1);
+        focusTodayDashboard();
+      } else {
+        handleChangeArea("today");
+      }
+
+      const historyToLoad = resolvedTargetDate === today ? 1 : historyPage;
+      await Promise.all([loadDashboard(), loadHistory(historyToLoad)]);
+      void loadRecentFoods?.();
+
+      const messageText =
+        successMessage ?? `Alimento copiado para ${targetMealDefinition.label}.`;
+      setMessage(messageText);
+      toast.success(messageText);
+      return true;
+    } catch {
+      setMessage(
+        (current) => current ?? "Não foi possível copiar esse alimento agora.",
+      );
+      return false;
     }
   }
 
@@ -906,6 +1019,7 @@ export function useNutritionScreenActions({
     handleAddDiaryItem,
     handleUpdateDiaryItem,
     handleDeleteDiaryItem,
+    handleCopyDiaryItem,
     handleSaveGoal,
     handleSaveWater,
     handleDiscardMealPlan,

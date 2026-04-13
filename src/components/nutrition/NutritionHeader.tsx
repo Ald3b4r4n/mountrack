@@ -374,6 +374,7 @@ function MobileMealQuickList({
   onAddToMeal,
   onUpdateDiaryItem,
   onDeleteDiaryItem,
+  onCopyDiaryItem,
 }: {
   mealDefinitions: MealDefinition[];
   mealCalories: Record<string, number>;
@@ -387,11 +388,8 @@ function MobileMealQuickList({
     mealType: MealType;
   }) => Promise<boolean | void> | boolean | void;
   onDeleteDiaryItem?: (itemId: string) => Promise<void> | void;
+  onCopyDiaryItem?: (item: DiaryItemSnapshot) => void;
 }) {
-  if (!onFocusMeal && !onAddToMeal) {
-    return null;
-  }
-
   const [expandedMeals, setExpandedMeals] = useState<Set<string>>(new Set());
   const [inspectedMealKey, setInspectedMealKey] = useState<MealType | null>(
     null,
@@ -418,6 +416,10 @@ function MobileMealQuickList({
       window.clearTimeout(timer);
     };
   }, [toastMessage]);
+
+  if (!onFocusMeal && !onAddToMeal) {
+    return null;
+  }
 
   const toggleMeal = (meal: MealType) => {
     setExpandedMeals((prev) => {
@@ -591,6 +593,7 @@ function MobileMealQuickList({
                                 onDelete={(itemId) => {
                                   setDeleteCandidateId(itemId);
                                 }}
+                                onCopy={onCopyDiaryItem}
                               />
                             </div>
                           ))}
@@ -616,6 +619,7 @@ function MobileMealQuickList({
         onOpenSearchForMeal={onAddToMeal}
         onUpdateDiaryItem={onUpdateDiaryItem}
         onDeleteDiaryItem={onDeleteDiaryItem}
+        onCopyDiaryItem={onCopyDiaryItem}
         onEditSaved={() => {
           setToastMessage("Item da refeicao atualizado.");
         }}
@@ -666,6 +670,7 @@ function MobileSummaryStrip({
   onAddToMeal,
   onUpdateDiaryItem,
   onDeleteDiaryItem,
+  onCopyDiaryItem,
   onAdjustWater,
   onOpenCustomWater,
 }: {
@@ -687,6 +692,7 @@ function MobileSummaryStrip({
     mealType: MealType;
   }) => Promise<boolean | void> | boolean | void;
   onDeleteDiaryItem?: (itemId: string) => Promise<void> | void;
+  onCopyDiaryItem?: (item: DiaryItemSnapshot) => void;
   onAdjustWater?: (amount: number) => void;
   onOpenCustomWater?: () => void;
 }) {
@@ -718,6 +724,7 @@ function MobileSummaryStrip({
         onAddToMeal={onAddToMeal}
         onUpdateDiaryItem={onUpdateDiaryItem}
         onDeleteDiaryItem={onDeleteDiaryItem}
+        onCopyDiaryItem={onCopyDiaryItem}
       />
       <div className="glass-panel static-panel min-w-0 overflow-hidden rounded-[1.25rem] border-white/5 bg-[#050f1d] p-4 shadow-2xl">
         <div className="mb-5 flex items-start justify-between gap-3">
@@ -881,6 +888,7 @@ interface NutritionHeaderProps {
     mealType: MealType;
   }) => Promise<boolean | void> | boolean | void;
   onDeleteDiaryItem?: (itemId: string) => Promise<void> | void;
+  onCopyDiaryItem?: (item: DiaryItemSnapshot) => void;
   recentlyLoggedFoodLabel?: string | null;
   onAdjustWater?: (amount: number) => void;
   onOpenCustomWater?: () => void;
@@ -904,6 +912,7 @@ export function NutritionHeader({
   onAddToMeal,
   onUpdateDiaryItem,
   onDeleteDiaryItem,
+  onCopyDiaryItem,
   recentlyLoggedFoodLabel,
   onAdjustWater,
   onOpenCustomWater,
@@ -988,6 +997,7 @@ export function NutritionHeader({
             onAddToMeal={onAddToMeal}
             onUpdateDiaryItem={onUpdateDiaryItem}
             onDeleteDiaryItem={onDeleteDiaryItem}
+            onCopyDiaryItem={onCopyDiaryItem}
             onAdjustWater={onAdjustWater}
             onOpenCustomWater={onOpenCustomWater}
           />

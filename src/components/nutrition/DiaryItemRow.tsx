@@ -1,13 +1,14 @@
-import { Pencil, Trash2 } from "lucide-react";
+import { Copy, Pencil, Trash2 } from "lucide-react";
 import type { DiaryItemSnapshot } from "@/modules/nutrition/domain/types";
 
 interface DiaryItemRowProps {
   item: DiaryItemSnapshot;
   onEdit: (item: DiaryItemSnapshot) => void;
   onDelete: (itemId: string) => void;
+  onCopy?: (item: DiaryItemSnapshot) => void;
 }
 
-export function DiaryItemRow({ item, onEdit, onDelete }: DiaryItemRowProps) {
+export function DiaryItemRow({ item, onEdit, onDelete, onCopy }: DiaryItemRowProps) {
   return (
     <div className="rounded-lg px-2 py-2 hover:bg-[#ffffff]/[0.02]">
       <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -33,6 +34,17 @@ export function DiaryItemRow({ item, onEdit, onDelete }: DiaryItemRowProps) {
           >
             <Pencil size={14} />
           </button>
+
+          {onCopy ? (
+            <button
+              type="button"
+              aria-label={`Copiar ${item.foodName} para outra refeição`}
+              onClick={() => onCopy(item)}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[#34d399]/10 hover:text-[#34d399]"
+            >
+              <Copy size={14} />
+            </button>
+          ) : null}
 
           <button
             type="button"

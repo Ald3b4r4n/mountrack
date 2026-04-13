@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { within } from "@testing-library/dom";
 import { FoodSearchPanel } from "@/components/nutrition/FoodSearchPanel";
-import type { FoodItem, MealDefinition } from "@/modules/nutrition/domain/types";
+import type {
+  FoodItem,
+  MealDefinition,
+  RecentConsumedFood,
+} from "@/modules/nutrition/domain/types";
 import { calculateNutritionForQuantity } from "@/modules/nutrition/services/nutrition-calc.service";
 
 const mealOptions: MealDefinition[] = [
@@ -305,6 +308,71 @@ function DynamicCaloriesComposerPanel() {
   );
 }
 
+const recentFoods: RecentConsumedFood[] = [
+  {
+    sourceItemId: "recent-1",
+    foodId: "food-rice",
+    foodName: "Arroz branco",
+    quantity: 120,
+    unit: "g",
+    calories: 156,
+    lastConsumedAt: "2026-03-14T12:30:00.000Z",
+    lastMealType: "lunch",
+    lastMealLabel: "Almoço",
+  },
+];
+
+function RecentFoodsPanel({
+  recent = recentFoods,
+  onRegisterRecentFood = jest.fn(),
+}: {
+  recent?: RecentConsumedFood[];
+  onRegisterRecentFood?: (food: RecentConsumedFood) => void;
+} = {}) {
+  return (
+    <FoodSearchPanel
+      storageMode="database"
+      isMobileLayout={false}
+      searchQuery=""
+      onSearchQueryChange={jest.fn()}
+      onSearch={jest.fn()}
+      isSearching={false}
+      isEnrichingExternal={false}
+      barcodeQuery=""
+      onBarcodeQueryChange={jest.fn()}
+      onBarcodeLookup={jest.fn()}
+      onOpenScanner={jest.fn()}
+      searchSourceLabel={null}
+      searchFeedback={null}
+      resultsVisible={false}
+      searchResults={[]}
+      resultState={{ title: "Busque um alimento", text: "Digite um nome para começar." }}
+      onApplyFoodSelection={jest.fn()}
+      onCustomFoodOpen={jest.fn()}
+      onClearSearch={jest.fn()}
+      selectedFood={null}
+      isComposerOpen={false}
+      selectedFoodTotals={null}
+      onOpenComposer={jest.fn()}
+      onCloseComposer={jest.fn()}
+      onReopenSearchResults={jest.fn()}
+      onSwapFoodSelection={jest.fn()}
+      quantity="100"
+      onQuantityChange={jest.fn()}
+      unit="g"
+      onUnitChange={jest.fn()}
+      mealOptions={mealOptions}
+      mealType="breakfast"
+      onMealTypeChange={jest.fn()}
+      onAddDiaryItem={jest.fn()}
+      searchCatalogBadge="Catálogo sincronizado"
+      recentFoods={recent}
+      isLoadingRecentFoods={false}
+      onRegisterRecentFood={onRegisterRecentFood}
+    />
+  );
+}
+
 describe("FoodSearchPanel", () => {
   beforeEach(() => {
     window.scrollTo = jest.fn();
@@ -432,5 +500,52 @@ describe("FoodSearchPanel", () => {
           element?.tagName === "SPAN" && element.textContent === "Porção atual 180 kcal",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("renders recently consumed foods and registers one quickly", async () => {
+    const user = userEvent.setup();
+    const onRegisterRecentFood = jest.fn();
+
+    render(<RecentFoodsPanel onRegisterRecentFood={onRegisterRecentFood} />);
+
+    expect(screen.getByText(/Consumidos recentemente/i)).toBeInTheDocument();
+    expect(screen.getByText(/Arroz branco/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Registrar Arroz branco/i }));
+
+    expect(onRegisterRecentFood).toHaveBeenCalledWith(recentFoods[0]);
+  });
+
+  it("keeps recently consumed cards constrained for long food names on mobile", () => {
+    const longRecentFood: RecentConsumedFood = {
+      ...recentFoods[0],
+      sourceItemId: "recent-long-name",
+      foodName:
+        "Iogurte Desnatado Morango Zero Lactose Itambé Fit Grego Proteico",
+      quantity: 405,
+      calories: 105,
+      lastMealLabel: "Café da manhã",
+    };
+
+    render(<RecentFoodsPanel recent={[longRecentFood]} />);
+
+    const foodName = screen.getByText(/Iogurte Desnatado Morango/i);
+    const card = foodName.closest("article");
+    expect(card).toHaveClass("min-w-0", "max-w-full", "overflow-hidden");
+    expect(foodName).toHaveClass("max-w-full", "truncate");
+
+    const foodMeta = screen.getByText(/405 g/i);
+    expect(foodMeta).toHaveClass("max-w-full", "truncate");
+
+    expect(
+      screen.getByRole("button", { name: /Registrar Iogurte Desnatado/i }),
+    ).toHaveClass("w-full", "sm:w-auto");
+  });
+
+  it("does not show developer notes when there are no recent foods", () => {
+    render(<RecentFoodsPanel recent={[]} />);
+
+    expect(screen.queryByText(/Consumidos recentemente/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/devnote|todo|debug|endpoint/i)).not.toBeInTheDocument();
   });
 });

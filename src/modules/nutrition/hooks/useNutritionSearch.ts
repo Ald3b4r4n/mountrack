@@ -8,10 +8,12 @@ import {
   authorizedNutritionFetch,
   getNutritionErrorMessage,
 } from "@/modules/nutrition/client";
+import { listRecentNutritionFoodsFromBrowser } from "@/modules/nutrition/client-storage";
 import type {
   FoodItem,
   FoodSource,
   MealType,
+  RecentConsumedFood,
 } from "@/modules/nutrition/domain/types";
 import { getFoodLabel } from "@/modules/nutrition/ui-helpers";
 import {
@@ -34,6 +36,10 @@ type NutritionSearchPayload = {
   source?: NutritionSearchSource;
   externalPending?: boolean;
   didYouMean?: string[];
+};
+
+type RecentFoodsPayload = {
+  foods?: RecentConsumedFood[];
 };
 
 export type NutritionSearchFilter = "all" | FoodSource;
@@ -89,6 +95,7 @@ function buildBarcodeDebugMessage(
 export function useNutritionSearch(
   activeUser: NutritionSearchUser,
   canUseBrowserPersistence: boolean,
+  dashboardStorageMode?: NutritionUiStorageMode,
 ) {
   const [searchQuery, setSearchQuery] = useState("");
   const [barcodeQuery, setBarcodeQuery] = useState("");
@@ -105,6 +112,8 @@ export function useNutritionSearch(
   const [message, setMessage] = useState<string | null>(null);
   const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
   const [barcodeMissCode, setBarcodeMissCode] = useState<string | null>(null);
+  const [recentFoods, setRecentFoods] = useState<RecentConsumedFood[]>([]);
+  const [isLoadingRecentFoods, setIsLoadingRecentFoods] = useState(false);
   const [storageMode, setStorageMode] =
     useState<NutritionUiStorageMode>("checking");
   const searchRequestIdRef = useRef(0);
@@ -127,6 +136,39 @@ export function useNutritionSearch(
     },
     [],
   );
+
+  const loadRecentFoods = useCallback(async () => {
+    if (!activeUser) {
+      setRecentFoods([]);
+      return;
+    }
+
+    if (dashboardStorageMode === "volatile" && canUseBrowserPersistence) {
+      setRecentFoods(listRecentNutritionFoodsFromBrowser(activeUser.uid, { limit: 8 }));
+      return;
+    }
+
+    setIsLoadingRecentFoods(true);
+    try {
+      const response = await authorizedNutritionFetch(
+        activeUser as Exclude<NutritionSearchUser, null>,
+        "/api/nutrition/foods/recent?limit=8",
+      );
+
+      if (!response.ok) {
+        setRecentFoods([]);
+        return;
+      }
+
+      setStorageMode(resolveUiStorageMode(response, canUseBrowserPersistence));
+      const payload = (await response.json()) as RecentFoodsPayload;
+      setRecentFoods(payload.foods ?? []);
+    } catch {
+      setRecentFoods([]);
+    } finally {
+      setIsLoadingRecentFoods(false);
+    }
+  }, [activeUser, canUseBrowserPersistence, dashboardStorageMode]);
 
   function clearSearchResults() {
     setSearchResults([]);
@@ -563,6 +605,8 @@ export function useNutritionSearch(
       message,
       searchSuggestions,
       barcodeMissCode,
+      recentFoods,
+      isLoadingRecentFoods,
       storageMode,
     },
     setters: {
@@ -592,6 +636,7 @@ export function useNutritionSearch(
       closeSelectedFoodComposer,
       reopenSearchResults,
       swapSelectedFood,
+      loadRecentFoods,
     },
   };
 }

@@ -1,5 +1,23 @@
 # Dependency Audit Notes
 
+## 2026-04-13
+
+- `npm audit --audit-level=high` is not green: `16 vulnerabilities` (`8 low`, `1 moderate`, `5 high`, `2 critical`).
+- Do not run `npm audit fix --force` blindly:
+  - the suggested `firebase-admin@10.3.0` path is a breaking downgrade for the current Admin SDK line;
+  - the suggested `next@16.2.3` path is outside the pinned `next@16.1.6` range and must be planned/tested intentionally.
+- High/critical packages to plan:
+  - `next`: upgrade within the Next 16 line after validating App Router, middleware/auth, nutrition APIs, and production build;
+  - `jspdf`: upgrade and smoke-test `downloadMealPlanPdf` export before release;
+  - `handlebars`: transitive dependency; identify owning dependency from lockfile after a normal `npm audit fix` dry run;
+  - `fast-xml-parser`, `flatted`, `node-forge`, `picomatch`: prefer non-force lockfile refresh or direct owner upgrades, then run full Jest/lint/build.
+- Moderate package:
+  - `brace-expansion`: eligible for normal `npm audit fix`, but should be included in a dedicated dependency PR with lockfile review.
+- Current mitigation:
+  - no new dependency was added for the nutrition recent/copy feature;
+  - user input remains validated with Zod at the new nutrition endpoints;
+  - schedule a dependency-maintenance branch before production release instead of mixing force upgrades into this feature.
+
 ## 2026-03-15
 
 - `npm audit --audit-level=high` is green.

@@ -1,4 +1,5 @@
 import type {
+  DiaryItemSnapshot,
   DiaryHistoryEntry,
   MealType,
 } from "@/modules/nutrition/domain/types";
@@ -12,6 +13,7 @@ interface DiaryPanelProps {
   todayEntry?: DiaryHistoryEntry;
   onAddToToday?: () => void;
   onOpenSearchForDateMeal?: (targetDate: string, meal: MealType) => void;
+  onCopyDiaryItem?: (item: DiaryItemSnapshot) => void;
   isHistoryLoading: boolean;
   historyEntries: DiaryHistoryEntry[];
   historyPage: number;
@@ -28,6 +30,7 @@ export function DiaryPanel({
   todayEntry,
   onAddToToday,
   onOpenSearchForDateMeal,
+  onCopyDiaryItem,
   isHistoryLoading,
   historyEntries,
   historyPage,
@@ -52,6 +55,7 @@ export function DiaryPanel({
         todayEntry={todayEntry}
         onAddToToday={onAddToToday}
         onOpenSearchForDateMeal={onOpenSearchForDateMeal}
+        onCopyDiaryItem={onCopyDiaryItem}
         isHistoryLoading={isHistoryLoading}
         historyEntries={historyEntries}
         historyPage={historyPage}

@@ -1,7 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { NutritionHeader } from "@/components/nutrition/NutritionHeader";
 import { NutritionScreen } from "@/components/nutrition/NutritionScreen";
 import { NutritionWorkspaceNav } from "@/components/nutrition/NutritionWorkspaceNav";
+import { MealSwitchDialog } from "@/components/nutrition/MealSwitchDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHydration } from "@/modules/nutrition/hooks/useHydration";
 import { useNutritionDashboard } from "@/modules/nutrition/hooks/useNutritionDashboard";
@@ -25,12 +27,17 @@ jest.mock("@/components/nutrition/NutritionScreenShell", () => ({
   NutritionScreenShell: ({
     headerProps,
     navProps,
+    copyMealSwitchDialogProps,
   }: {
     headerProps: React.ComponentProps<typeof NutritionHeader>;
     navProps: React.ComponentProps<typeof NutritionWorkspaceNav>;
+    copyMealSwitchDialogProps?: React.ComponentProps<typeof MealSwitchDialog> | null;
   }) => (
     <div>
       <NutritionHeader {...headerProps} />
+      {copyMealSwitchDialogProps ? (
+        <MealSwitchDialog {...copyMealSwitchDialogProps} />
+      ) : null}
       <NutritionWorkspaceNav {...navProps} />
     </div>
   ),
@@ -86,6 +93,24 @@ const goal: NutritionGoal = {
   targetFat: 65,
   objective: "maintain",
 };
+
+const breakfastItem = {
+  id: "item-breakfast",
+  diaryId: "preview-demo-user:2026-03-15",
+  foodId: "food-yogurt",
+  foodName: "Iogurte natural",
+  mealType: "breakfast",
+  mealLabel: "Café da manhã",
+  quantity: 170,
+  unit: "g",
+  consumedAt: "2026-03-15T08:00:00.000Z",
+  calories: 110,
+  protein: 8,
+  carbs: 12,
+  fat: 3,
+  fiber: 0,
+  sodium: 70,
+} as const;
 
 const mockedUseAuth = jest.mocked(useAuth);
 const mockedUseNutritionDashboard = jest.mocked(useNutritionDashboard);
@@ -162,6 +187,8 @@ describe("NutritionScreen", () => {
         message: null,
         searchSuggestions: [],
         barcodeMissCode: null,
+        recentFoods: [],
+        isLoadingRecentFoods: false,
       },
       actions: {
         handleSearchQueryChange: jest.fn(),
@@ -177,6 +204,7 @@ describe("NutritionScreen", () => {
         closeSelectedFoodComposer: jest.fn(),
         reopenSearchResults: jest.fn(),
         swapSelectedFood: jest.fn(),
+        loadRecentFoods: jest.fn(async () => {}),
       },
     } as unknown as ReturnType<typeof useNutritionSearch>);
     mockedUseHydration.mockReturnValue({
@@ -198,6 +226,7 @@ describe("NutritionScreen", () => {
       handleAddDiaryItem: jest.fn(async () => {}),
       handleUpdateDiaryItem: jest.fn(async () => {}),
       handleDeleteDiaryItem: jest.fn(async () => {}),
+      handleCopyDiaryItem: jest.fn(async () => true),
       handleSaveGoal: jest.fn(async () => {}),
       handleSaveWater: jest.fn(async () => {}),
       handleDiscardMealPlan: jest.fn(),
@@ -230,5 +259,77 @@ describe("NutritionScreen", () => {
     render(<NutritionScreen />);
 
     expect(await screen.findByText(/Lanche em foco/i)).toBeInTheDocument();
+  });
+
+  it("opens the copy target chooser from a diary row and calls the copy action", async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    const handleCopyDiaryItem = jest.fn(async () => true);
+
+    mockedUseNutritionDashboard.mockReturnValue({
+      state: {
+        summary: {
+          ...summary,
+          consumedCalories: 110,
+          remainingCalories: 1890,
+          meals: { ...summary.meals, breakfast: 110 },
+        },
+        diaryItems: [breakfastItem],
+        diaryMealDefinitions: [],
+        mealPlan: null,
+        goal,
+        isLoading: false,
+        storageMode: "database",
+        historyPage: 1,
+        historyEntries: [],
+        isHistoryLoading: false,
+        historyTotalPages: 1,
+      },
+      setters: {
+        setSummary: jest.fn(),
+        setMealPlan: jest.fn(),
+        setGoal: jest.fn(),
+        setDiaryMealDefinitions: jest.fn(),
+        setHistoryPage: jest.fn(),
+      },
+      actions: {
+        resolveRequestError: jest.fn(async () => "erro"),
+        loadDashboard: jest.fn(async () => "database"),
+        loadBrowserDashboard: jest.fn(() => null),
+        hydrateDashboard: jest.fn(),
+        loadHistory: jest.fn(async () => {}),
+        loadBrowserHistory: jest.fn(() => null),
+        hydrateHistory: jest.fn(),
+      },
+    } as unknown as ReturnType<typeof useNutritionDashboard>);
+    mockedUseNutritionScreenActions.mockReturnValue({
+      handleAddDiaryItem: jest.fn(async () => {}),
+      handleUpdateDiaryItem: jest.fn(async () => {}),
+      handleDeleteDiaryItem: jest.fn(async () => {}),
+      handleCopyDiaryItem,
+      handleSaveGoal: jest.fn(async () => {}),
+      handleSaveWater: jest.fn(async () => {}),
+      handleDiscardMealPlan: jest.fn(),
+      handleGenerateMealPlan: jest.fn(async () => {}),
+      handleChangeMealPlanItemQuantity: jest.fn(),
+      handleRejectMealPlanItem: jest.fn(),
+      handleExportMealPlanPdf: jest.fn(async () => {}),
+    } as unknown as ReturnType<typeof useNutritionScreenActions>);
+
+    render(<NutritionScreen />);
+
+    await user.click(await screen.findByRole("button", { name: /^Café da manhã$/i }));
+    await user.click(
+      screen.getByRole("button", {
+        name: /Copiar Iogurte natural para outra refeição/i,
+      }),
+    );
+    const copyDialog = screen.getByRole("dialog", { name: /Escolha a refeição/i });
+    await user.click(within(copyDialog).getByRole("button", { name: /Almoço/i }));
+
+    expect(handleCopyDiaryItem).toHaveBeenCalledWith({
+      itemId: "item-breakfast",
+      targetMealType: "lunch",
+      targetDate: "2026-03-15",
+    });
   });
 });

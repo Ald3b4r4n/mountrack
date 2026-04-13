@@ -6,6 +6,7 @@ import type {
   MealType,
   NutritionTotals,
   NutritionUnit,
+  RecentConsumedFood,
 } from "@/modules/nutrition/domain/types";
 
 interface NutritionSearchWorkspaceProps {
@@ -57,6 +58,9 @@ interface NutritionSearchWorkspaceProps {
   onMealTypeChange: (value: MealType) => void;
   onAddDiaryItem: () => void;
   searchCatalogBadge: string;
+  recentFoods?: RecentConsumedFood[];
+  isLoadingRecentFoods?: boolean;
+  onRegisterRecentFood?: (food: RecentConsumedFood) => void;
 }
 
 export function NutritionSearchWorkspace({
@@ -102,6 +106,9 @@ export function NutritionSearchWorkspace({
   onMealTypeChange,
   onAddDiaryItem,
   searchCatalogBadge,
+  recentFoods,
+  isLoadingRecentFoods,
+  onRegisterRecentFood,
 }: NutritionSearchWorkspaceProps) {
   return (
     <FoodSearchPanel
@@ -148,6 +155,9 @@ export function NutritionSearchWorkspace({
       onMealTypeChange={onMealTypeChange}
       onAddDiaryItem={onAddDiaryItem}
       searchCatalogBadge={searchCatalogBadge}
+      recentFoods={recentFoods}
+      isLoadingRecentFoods={isLoadingRecentFoods}
+      onRegisterRecentFood={onRegisterRecentFood}
     />
   );
 }

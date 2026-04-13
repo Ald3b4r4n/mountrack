@@ -1,10 +1,12 @@
 import type { FoodItem, NutritionGoal } from "@/modules/nutrition/domain/types";
 import {
   clearNutritionMealPlanFromBrowser,
+  copyNutritionDiaryItemInBrowser,
   hasNutritionBrowserSnapshot,
   loadNutritionDashboardFromBrowser,
   loadNutritionFocusedMealFromBrowser,
   loadNutritionHistoryFromBrowser,
+  listRecentNutritionFoodsFromBrowser,
   replaceNutritionDiaryItemInBrowser,
   saveNutritionDiaryItemToBrowser,
   saveNutritionFocusedMealToBrowser,
@@ -142,6 +144,86 @@ describe("nutrition client storage", () => {
     expect(dashboard.diary.items[0]?.mealType).toBe("lunch");
     expect(dashboard.summary.meals.lunch).toBeGreaterThan(0);
     expect(dashboard.summary.meals.breakfast).toBe(0);
+  });
+
+  it("copies a browser diary item to another meal and keeps the original item", () => {
+    const item = createDiaryItemSnapshot({
+      diaryId: `${userId}:${date}`,
+      food: wheyFood,
+      quantity: 1,
+      unit: "serving",
+      mealType: "breakfast",
+      consumedAt: "2026-03-07T08:30:00.000Z",
+    });
+
+    saveNutritionDiaryItemToBrowser(userId, date, defaultGoal, item);
+
+    const copied = copyNutritionDiaryItemInBrowser(userId, item.id, defaultGoal, {
+      targetDate: "2026-03-08",
+      targetMealType: "lunch",
+      targetMealLabel: "Almoço",
+      consumedAt: "2026-03-08T12:30:00.000Z",
+    });
+
+    const sourceDashboard = loadNutritionDashboardFromBrowser(userId, date, defaultGoal);
+    const targetDashboard = loadNutritionDashboardFromBrowser(userId, "2026-03-08", defaultGoal);
+
+    expect(copied?.id).not.toBe(item.id);
+    expect(sourceDashboard.diary.items).toHaveLength(1);
+    expect(sourceDashboard.diary.items[0]?.id).toBe(item.id);
+    expect(targetDashboard.diary.items).toHaveLength(1);
+    expect(targetDashboard.diary.items[0]).toEqual(
+      expect.objectContaining({
+        id: copied?.id,
+        foodId: item.foodId,
+        mealType: "lunch",
+        mealLabel: "Almoço",
+        consumedAt: "2026-03-08T12:30:00.000Z",
+      }),
+    );
+  });
+
+  it("lists browser recent foods newest first and deduped by food id", () => {
+    const oldItem = createDiaryItemSnapshot({
+      diaryId: `${userId}:2026-03-06`,
+      food: wheyFood,
+      quantity: 1,
+      unit: "serving",
+      mealType: "breakfast",
+      consumedAt: "2026-03-06T08:30:00.000Z",
+    });
+    const newItem = {
+      ...oldItem,
+      id: "new-whey-item",
+      quantity: 2,
+      consumedAt: "2026-03-07T08:30:00.000Z",
+    };
+    const riceItem = {
+      ...oldItem,
+      id: "rice-item",
+      foodId: "food-rice",
+      foodName: "Arroz branco",
+      mealType: "lunch" as const,
+      consumedAt: "2026-03-07T12:30:00.000Z",
+    };
+
+    saveNutritionDiaryItemToBrowser(userId, "2026-03-06", defaultGoal, oldItem);
+    saveNutritionDiaryItemToBrowser(userId, "2026-03-07", defaultGoal, newItem);
+    saveNutritionDiaryItemToBrowser(userId, "2026-03-07", defaultGoal, riceItem);
+
+    expect(listRecentNutritionFoodsFromBrowser(userId, { limit: 8 })).toEqual([
+      expect.objectContaining({
+        sourceItemId: "rice-item",
+        foodId: "food-rice",
+        foodName: "Arroz branco",
+        lastMealType: "lunch",
+      }),
+      expect.objectContaining({
+        sourceItemId: "new-whey-item",
+        foodId: wheyFood.id,
+        quantity: 2,
+      }),
+    ]);
   });
 
   it("excludes the current day from browser history snapshots", () => {
