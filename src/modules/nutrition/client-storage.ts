@@ -2,12 +2,14 @@
 
 import type {
   DailySummary,
+  DiaryItemCopyRequest,
   DiaryHistoryEntry,
   DiaryItemSnapshot,
   MealDefinition,
   MealType,
   MealPlan,
   NutritionGoal,
+  RecentConsumedFood,
 } from "@/modules/nutrition/domain/types";
 import { toStableHistoryDate } from "@/modules/nutrition/history-date";
 import { buildDailySummary } from "@/modules/nutrition/services/daily-calories.service";
@@ -44,6 +46,10 @@ export interface NutritionHistorySnapshot {
   pageSize: number;
   total: number;
   totalPages: number;
+}
+
+interface ListRecentNutritionFoodsOptions {
+  limit?: number;
 }
 
 const STORAGE_PREFIX = "mountrack:nutrition:";
@@ -148,6 +154,59 @@ function writeRawState(userId: string, state: NutritionBrowserState): void {
 
 function sortDiaryItems(items: DiaryItemSnapshot[]): DiaryItemSnapshot[] {
   return [...items].sort((left, right) => right.consumedAt.localeCompare(left.consumedAt));
+}
+
+function normalizeRecentFoodsLimit(limit = 8): number {
+  if (!Number.isFinite(limit)) {
+    return 8;
+  }
+
+  return Math.min(Math.max(Math.trunc(limit), 1), 12);
+}
+
+function toRecentConsumedFood(item: DiaryItemSnapshot): RecentConsumedFood | null {
+  if (!item.foodId || !item.foodName) {
+    return null;
+  }
+
+  return {
+    sourceItemId: item.id,
+    foodId: item.foodId,
+    foodName: item.foodName,
+    quantity: item.quantity,
+    unit: item.unit,
+    calories: item.calories,
+    lastConsumedAt: item.consumedAt,
+    lastMealType: item.mealType,
+    lastMealLabel: item.mealLabel,
+  };
+}
+
+function buildRecentConsumedFoods(
+  items: DiaryItemSnapshot[],
+  limit: number,
+): RecentConsumedFood[] {
+  const seenFoodIds = new Set<string>();
+  const recentFoods: RecentConsumedFood[] = [];
+
+  for (const item of sortDiaryItems(items)) {
+    if (seenFoodIds.has(item.foodId)) {
+      continue;
+    }
+
+    const recentFood = toRecentConsumedFood(item);
+    if (!recentFood) {
+      continue;
+    }
+
+    seenFoodIds.add(item.foodId);
+    recentFoods.push(recentFood);
+    if (recentFoods.length >= limit) {
+      break;
+    }
+  }
+
+  return recentFoods;
 }
 
 export function hasNutritionBrowserSnapshot(userId: string): boolean {
@@ -292,6 +351,59 @@ export function saveNutritionDiaryItemToBrowser(
   }
   diary.items = sortDiaryItems([...diary.items, item]);
   writeRawState(userId, state);
+}
+
+export function copyNutritionDiaryItemInBrowser(
+  userId: string,
+  sourceItemId: string,
+  goal: NutritionGoal,
+  input: DiaryItemCopyRequest,
+): DiaryItemSnapshot | null {
+  const state = readRawState(userId);
+  const sourceItem = Object.values(state.diaries ?? {})
+    .find((diary) => diary.userId === userId && diary.items.some((item) => item.id === sourceItemId))
+    ?.items.find((item) => item.id === sourceItemId);
+
+  if (!sourceItem) {
+    return null;
+  }
+
+  const targetDiary = getOrCreateDiary(state, userId, input.targetDate, resolveGoal(userId, state, goal));
+  const copiedItem: DiaryItemSnapshot = {
+    ...sourceItem,
+    id: crypto.randomUUID(),
+    diaryId: `${userId}:${input.targetDate}`,
+    mealType: input.targetMealType,
+    mealLabel: input.targetMealLabel,
+    consumedAt: input.consumedAt ?? new Date().toISOString(),
+  };
+
+  if (!targetDiary.mealDefinitions.some((definition) => definition.key === copiedItem.mealType)) {
+    targetDiary.mealDefinitions = [
+      ...targetDiary.mealDefinitions,
+      {
+        key: copiedItem.mealType,
+        label: getMealLabel(copiedItem.mealType, copiedItem.mealLabel),
+      },
+    ];
+  }
+
+  targetDiary.items = sortDiaryItems([...targetDiary.items, copiedItem]);
+  writeRawState(userId, state);
+  return copiedItem;
+}
+
+export function listRecentNutritionFoodsFromBrowser(
+  userId: string,
+  { limit = 8 }: ListRecentNutritionFoodsOptions = {},
+): RecentConsumedFood[] {
+  const state = readRawState(userId);
+  const normalizedLimit = normalizeRecentFoodsLimit(limit);
+  const items = Object.values(state.diaries ?? {})
+    .filter((diary) => diary.userId === userId)
+    .flatMap((diary) => diary.items);
+
+  return buildRecentConsumedFoods(items, normalizedLimit);
 }
 
 export function saveNutritionMealDefinitionsToBrowser(

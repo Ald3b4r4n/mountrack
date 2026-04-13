@@ -19,6 +19,7 @@ interface NutritionScreenShellProps {
   customMealDialogKey: string;
   customMealDialogProps: ComponentProps<typeof CustomMealDialog>;
   mealSwitchDialogProps: ComponentProps<typeof MealSwitchDialog>;
+  copyMealSwitchDialogProps?: ComponentProps<typeof MealSwitchDialog> | null;
   customFoodDialogProps: ComponentProps<typeof CustomFoodDialog>;
   customWaterDialogProps: ComponentProps<typeof CustomWaterDialog>;
   headerProps: ComponentProps<typeof NutritionHeader>;
@@ -34,6 +35,7 @@ export function NutritionScreenShell({
   customMealDialogKey,
   customMealDialogProps,
   mealSwitchDialogProps,
+  copyMealSwitchDialogProps,
   customFoodDialogProps,
   customWaterDialogProps,
   headerProps,
@@ -45,6 +47,9 @@ export function NutritionScreenShell({
       <BarcodeScannerDialog {...barcodeScannerProps} />
       <CustomMealDialog key={customMealDialogKey} {...customMealDialogProps} />
       <MealSwitchDialog {...mealSwitchDialogProps} />
+      {copyMealSwitchDialogProps ? (
+        <MealSwitchDialog {...copyMealSwitchDialogProps} />
+      ) : null}
       <CustomFoodDialog {...customFoodDialogProps} />
       <CustomWaterDialog {...customWaterDialogProps} />
       <NutritionWorkspaceNav {...navProps} />

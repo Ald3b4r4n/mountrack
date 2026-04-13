@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CalendarDays } from "lucide-react";
 import type {
+  DiaryItemSnapshot,
   DiaryHistoryEntry,
   MealType,
 } from "@/modules/nutrition/domain/types";
@@ -29,6 +30,7 @@ interface DiaryHistoryViewProps {
   todayEntry?: DiaryHistoryEntry;
   onAddToToday?: () => void;
   onOpenSearchForDateMeal?: (targetDate: string, meal: MealType) => void;
+  onCopyDiaryItem?: (item: DiaryItemSnapshot) => void;
 }
 
 export function DiaryHistoryView({
@@ -42,6 +44,7 @@ export function DiaryHistoryView({
   todayEntry,
   onAddToToday,
   onOpenSearchForDateMeal,
+  onCopyDiaryItem,
 }: DiaryHistoryViewProps) {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [retroDate, setRetroDate] = useState<string | null>(null);
@@ -210,6 +213,7 @@ export function DiaryHistoryView({
           targetDate={retroDate}
           onClose={() => setRetroDate(null)}
           onMutated={() => void loadHistory(historyPage)}
+          onCopyDiaryItem={onCopyDiaryItem}
           onOpenSearchForMeal={(targetDate, meal) => {
             setRetroDate(null);
             onOpenSearchForDateMeal?.(targetDate, meal);

@@ -78,6 +78,25 @@ export interface DiaryItemSnapshot extends NutritionTotals {
   consumedAt: string;
 }
 
+export interface DiaryItemCopyRequest {
+  targetDate: string;
+  targetMealType: MealType;
+  targetMealLabel?: string;
+  consumedAt?: string;
+}
+
+export interface RecentConsumedFood {
+  sourceItemId: string;
+  foodId: string;
+  foodName: string;
+  quantity: number;
+  unit: NutritionUnit;
+  calories: number;
+  lastConsumedAt: string;
+  lastMealType: MealType;
+  lastMealLabel?: string;
+}
+
 export interface DailySummary extends NutritionTotals {
   date: string;
   targetCalories: number;

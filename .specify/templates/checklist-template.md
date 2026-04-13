@@ -32,6 +32,13 @@
 - [ ] CHK005 Item with specific criteria
 - [ ] CHK006 Final item in this category
 
+## Constitution Compliance
+
+- [ ] CHKXXX Tests were written before implementation and verified red first
+- [ ] CHKXXX Technical documentation impact was handled in docs/ or specs/
+- [ ] CHKXXX README.md was updated or no-impact rationale was recorded
+- [ ] CHKXXX Applicable checks were executed and results recorded
+
 ## Notes
 
 - Check items off as completed: `[x]`

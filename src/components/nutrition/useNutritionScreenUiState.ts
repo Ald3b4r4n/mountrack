@@ -4,6 +4,7 @@ import { getDefaultFocusedMeal } from "@/components/nutrition/nutrition-screen-h
 import type { NutritionArea } from "@/components/nutrition/NutritionWorkspaceNav";
 import type { PlanningTabKey } from "@/modules/nutrition/constants";
 import type {
+  DiaryItemSnapshot,
   FoodItem,
   MealDefinition,
   MealPlan,
@@ -63,6 +64,7 @@ export interface NutritionScreenUiState {
   isUpdatingWater: boolean;
   mealChooserOpen: boolean;
   editingCustomFood: FoodItem | null;
+  copyCandidate: DiaryItemSnapshot | null;
 }
 
 type NutritionScreenUiAction =
@@ -128,6 +130,7 @@ function createInitialNutritionScreenUiState(): NutritionScreenUiState {
     isUpdatingWater: false,
     mealChooserOpen: false,
     editingCustomFood: null,
+    copyCandidate: null,
   };
 }
 
@@ -293,5 +296,11 @@ export function useNutritionScreenUiState() {
     setEditingCustomFood: (
       value: FoodItem | null | ((current: FoodItem | null) => FoodItem | null),
     ) => setUiStateField("editingCustomFood", value),
+    setCopyCandidate: (
+      value:
+        | DiaryItemSnapshot
+        | null
+        | ((current: DiaryItemSnapshot | null) => DiaryItemSnapshot | null),
+    ) => setUiStateField("copyCandidate", value),
   };
 }

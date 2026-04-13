@@ -57,4 +57,26 @@ describe("DiaryItemRow", () => {
     expect(screen.getByText(/Pão Francês/i)).toBeInTheDocument();
     expect(screen.getByText(/137/)).toBeInTheDocument();
   });
+
+  it("calls onCopy with the full item and keeps the aria label in Portuguese", async () => {
+    const user = userEvent.setup();
+    const onCopy = jest.fn();
+
+    render(
+      <DiaryItemRow
+        item={item}
+        onEdit={jest.fn()}
+        onDelete={jest.fn()}
+        onCopy={onCopy}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /Copiar Pão Francês para outra refeição/i,
+      }),
+    );
+
+    expect(onCopy).toHaveBeenCalledWith(item);
+  });
 });

@@ -23,6 +23,7 @@ interface RetroactiveDiaryViewProps {
   onClose: () => void;
   onMutated?: () => void;
   onOpenSearchForMeal?: (targetDate: string, meal: MealType) => void;
+  onCopyDiaryItem?: (item: DiaryItemSnapshot) => void;
 }
 
 interface DiaryResponse {
@@ -44,6 +45,7 @@ export function RetroactiveDiaryView({
   onClose,
   onMutated,
   onOpenSearchForMeal,
+  onCopyDiaryItem,
 }: RetroactiveDiaryViewProps) {
   // Normalize to YYYY-MM-DD — entry.date may arrive as a full ISO timestamp
   const dateKey = targetDate.slice(0, 10);
@@ -183,6 +185,11 @@ export function RetroactiveDiaryView({
   const openSearchForMeal = (meal: MealType) => {
     onOpenSearchForMeal?.(dateKey, meal);
     setInspectedMealKey(null);
+    onClose();
+  };
+
+  const requestCopyItem = (item: DiaryItemSnapshot) => {
+    onCopyDiaryItem?.(item);
     onClose();
   };
 
@@ -412,6 +419,7 @@ export function RetroactiveDiaryView({
                               onDelete={(itemId) => {
                                 requestDeleteItem(itemId);
                               }}
+                              onCopy={onCopyDiaryItem ? requestCopyItem : undefined}
                             />
                           ))}
                         </div>
@@ -441,6 +449,7 @@ export function RetroactiveDiaryView({
         onEditSaved={() => {
           setToastMessage("Item do historico atualizado.");
         }}
+        onCopyDiaryItem={onCopyDiaryItem ? requestCopyItem : undefined}
         onDeleteDiaryItem={async (itemId) => {
           await requestDeleteFromHistoryDialog(itemId);
         }}

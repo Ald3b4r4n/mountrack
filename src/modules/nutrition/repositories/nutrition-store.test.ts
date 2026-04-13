@@ -11,8 +11,10 @@ import {
   completeMissingFoodLookup,
   findAccessibleFoodById,
   getOrCreateDiary,
+  copyDiaryItem,
   listAccessibleFoods,
   listDiaryHistory,
+  listRecentConsumedFoods,
   listFoods,
   listUserCustomFoods,
   queueMissingFoodLookup,
@@ -151,6 +153,140 @@ describe("nutrition-store authorization", () => {
     const deletedDiary = await removeDiaryItem("user-a", "item-a");
 
     expect(deletedDiary?.items).toHaveLength(0);
+  });
+
+  it("copies a diary item to a target meal without changing the source item", async () => {
+    const sourceDiary = await getOrCreateDiary("user-a", "2026-03-07", 2000, 2200);
+    const sourceItem = makeDiaryItem("item-a", sourceDiary.id, {
+      mealType: "breakfast",
+      mealLabel: "Café da manhã",
+      consumedAt: "2026-03-07T08:00:00.000Z",
+    });
+
+    await saveDiaryItem("user-a", "2026-03-07", 2000, 2200, sourceItem);
+
+    const copied = await copyDiaryItem(
+      "user-a",
+      "item-a",
+      {
+        targetDate: "2026-03-08",
+        targetMealType: "lunch",
+        targetMealLabel: "Almoço",
+        consumedAt: "2026-03-08T12:30:00.000Z",
+      },
+      2100,
+      2300,
+    );
+
+    expect(copied?.item.id).not.toBe("item-a");
+    expect(copied?.item).toEqual(
+      expect.objectContaining({
+        foodId: "food-banana",
+        foodName: "Banana",
+        mealType: "lunch",
+        mealLabel: "Almoço",
+        consumedAt: "2026-03-08T12:30:00.000Z",
+        calories: 105,
+      }),
+    );
+
+    const refreshedSourceDiary = await getOrCreateDiary("user-a", "2026-03-07", 2000, 2200);
+    const targetDiary = await getOrCreateDiary("user-a", "2026-03-08", 2100, 2300);
+
+    expect(refreshedSourceDiary.items).toHaveLength(1);
+    expect(refreshedSourceDiary.items[0]?.id).toBe("item-a");
+    expect(targetDiary.items).toHaveLength(1);
+    expect(targetDiary.items[0]?.id).toBe(copied?.item.id);
+  });
+
+  it("does not copy another user's diary item", async () => {
+    const sourceDiary = await getOrCreateDiary("user-a", "2026-03-07", 2000, 2200);
+    await saveDiaryItem("user-a", "2026-03-07", 2000, 2200, makeDiaryItem("item-a", sourceDiary.id));
+
+    const copied = await copyDiaryItem(
+      "user-b",
+      "item-a",
+      {
+        targetDate: "2026-03-08",
+        targetMealType: "lunch",
+        targetMealLabel: "Almoço",
+      },
+      2100,
+      2300,
+    );
+
+    expect(copied).toBeNull();
+  });
+
+  it("lists recent consumed foods scoped by user, newest first, and deduped by food id", async () => {
+    const oldDiary = await getOrCreateDiary("user-a", "2026-03-06", 2000, 2200);
+    const newDiary = await getOrCreateDiary("user-a", "2026-03-07", 2000, 2200);
+    const otherUserDiary = await getOrCreateDiary("user-b", "2026-03-07", 2000, 2200);
+
+    await saveDiaryItem(
+      "user-a",
+      "2026-03-06",
+      2000,
+      2200,
+      makeDiaryItem("old-banana", oldDiary.id, {
+        foodId: "food-banana",
+        foodName: "Banana antiga",
+        consumedAt: "2026-03-06T08:00:00.000Z",
+      }),
+    );
+    await saveDiaryItem(
+      "user-a",
+      "2026-03-07",
+      2000,
+      2200,
+      makeDiaryItem("new-banana", newDiary.id, {
+        foodId: "food-banana",
+        foodName: "Banana nova",
+        quantity: 2,
+        consumedAt: "2026-03-07T08:00:00.000Z",
+      }),
+    );
+    await saveDiaryItem(
+      "user-a",
+      "2026-03-07",
+      2000,
+      2200,
+      makeDiaryItem("rice", newDiary.id, {
+        foodId: "food-rice",
+        foodName: "Arroz branco",
+        mealType: "lunch",
+        consumedAt: "2026-03-07T12:00:00.000Z",
+      }),
+    );
+    await saveDiaryItem(
+      "user-b",
+      "2026-03-07",
+      2000,
+      2200,
+      makeDiaryItem("other-user-food", otherUserDiary.id, {
+        foodId: "food-hidden",
+        foodName: "Alimento oculto",
+        consumedAt: "2026-03-07T13:00:00.000Z",
+      }),
+    );
+
+    const recentFoods = await listRecentConsumedFoods("user-a", { limit: 8 });
+
+    expect(recentFoods).toEqual([
+      expect.objectContaining({
+        sourceItemId: "rice",
+        foodId: "food-rice",
+        foodName: "Arroz branco",
+        lastMealType: "lunch",
+      }),
+      expect.objectContaining({
+        sourceItemId: "new-banana",
+        foodId: "food-banana",
+        foodName: "Banana nova",
+        quantity: 2,
+      }),
+    ]);
+    expect(recentFoods.some((food) => food.foodId === "food-hidden")).toBe(false);
   });
 
   it("keeps custom foods private to the owner", async () => {

@@ -41,4 +41,36 @@ describe("MealSwitchDialog", () => {
       expect.objectContaining({ key: "custom:ceia", label: "Ceia" }),
     );
   });
+
+  it("can be reused to choose a copy target meal without meal management actions", async () => {
+    const user = userEvent.setup();
+    const onSelectMeal = jest.fn();
+
+    render(
+      <MealSwitchDialog
+        open
+        onClose={jest.fn()}
+        activeMeal="breakfast"
+        mealDefinitions={mealDefinitions}
+        mealCalories={{ breakfast: 120, lunch: 350, "custom:ceia": 90 }}
+        mealItemsCount={{ breakfast: 1, lunch: 3, "custom:ceia": 2 }}
+        onSelectMeal={onSelectMeal}
+        onCreateMeal={jest.fn()}
+        onManageMeal={jest.fn()}
+        title="Escolha a refeição"
+        description="Selecione a refeição de destino para copiar o alimento."
+        selectLabel="Copiar"
+        showMealManagement={false}
+      />,
+    );
+
+    expect(
+      screen.getByRole("dialog", { name: /Escolha a refeição/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Criar refeição/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Almoco/i }));
+
+    expect(onSelectMeal).toHaveBeenCalledWith("lunch");
+  });
 });

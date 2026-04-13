@@ -2,6 +2,7 @@ import type { Ref } from "react";
 import { DiaryPanel } from "@/components/nutrition/DiaryPanel";
 import { authorizedNutritionFetch } from "@/modules/nutrition/client";
 import type {
+  DiaryItemSnapshot,
   DiaryHistoryEntry,
   MealType,
 } from "@/modules/nutrition/domain/types";
@@ -12,6 +13,7 @@ interface NutritionTodayWorkspaceSectionProps {
   todayEntry: DiaryHistoryEntry;
   onAddToToday: () => void;
   onOpenSearchForDateMeal?: (targetDate: string, meal: MealType) => void;
+  onCopyDiaryItem?: (item: DiaryItemSnapshot) => void;
   isHistoryLoading: boolean;
   historyEntries: DiaryHistoryEntry[];
   historyPage: number;
@@ -28,6 +30,7 @@ export function NutritionTodayWorkspaceSection({
   todayEntry,
   onAddToToday,
   onOpenSearchForDateMeal,
+  onCopyDiaryItem,
   isHistoryLoading,
   historyEntries,
   historyPage,
@@ -44,6 +47,7 @@ export function NutritionTodayWorkspaceSection({
       todayEntry={todayEntry}
       onAddToToday={onAddToToday}
       onOpenSearchForDateMeal={onOpenSearchForDateMeal}
+      onCopyDiaryItem={onCopyDiaryItem}
       isHistoryLoading={isHistoryLoading}
       historyEntries={historyEntries}
       historyPage={historyPage}

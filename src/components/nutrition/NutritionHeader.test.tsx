@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { NutritionHeader } from "@/components/nutrition/NutritionHeader";
 import type {
   DailySummary,
+  DiaryItemSnapshot,
   NutritionGoal,
 } from "@/modules/nutrition/domain/types";
 
@@ -35,6 +36,24 @@ const goal: NutritionGoal = {
   targetCarbs: 180,
   targetFat: 65,
   objective: "maintain",
+};
+
+const diaryItem: DiaryItemSnapshot = {
+  id: "item-1",
+  diaryId: "diary-1",
+  foodId: "food-1",
+  foodName: "Iogurte natural",
+  mealType: "breakfast",
+  mealLabel: "Café da manhã",
+  quantity: 170,
+  unit: "g",
+  consumedAt: "2026-03-10T08:00:00.000Z",
+  calories: 110,
+  protein: 8,
+  carbs: 12,
+  fat: 3,
+  fiber: 0,
+  sodium: 70,
 };
 
 describe("NutritionHeader", () => {
@@ -82,5 +101,42 @@ describe("NutritionHeader", () => {
     expect(screen.getByText(/Café da manhã em foco/i)).toBeInTheDocument();
     expect(screen.getByText(/Água 0%/i)).toBeInTheDocument();
     expect(screen.getByText(/Meta 140 g/i)).toBeInTheDocument();
+  });
+
+  it("rerenders the mobile meal list with and without meal callbacks without hook errors", () => {
+    const mealDefinitions = [
+      { key: "breakfast" as const, label: "Café da manhã", isDefault: true },
+      { key: "lunch" as const, label: "Almoço", isDefault: true },
+      { key: "snack" as const, label: "Lanche", isDefault: true },
+      { key: "dinner" as const, label: "Jantar", isDefault: true },
+    ];
+    const baseProps = {
+      isMobileLayout: true,
+      isPreview: false,
+      summary,
+      goal,
+      waterRatio: 0,
+      consumedRatio: 26,
+      mealDefinitions,
+      mealCalories: summary.meals,
+      activeMeal: "breakfast" as const,
+      groupedDiaryItems: { breakfast: [diaryItem] },
+      activeMealLabel: "Café da manhã",
+      activeMealCalories: 185,
+    };
+
+    const { rerender } = render(
+      <NutritionHeader
+        {...baseProps}
+        onFocusMeal={jest.fn()}
+        onAddToMeal={jest.fn()}
+      />,
+    );
+
+    expect(screen.getAllByRole("button", { name: /Café da manhã/i }).length).toBeGreaterThan(0);
+
+    expect(() => {
+      rerender(<NutritionHeader {...baseProps} />);
+    }).not.toThrow();
   });
 });

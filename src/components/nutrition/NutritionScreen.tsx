@@ -25,9 +25,11 @@ import {
   saveNutritionFocusedMealToBrowser,
 } from "@/modules/nutrition/client-storage";
 import type {
+  DiaryItemSnapshot,
   DiaryHistoryEntry,
   MealType,
   NutritionObjective,
+  RecentConsumedFood,
 } from "@/modules/nutrition/domain/types";
 import { useHydration } from "@/modules/nutrition/hooks/useHydration";
 import { useNutritionDashboard } from "@/modules/nutrition/hooks/useNutritionDashboard";
@@ -89,6 +91,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     setIsUpdatingWater,
     setMealChooserOpen,
     setEditingCustomFood,
+    setCopyCandidate,
   } = useNutritionScreenUiState();
   const canUseBrowserPersistence = Boolean(
     activeUser && !("devBypass" in activeUser && activeUser.devBypass),
@@ -99,12 +102,8 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     today,
     canUseBrowserPersistence,
   );
-  const searchHook = useNutritionSearch(activeUser, canUseBrowserPersistence);
-  const hydrationHook = useHydration();
 
   const { state: dState, setters: dSetters, actions: dActions } = dashboardHook;
-  const { state: sState, actions: sActions } = searchHook;
-  const { state: hState, setters: hSetters } = hydrationHook;
 
   const {
     summary,
@@ -136,6 +135,15 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     hydrateHistory,
   } = dActions;
 
+  const searchHook = useNutritionSearch(
+    activeUser,
+    canUseBrowserPersistence,
+    storageMode,
+  );
+  const hydrationHook = useHydration();
+  const { state: sState, actions: sActions } = searchHook;
+  const { state: hState, setters: hSetters } = hydrationHook;
+
   const {
     isSearching,
     isEnrichingExternal,
@@ -150,6 +158,8 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     message: searchMessage,
     searchSuggestions,
     barcodeMissCode,
+    recentFoods,
+    isLoadingRecentFoods,
   } = sState;
   const {
     handleSearchQueryChange,
@@ -165,6 +175,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     closeSelectedFoodComposer,
     reopenSearchResults,
     swapSelectedFood,
+    loadRecentFoods,
   } = sActions;
 
   const { waterDraft, isUpdatingWater, hydrationMode } = hState;
@@ -199,6 +210,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     customWaterOpen,
     mealChooserOpen,
     editingCustomFood,
+    copyCandidate,
   } = uiState;
 
   const activeWorkspaceRef = useRef<HTMLDivElement | null>(null);
@@ -297,6 +309,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     handleAddDiaryItem,
     handleUpdateDiaryItem,
     handleDeleteDiaryItem,
+    handleCopyDiaryItem,
     handleSaveGoal,
     handleSaveCustomWater,
     handleDiscardMealPlan,
@@ -355,11 +368,20 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     loadDashboard,
     loadHistory,
     resolveRequestError,
+    loadRecentFoods,
   });
 
   useEffect(() => {
     setSearchMealContext(mealType);
   }, [mealType, setSearchMealContext]);
+
+  useEffect(() => {
+    if (!activeUser) {
+      return;
+    }
+
+    void loadRecentFoods();
+  }, [activeUser, loadRecentFoods]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 860px)");
@@ -687,6 +709,37 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     summary,
   };
 
+  const requestCopyDiaryItem = (item: DiaryItemSnapshot) => {
+    setCopyCandidate(item);
+  };
+
+  const confirmCopyTargetMeal = async (targetMeal: MealType) => {
+    if (!copyCandidate) {
+      return;
+    }
+
+    const copied = await handleCopyDiaryItem({
+      itemId: copyCandidate.id,
+      targetMealType: targetMeal,
+      targetDate: today,
+    });
+
+    if (copied) {
+      setCopyCandidate(null);
+    }
+  };
+
+  const registerRecentFood = (food: RecentConsumedFood) => {
+    const targetMealDefinition = getActiveMealDefinition(mealType);
+
+    void handleCopyDiaryItem({
+      itemId: food.sourceItemId,
+      targetMealType: mealType,
+      targetDate: today,
+      successMessage: `Alimento registrado em ${targetMealDefinition.label}.`,
+    });
+  };
+
   const todayWorkspaceProps = {
     authUser: activeUser,
     isMobileLayout,
@@ -694,6 +747,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     onAddToToday: () => openSearchForTodayMeal(activeDiaryMeal),
     onOpenSearchForDateMeal: (targetDate: string, meal: MealType) =>
       openSearchForDateMeal(targetDate, meal),
+    onCopyDiaryItem: requestCopyDiaryItem,
     isHistoryLoading,
     historyEntries,
     historyPage,
@@ -765,6 +819,9 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     },
     onAddDiaryItem: () => void handleAddDiaryItem(),
     searchCatalogBadge,
+    recentFoods,
+    isLoadingRecentFoods,
+    onRegisterRecentFood: registerRecentFood,
   };
   const planningWorkspaceProps = {
     isMobileLayout,
@@ -899,6 +956,32 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
           openManageMealDialog(meal);
         },
       }}
+      copyMealSwitchDialogProps={
+        copyCandidate
+          ? {
+              open: true,
+              onClose: () => setCopyCandidate(null),
+              activeMeal: copyCandidate.mealType,
+              mealDefinitions,
+              mealCalories: summary.meals,
+              mealItemsCount: Object.fromEntries(
+                mealDefinitions.map((meal) => [
+                  meal.key,
+                  groupedDiaryItems[meal.key]?.length ?? 0,
+                ]),
+              ),
+              title: "Escolha a refeição",
+              description: `Selecione a refeição de destino para copiar ${copyCandidate.foodName}.`,
+              selectLabel: "Copiar",
+              showMealManagement: false,
+              onSelectMeal: (meal) => {
+                void confirmCopyTargetMeal(meal);
+              },
+              onCreateMeal: () => undefined,
+              onManageMeal: () => undefined,
+            }
+          : null
+      }
       customFoodDialogProps={{
         authUser: activeUser,
         open: customFoodOpen,
@@ -969,6 +1052,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
         onDeleteDiaryItem: isMobileLayout
           ? (itemId) => void handleDeleteDiaryItem(itemId)
           : undefined,
+        onCopyDiaryItem: isMobileLayout ? requestCopyDiaryItem : undefined,
         onAdjustWater: (amount) => {
           void handleSaveCustomWater(amount, "increment");
         },
