@@ -387,6 +387,37 @@ describe("catalog search service", () => {
     expect(result.externalPending).toBe(false);
   });
 
+  it("prioritizes Brazilian catalog results over FatSecret international fallback", async () => {
+    mockedSearchFatSecretFoods.mockResolvedValue([
+      makeFood("fatsecret-rice-us", {
+        source: "fatsecret",
+        name: "Long Grain Rice",
+        displayName: "Long Grain Rice",
+        confidenceScore: 0.88,
+        locale: undefined,
+        countryCode: undefined,
+      }),
+    ]);
+    mockedListAccessibleFoods.mockResolvedValue([
+      makeFood("tbca-arroz-br", {
+        source: "tbca",
+        name: "Arroz, integral, cozido",
+        displayName: "Arroz, integral, cozido",
+        confidenceScore: 1.2,
+        locale: "pt-BR",
+        countryCode: "BR",
+      }),
+    ]);
+
+    const result = await searchNutritionCatalog("user-a", "arroz");
+
+    expect(result.results.map((item) => item.id)).toEqual([
+      "tbca-arroz-br",
+      "fatsecret-rice-us",
+    ]);
+    expect(result.source).toBe("catalog");
+  });
+
   it("matches stored foods when the scanner returns a GTIN-14 variant", async () => {
     mockedListAccessibleFoods.mockResolvedValue([
       makeFood("leite-condensado", {

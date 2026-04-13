@@ -15,6 +15,8 @@
   - `brace-expansion`: eligible for normal `npm audit fix`, but should be included in a dedicated dependency PR with lockfile review.
 - Current mitigation:
   - no new dependency was added for the nutrition recent/copy feature;
+  - the search UX/FatSecret localization refinement added no dependency and did
+    not change `package-lock.json`;
   - user input remains validated with Zod at the new nutrition endpoints;
   - schedule a dependency-maintenance branch before production release instead of mixing force upgrades into this feature.
 

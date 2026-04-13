@@ -1,7 +1,11 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FoodSearchResultsSection } from "@/components/nutrition/FoodSearchResultsSection";
-import type { FoodItem, NutritionGoal } from "@/modules/nutrition/domain/types";
+import type {
+  FoodItem,
+  NutritionGoal,
+  RecentConsumedFood,
+} from "@/modules/nutrition/domain/types";
 
 const food: FoodItem = {
   id: "f1",
@@ -47,6 +51,31 @@ const nutritionGoal: NutritionGoal = {
   targetWaterMl: 2200,
   objective: "maintain",
 };
+
+const recentFoods: RecentConsumedFood[] = [
+  {
+    sourceItemId: "recent-rice",
+    foodId: "rice",
+    foodName: "Arroz branco",
+    quantity: 120,
+    unit: "g",
+    calories: 156,
+    lastConsumedAt: "2026-04-11T12:00:00.000Z",
+    lastMealType: "lunch",
+    lastMealLabel: "Almoço",
+  },
+  {
+    sourceItemId: "recent-banana",
+    foodId: "banana",
+    foodName: "Banana prata",
+    quantity: 80,
+    unit: "g",
+    calories: 71,
+    lastConsumedAt: "2026-04-12T08:00:00.000Z",
+    lastMealType: "breakfast",
+    lastMealLabel: "Café da manhã",
+  },
+];
 
 describe("FoodSearchResultsSection", () => {
   // T021a — IDR% shown when goal is set
@@ -188,5 +217,45 @@ describe("FoodSearchResultsSection", () => {
     await user.click(screen.getByRole("button", { name: /Feijao carioca/i }));
 
     expect(onSearchSuggestion).toHaveBeenCalledWith("Feijao carioca cozido");
+  });
+
+  it("renders filtered recent foods when the Recentes source is active", async () => {
+    const user = userEvent.setup();
+    const onRegisterRecentFood = jest.fn();
+
+    render(
+      <FoodSearchResultsSection
+        {...baseProps}
+        activeSource="recent"
+        searchQuery="arroz"
+        recentFoods={recentFoods}
+        onRegisterRecentFood={onRegisterRecentFood}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /Recentes/i })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByText(/Arroz branco/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Banana prata/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Registrar Arroz branco/i }));
+
+    expect(onRegisterRecentFood).toHaveBeenCalledWith(recentFoods[0]);
+  });
+
+  it("shows a clean empty state when Recentes has no match for the search", () => {
+    render(
+      <FoodSearchResultsSection
+        {...baseProps}
+        activeSource="recent"
+        searchQuery="cuscuz"
+        recentFoods={recentFoods}
+      />,
+    );
+
+    expect(screen.getByText("Nenhum recente para esta busca.")).toBeInTheDocument();
+    expect(screen.queryByText(/devnote|TODO|debug|endpoint/)).not.toBeInTheDocument();
   });
 });

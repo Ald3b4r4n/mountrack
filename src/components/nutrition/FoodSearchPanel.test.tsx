@@ -373,6 +373,51 @@ function RecentFoodsPanel({
   );
 }
 
+function SearchSessionWithRecentFoodsPanel() {
+  return (
+    <FoodSearchPanel
+      storageMode="database"
+      isMobileLayout={false}
+      searchQuery="banana"
+      onSearchQueryChange={jest.fn()}
+      onSearch={jest.fn()}
+      isSearching={false}
+      isEnrichingExternal={false}
+      barcodeQuery=""
+      onBarcodeQueryChange={jest.fn()}
+      onBarcodeLookup={jest.fn()}
+      onOpenScanner={jest.fn()}
+      searchSourceLabel="Catálogo do app"
+      searchFeedback="Resultados prontos"
+      resultsVisible
+      searchResults={[selectedFood]}
+      resultState={{ title: "Resultados", text: "Selecione um alimento." }}
+      onApplyFoodSelection={jest.fn()}
+      onCustomFoodOpen={jest.fn()}
+      onClearSearch={jest.fn()}
+      selectedFood={null}
+      isComposerOpen={false}
+      selectedFoodTotals={null}
+      onOpenComposer={jest.fn()}
+      onCloseComposer={jest.fn()}
+      onReopenSearchResults={jest.fn()}
+      onSwapFoodSelection={jest.fn()}
+      quantity="100"
+      onQuantityChange={jest.fn()}
+      unit="g"
+      onUnitChange={jest.fn()}
+      mealOptions={mealOptions}
+      mealType="breakfast"
+      onMealTypeChange={jest.fn()}
+      onAddDiaryItem={jest.fn()}
+      searchCatalogBadge="Catálogo sincronizado"
+      recentFoods={recentFoods}
+      isLoadingRecentFoods={false}
+      onRegisterRecentFood={jest.fn()}
+    />
+  );
+}
+
 describe("FoodSearchPanel", () => {
   beforeEach(() => {
     window.scrollTo = jest.fn();
@@ -514,6 +559,13 @@ describe("FoodSearchPanel", () => {
     await user.click(screen.getByRole("button", { name: /Registrar Arroz branco/i }));
 
     expect(onRegisterRecentFood).toHaveBeenCalledWith(recentFoods[0]);
+  });
+
+  it("hides the standalone recent-food block while search results are active", () => {
+    render(<SearchSessionWithRecentFoodsPanel />);
+
+    expect(screen.queryByText(/Consumidos recentemente/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Barra de Proteína - Sabor Trufa/i)).toBeInTheDocument();
   });
 
   it("keeps recently consumed cards constrained for long food names on mobile", () => {

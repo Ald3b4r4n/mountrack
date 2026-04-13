@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { SourceFilterChips } from "@/components/nutrition/SourceFilterChips";
 import type { FoodSource } from "@/modules/nutrition/domain/types";
 
-type FilterSource = "all" | FoodSource;
+type FilterSource = "all" | "recent" | FoodSource;
 
 describe("SourceFilterChips", () => {
   it("renders a chip for each available source", () => {
@@ -63,5 +63,25 @@ describe("SourceFilterChips", () => {
     );
 
     expect(container.firstChild).toBeNull();
+  });
+
+  it("renders and selects the Recentes chip", async () => {
+    const user = userEvent.setup();
+    const onChange = jest.fn();
+
+    render(
+      <SourceFilterChips
+        activeSource="recent"
+        onChange={onChange}
+        availableSources={["all", "recent", "fatsecret"]}
+      />,
+    );
+
+    const recentChip = screen.getByRole("button", { name: /Recentes/i });
+    expect(recentChip).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(screen.getByRole("button", { name: /FatSecret/i }));
+
+    expect(onChange).toHaveBeenCalledWith("fatsecret" as FilterSource);
   });
 });

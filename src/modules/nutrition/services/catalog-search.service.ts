@@ -48,6 +48,7 @@ const SEARCH_STOP_WORDS = new Set([
 ]);
 
 const SEARCH_TOKEN_SYNONYMS: Record<string, string[]> = {
+  arroz: ["rice"],
   feijao: ["bean", "beans", "black", "pinto"],
   feijoes: ["bean", "beans", "black", "pinto"],
 };
@@ -434,23 +435,13 @@ export async function searchNutritionCatalog(
       sourceFilter,
     );
 
-    const fatSecretPrimaryResults = await searchFoodsByQuery(query, {
-      internalFoods: fatSecretCandidates,
-      limit: SEARCH_LIMIT,
-      mealType,
-    });
-
-    const localLastResults = await searchFoodsByQuery(query, {
+    const rankedResults = await searchFoodsByQuery(query, {
       internalFoods: catalogFoods,
+      externalResults: fatSecretResults,
       limit: SEARCH_LIMIT,
       source: sourceFilter,
       mealType,
     });
-
-    const rankedResults = appendUniqueFoods(
-      fatSecretPrimaryResults,
-      localLastResults,
-    );
     const prioritizedResults = buildHybridResults(
       rankedResults,
       fatSecretCandidates,
@@ -477,7 +468,10 @@ export async function searchNutritionCatalog(
 
     return {
       results: prioritizedResults,
-      source: "fatsecret-primary",
+      source:
+        prioritizedResults[0]?.source === "fatsecret"
+          ? "fatsecret-primary"
+          : resolveCatalogSource(prioritizedResults),
       externalPending: false,
       didYouMean:
         prioritizedResults.length > 0

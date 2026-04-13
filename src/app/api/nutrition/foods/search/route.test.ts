@@ -106,6 +106,17 @@ describe("GET /api/nutrition/foods/search", () => {
     );
   });
 
+  it("rejects the UI-only recent source filter at the API boundary", async () => {
+    const response = await GET(
+      new Request(
+        "http://localhost/api/nutrition/foods/search?q=arroz&source=recent",
+      ),
+    );
+
+    expect(response.status).toBe(400);
+    expect(searchNutritionCatalogMock).not.toHaveBeenCalled();
+  });
+
   it("passes mealType context to catalog search when provided", async () => {
     searchNutritionCatalogMock.mockResolvedValue({
       results: [],

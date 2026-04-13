@@ -42,7 +42,8 @@ type RecentFoodsPayload = {
   foods?: RecentConsumedFood[];
 };
 
-export type NutritionSearchFilter = "all" | FoodSource;
+export type NutritionSearchFilter = "all" | "recent" | FoodSource;
+type ApiNutritionSearchFilter = Exclude<NutritionSearchFilter, "recent">;
 
 type SearchCacheEntry = {
   results: FoodItem[];
@@ -52,7 +53,7 @@ type SearchCacheEntry = {
 };
 
 const SEARCH_CACHE_TTL_MS = 60_000;
-const REMOTE_SOURCE_FILTERS = new Set<NutritionSearchFilter>([
+const REMOTE_SOURCE_FILTERS = new Set<ApiNutritionSearchFilter>([
   "all",
   "fatsecret",
   "openfoodfacts",
@@ -246,7 +247,7 @@ export function useNutritionSearch(
 
   async function requestSearch(
     query: string,
-    source: NutritionSearchFilter,
+    source: ApiNutritionSearchFilter,
     mealType: MealType | null,
   ): Promise<Response> {
     const sourceParam =
@@ -293,7 +294,14 @@ export function useNutritionSearch(
       return;
     }
 
-    const cacheKey = buildSearchCacheKey(query, nextSource);
+    const effectiveSource: ApiNutritionSearchFilter =
+      nextSource === "recent" ? "all" : nextSource;
+
+    if (nextSource === "recent") {
+      setSourceFilter("all");
+    }
+
+    const cacheKey = buildSearchCacheKey(query, effectiveSource);
 
     const cachedEntry = getFreshCacheEntry(
       cacheKey,
@@ -322,7 +330,7 @@ export function useNutritionSearch(
     try {
       const response = await requestSearch(
         query,
-        nextSource,
+        effectiveSource,
         searchMealContextRef.current,
       );
       if (searchRequestIdRef.current !== requestId) {
@@ -406,6 +414,11 @@ export function useNutritionSearch(
     setMessage(null);
 
     if (!activeUser || !searchQuery.trim()) {
+      return;
+    }
+
+    if (nextSource === "recent") {
+      setResultsVisible(true);
       return;
     }
 

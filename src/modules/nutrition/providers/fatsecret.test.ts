@@ -177,4 +177,90 @@ describe("fatsecret provider", () => {
     expect(expressionsQueried).toContain("feijao   preto");
     expect(expressionsQueried).toContain("feijao preto");
   });
+
+  it("requests localized FatSecret search with region BR and language pt", async () => {
+    fetchSpy.mockResolvedValue(makeFetchResponse(makeClassicPayload([])));
+
+    await searchFatSecretFoods("arroz");
+
+    const requestedParams = fetchSpy.mock.calls.map(([, init]) => {
+      const body = JSON.parse(String(init?.body ?? "{}")) as ProxyRequestBody;
+      return body.params ?? {};
+    });
+
+    expect(requestedParams).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          search_expression: "arroz",
+          region: "BR",
+          language: "pt",
+        }),
+      ]),
+    );
+  });
+
+  it("does not mark default FatSecret fallback results as Brazilian", async () => {
+    fetchSpy.mockImplementation(async (_url, init) => {
+      const body = JSON.parse(String(init?.body ?? "{}")) as ProxyRequestBody;
+      const method = body.method ?? "";
+      const params = body.params ?? {};
+
+      if (params.region === "BR") {
+        return makeFetchResponse(makeClassicPayload([]));
+      }
+
+      if (method === "foods.search" && params.page_number === "0") {
+        return makeFetchResponse(
+          makeClassicPayload([makeFatSecretFood("100", "Long Grain Rice")]),
+        );
+      }
+
+      return makeFetchResponse(makeClassicPayload([]));
+    });
+
+    const results = await searchFatSecretFoods("arroz");
+
+    expect(results[0]?.id).toBe("fatsecret-100");
+    expect(results[0]?.countryCode).toBeUndefined();
+    expect(results[0]?.locale).toBeUndefined();
+  });
+
+  it("keeps localized FatSecret results before default fallback results", async () => {
+    fetchSpy.mockImplementation(async (_url, init) => {
+      const body = JSON.parse(String(init?.body ?? "{}")) as ProxyRequestBody;
+      const method = body.method ?? "";
+      const params = body.params ?? {};
+
+      if (
+        method === "foods.search.v3" &&
+        params.region === "BR" &&
+        params.page_number === "0"
+      ) {
+        return makeFetchResponse(
+          makeV3Payload([makeFatSecretFood("200", "Arroz integral")]),
+        );
+      }
+
+      if (
+        method === "foods.search" &&
+        !params.region &&
+        params.page_number === "0"
+      ) {
+        return makeFetchResponse(
+          makeClassicPayload([makeFatSecretFood("201", "Brown Rice")]),
+        );
+      }
+
+      return makeFetchResponse(makeClassicPayload([]));
+    });
+
+    const results = await searchFatSecretFoods("arroz");
+
+    expect(results.map((item) => item.id).slice(0, 2)).toEqual([
+      "fatsecret-200",
+      "fatsecret-201",
+    ]);
+    expect(results[0]?.countryCode).toBe("BR");
+    expect(results[1]?.countryCode).toBeUndefined();
+  });
 });

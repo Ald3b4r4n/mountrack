@@ -29,6 +29,10 @@ o alimento na refeição em foco com a última quantidade usada.
 3. **Given** usuário não possui histórico alimentar, **When** abre a busca,
    **Then** nenhum texto técnico ou devnote aparece; a interface mantém a
    mensagem limpa de busca normal.
+4. **Given** usuário envia uma busca por alimento, **When** resultados do
+   catálogo retornam, **Then** os resultados buscados aparecem antes dos
+   atalhos recentes, e "Recentes" fica disponível como opção separada de filtro
+   ou origem.
 
 ---
 
@@ -79,6 +83,60 @@ hoje, o diário de hoje recebe uma cópia com novo identificador e horário atua
 
 ---
 
+### User Story 4 - Buscar sem recentes ocupando o topo (Priority: P1)
+
+Usuário envia uma busca por alimento e vê primeiro os resultados pesquisados,
+mantendo recentes como opção secundária.
+
+**Why this priority**: Em mobile, recentes acima dos resultados empurram a
+resposta da busca para baixo e fazem parecer que a busca não trouxe o que foi
+pedido.
+
+**Independent Test**: Com recentes carregados e uma busca por "arroz" retornando
+resultados, a área de resultados deve aparecer antes de qualquer lista de
+recentes; a opção "Recentes" deve estar disponível como filtro separado.
+
+**Acceptance Scenarios**:
+
+1. **Given** usuário possui recentes, **When** ainda não enviou busca, **Then**
+   vê "Consumidos recentemente" como atalho.
+2. **Given** usuário envia uma busca válida, **When** resultados do catálogo
+   retornam, **Then** os resultados buscados aparecem primeiro.
+3. **Given** usuário está em uma busca ativa, **When** seleciona "Recentes",
+   **Then** vê os alimentos recentes filtrados pelo termo buscado, quando houver
+   correspondência.
+
+---
+
+### User Story 5 - Investigar e priorizar FatSecret Brasil (Priority: P1)
+
+Usuário busca alimentos comuns no Brasil e recebe resultados brasileiros ou em
+português antes de resultados internacionais quando o FatSecret permitir
+localização para `BR`/`pt`.
+
+**Why this priority**: A qualidade da busca é central para o diário alimentar; se
+FatSecret retorna itens de fora do Brasil como primeira resposta, o registro fica
+mais lento e menos confiável.
+
+**Independent Test**: Uma busca simulada com respostas localizada `BR/pt` e
+default `US/en` deve priorizar os itens localizados. Quando a resposta localizada
+falhar ou vier vazia, o fallback internacional pode aparecer, mas não deve ser
+marcado artificialmente como `countryCode="BR"`.
+
+**Acceptance Scenarios**:
+
+1. **Given** FatSecret localizado retorna itens brasileiros, **When** busca é
+   executada, **Then** esses itens aparecem antes dos resultados default.
+2. **Given** FatSecret localizado retorna vazio ou erro por falta de permissão,
+   **When** fallback default é usado, **Then** o sistema registra diagnóstico
+   técnico e não rotula os itens default como brasileiros.
+3. **Given** busca por alimento comum no Brasil, **When** existem resultados
+   locais em TBCA/catálogo e FatSecret só traz itens internacionais, **Then** o
+   ranking não deve deixar resultados internacionais irrelevantes acima dos
+   resultados brasileiros mais aderentes.
+
+---
+
 ### Edge Cases
 
 - Histórico vazio: não renderizar seção vazia chamativa; manter texto limpo de
@@ -120,6 +178,18 @@ hoje, o diário de hoje recebe uma cópia com novo identificador e horário atua
   retornar recentes ou copiar item.
 - **FR-010**: O fluxo MUST manter compatibilidade com banco PostgreSQL e fallback
   local do navegador.
+- **FR-011**: Após submissão de busca, a UI MUST priorizar visualmente os
+  resultados buscados; alimentos recentes MUST aparecer somente como opção
+  secundária, filtro ou origem selecionável, sem ocupar o espaço principal acima
+  dos resultados.
+- **FR-012**: O filtro de fontes da busca MUST permitir selecionar `Recentes`
+  durante busca ativa sem misturar recentes ao resultado `Todos`.
+- **FR-013**: O provedor FatSecret MUST enviar e testar `region=BR` e
+  `language=pt` nas passagens localizadas, mantendo fallback default separado.
+- **FR-014**: Resultados FatSecret vindos de fallback default sem região não
+  MUST ser rotulados como `locale="pt-BR"` ou `countryCode="BR"` sem evidência.
+- **FR-015**: O ranking MUST priorizar resultados brasileiros/português quando
+  disponíveis e reduzir a precedência de resultados internacionais irrelevantes.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -143,6 +213,12 @@ hoje, o diário de hoje recebe uma cópia com novo identificador e horário atua
   e não contêm devnotes, TODOs, stack traces ou termos internos.
 - **SC-004**: Após copiar ou registrar recente, totais de refeição e dia são
   atualizados sem refresh manual.
+- **SC-005**: Após uma busca submetida em mobile, o primeiro bloco de resultado
+  visível corresponde aos alimentos buscados, não à lista de recentes.
+- **SC-006**: Em testes simulados, resultados FatSecret `BR/pt` aparecem antes
+  de resultados default `US/en` para a mesma busca.
+- **SC-007**: Resultados FatSecret default sem localização não recebem
+  `countryCode="BR"` automaticamente.
 
 ## Documentation & README Impact *(mandatory)*
 
@@ -163,3 +239,8 @@ hoje, o diário de hoje recebe uma cópia com novo identificador e horário atua
   fino de quantidade pode continuar pelo fluxo de edição existente.
 - A cópia entre refeições acontece no diário atual; cópia retroativa pode usar o
   mesmo contrato quando o fluxo retroativo passar `targetDate`.
+- "Todos" representa fontes de catálogo durante busca ativa; recentes não entram
+  em "Todos" por padrão para evitar duplicidade e preservar clareza da busca.
+- A localização FatSecret depende de suporte da conta/plano; se a API ignorar ou
+  negar localização, o app deve diagnosticar e cair para fontes brasileiras
+  internas/TBCA quando forem mais relevantes.

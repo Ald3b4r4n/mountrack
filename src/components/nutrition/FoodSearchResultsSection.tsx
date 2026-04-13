@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import { Check, Pencil } from "lucide-react";
-import type { FoodItem, NutritionGoal } from "@/modules/nutrition/domain/types";
+import type {
+  FoodItem,
+  NutritionGoal,
+  RecentConsumedFood,
+} from "@/modules/nutrition/domain/types";
 import {
+  formatCalories,
   formatFoodSourceLabel,
   getFoodLabel,
 } from "@/modules/nutrition/ui-helpers";
@@ -24,10 +29,14 @@ interface FoodSearchResultsSectionProps {
   resultsPanelRef: RefObject<HTMLDivElement | null>;
   hasVisibleResults: boolean;
   searchResults: FoodItem[];
+  searchQuery?: string;
   searchSuggestions: string[];
   resultEmptyState: { title: string; text: string };
   isEnrichingExternal: boolean;
   searchSourceLabel: string | null;
+  recentFoods?: RecentConsumedFood[];
+  isLoadingRecentFoods?: boolean;
+  onRegisterRecentFood?: (food: RecentConsumedFood) => void;
   onSearchSuggestion?: (value: string) => void;
   nutritionGoal?: NutritionGoal | null;
   onCustomFoodOpen: () => void;
@@ -65,6 +74,15 @@ function resolveFoodQualityBadge(food: FoodItem): {
   };
 }
 
+function normalizeSearchTerm(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function FoodSearchResultsSection({
   isMobileLayout,
   hasSearchSession,
@@ -78,9 +96,13 @@ export function FoodSearchResultsSection({
   resultsPanelRef,
   hasVisibleResults,
   searchResults,
+  searchQuery = "",
   searchSuggestions,
   resultEmptyState,
   isEnrichingExternal,
+  recentFoods = [],
+  isLoadingRecentFoods = false,
+  onRegisterRecentFood,
   onSearchSuggestion,
   nutritionGoal,
   onEditCustomFood,
@@ -93,13 +115,15 @@ export function FoodSearchResultsSection({
     useState<FoodSourceFilter>("all");
   const activeSource = controlledActiveSource ?? localActiveSource;
   const handleSourceChange = onSourceChange ?? setLocalActiveSource;
+  const hasRecentFoods = recentFoods.length > 0;
 
   const availableSources = useMemo<FoodSourceFilter[]>(
     () => [
       "all",
+      ...(hasRecentFoods ? (["recent"] as const) : []),
       ...Array.from(new Set(searchResults.map((food) => food.source))),
     ],
-    [searchResults],
+    [hasRecentFoods, searchResults],
   );
 
   useEffect(() => {
@@ -115,13 +139,22 @@ export function FoodSearchResultsSection({
   const visibleResults =
     activeSource === "all"
       ? searchResults
+      : activeSource === "recent"
+        ? []
       : searchResults.filter((food) => food.source === activeSource);
+  const normalizedRecentQuery = normalizeSearchTerm(searchQuery);
+  const visibleRecentFoods =
+    activeSource === "recent" && normalizedRecentQuery
+      ? recentFoods.filter((food) =>
+          normalizeSearchTerm(food.foodName).includes(normalizedRecentQuery),
+        )
+      : recentFoods;
   const expandableSourceEntries = useMemo(
     () =>
       availableSources
         .filter(
-          (source): source is Exclude<FoodSourceFilter, "all"> =>
-            source !== "all",
+          (source): source is Exclude<FoodSourceFilter, "all" | "recent"> =>
+            source !== "all" && source !== "recent",
         )
         .map((source) => ({
           source,
@@ -132,6 +165,16 @@ export function FoodSearchResultsSection({
   );
   const sourceExploreTarget =
     activeSource === "all" ? expandableSourceEntries[0] : null;
+  const resultCountLabel =
+    activeSource === "recent"
+      ? isLoadingRecentFoods
+        ? "Recentes"
+        : `${visibleRecentFoods.length} recente${visibleRecentFoods.length !== 1 ? "s" : ""}`
+      : hasVisibleResults
+        ? `${visibleResults.length} resultado${visibleResults.length !== 1 ? "s" : ""}`
+        : "Resultados";
+  const shouldShowSourceFilters =
+    (hasVisibleResults || hasRecentFoods) && availableSources.length > 1;
 
   if (!hasSearchSession) {
     return null;
@@ -184,9 +227,7 @@ export function FoodSearchResultsSection({
         <div>
           <div className="mb-2 flex items-center justify-between">
             <span className="text-[0.78rem] font-medium uppercase tracking-wider text-[var(--text-muted)]">
-              {hasVisibleResults
-                ? `${visibleResults.length} resultado${visibleResults.length !== 1 ? "s" : ""}`
-                : "Resultados"}
+              {resultCountLabel}
             </span>
             <div className="flex gap-2">
               {isEnrichingExternal ? (
@@ -194,7 +235,7 @@ export function FoodSearchResultsSection({
                   Complementando
                 </span>
               ) : null}
-              {searchResults.length > 0 || selectedFood ? (
+              {searchResults.length > 0 || selectedFood || hasRecentFoods ? (
                 <button
                   type="button"
                   onClick={onClearSearch}
@@ -206,7 +247,7 @@ export function FoodSearchResultsSection({
             </div>
           </div>
 
-          {hasVisibleResults ? (
+          {shouldShowSourceFilters ? (
             <SourceFilterChips
               activeSource={activeSource}
               onChange={handleSourceChange}
@@ -246,7 +287,53 @@ export function FoodSearchResultsSection({
           ) : null}
 
           <div className="grid max-h-[min(52vh,480px)] gap-1 overflow-y-auto">
-            {hasVisibleResults ? (
+            {activeSource === "recent" ? (
+              isLoadingRecentFoods ? (
+                <div className="py-8 text-center">
+                  <p className="text-[0.88rem] text-[var(--text-secondary)]">
+                    Carregando recentes...
+                  </p>
+                </div>
+              ) : visibleRecentFoods.length > 0 ? (
+                visibleRecentFoods.map((food) => (
+                  <article
+                    key={food.sourceItemId}
+                    className="min-w-0 rounded-xl px-3 py-3 transition-colors hover:bg-[#ffffff]/[0.03]"
+                  >
+                    <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <strong className="block truncate text-[0.9rem] leading-tight">
+                          {food.foodName}
+                        </strong>
+                        <span className="mt-0.5 block truncate text-[0.78rem] text-[var(--text-secondary)]">
+                          {food.quantity} {food.unit} ·{" "}
+                          {formatCalories(food.calories)}
+                          {food.lastMealLabel
+                            ? ` · ${food.lastMealLabel}`
+                            : ""}
+                        </span>
+                      </div>
+                      {onRegisterRecentFood ? (
+                        <button
+                          type="button"
+                          onClick={() => onRegisterRecentFood(food)}
+                          aria-label={`Registrar ${food.foodName}`}
+                          className="btn-outline w-full shrink-0 justify-center rounded-[0.75rem] px-3 py-1.5 text-[0.78rem] sm:w-auto"
+                        >
+                          Registrar
+                        </button>
+                      ) : null}
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <div className="py-8 text-center">
+                  <p className="text-[0.88rem] text-[var(--text-secondary)]">
+                    Nenhum recente para esta busca.
+                  </p>
+                </div>
+              )
+            ) : hasVisibleResults ? (
               visibleResults.map((food) => {
                 const kcal = food.caloriesPer100;
                 const kcalLabel =

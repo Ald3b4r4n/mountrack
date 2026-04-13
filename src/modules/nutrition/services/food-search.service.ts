@@ -316,6 +316,8 @@ function computeFoodScore(
         brandProfile,
       )
     : false;
+  const hasBrazilianContext =
+    food.countryCode === "BR" || food.locale?.toLowerCase().startsWith("pt");
   const isGenericSingleTokenQuery = !brandProfile && queryTokens.length === 1;
   const nameStartsWithPrimaryToken = startsWithQueryToken(
     food.displayName ?? food.name,
@@ -356,7 +358,8 @@ function computeFoodScore(
   if (food.locale?.startsWith("pt")) score += 55;
   if (food.countryCode === "BR") score += 45;
   if (food.source === "custom") score += 70;
-  if (food.source === "fatsecret") score += 90;
+  if (food.source === "tbca") score += 70;
+  if (food.source === "fatsecret") score += hasBrazilianContext ? 90 : 20;
   if (food.source === "openfoodfacts") score += 24;
   if (food.source === "internal")
     score -= brandProfile && matchesRequestedBrand ? 0 : 35;

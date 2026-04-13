@@ -534,7 +534,7 @@ export function FoodSearchPanel({
           </div>
         ) : null}
 
-        {!selectedFood ? (
+        {!selectedFood && !hasSearchSession ? (
           <RecentFoodsSection
             recentFoods={recentFoods}
             isLoading={isLoadingRecentFoods}
@@ -555,10 +555,14 @@ export function FoodSearchPanel({
           resultsPanelRef={resultsPanelRef}
           hasVisibleResults={hasVisibleResults}
           searchResults={searchResults}
+          searchQuery={searchQuery}
           searchSuggestions={searchSuggestions}
           resultEmptyState={resultEmptyState}
           isEnrichingExternal={isEnrichingExternal}
           searchSourceLabel={searchSourceLabel}
+          recentFoods={recentFoods}
+          isLoadingRecentFoods={isLoadingRecentFoods}
+          onRegisterRecentFood={onRegisterRecentFood}
           onSearchSuggestion={onSearchSuggestion}
           onCustomFoodOpen={onCustomFoodOpen}
           onEditCustomFood={onEditCustomFood}
