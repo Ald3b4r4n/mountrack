@@ -62,9 +62,10 @@ O objetivo é reduzir fricção para o usuário final e, ao mesmo tempo, entrega
 - metas de calorias, proteína, carboidratos e gordura;
 - controle de água;
 - busca e cadastro de alimentos;
-- atalhos para registrar alimentos consumidos recentemente;
+- alimentos recentes como atalho antes da busca e como filtro após pesquisar;
 - cópia de alimentos entre refeições sem alterar o item original;
-- integração com catálogo nutricional e atribuição compatível com FatSecret.
+- integração com catálogo nutricional, TBCA e FatSecret com prioridade para
+  resultados brasileiros quando disponíveis.
 
 ### Billing e operação
 

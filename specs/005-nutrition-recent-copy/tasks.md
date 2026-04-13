@@ -143,6 +143,86 @@ meal as destination.
 
 ---
 
+## Phase 7: User Story 4 - Buscar sem recentes ocupando o topo (Priority: P1)
+
+**Goal**: Após uma busca submetida, resultados pesquisados aparecem primeiro e
+recentes ficam como opção/filtro separado.
+
+**Independent Test**: Com recentes carregados e busca por `arroz` com resultados,
+o painel de resultados aparece antes de qualquer lista de recentes; selecionar
+`Recentes` exibe atalhos recentes filtrados pelo termo.
+
+### Tests for User Story 4 (MANDATORY - write first)
+
+- [X] T050 [P] [US4] Add failing test that active search hides the standalone recent-food block above results in `src/components/nutrition/FoodSearchPanel.test.tsx`
+- [X] T051 [P] [US4] Add failing test for the `Recentes` source chip label and selection in `src/components/nutrition/SourceFilterChips.test.tsx`
+- [X] T052 [P] [US4] Add failing test that `Recentes` renders filtered recent foods and clean empty state in `src/components/nutrition/FoodSearchResultsSection.test.tsx`
+- [X] T053 [P] [US4] Add failing hook test that selecting `recent` does not call `/api/nutrition/foods/search` in `src/modules/nutrition/hooks/useNutritionSearch.test.tsx`
+
+### Implementation for User Story 4
+
+- [X] T054 [US4] Extend search filter typing to include UI-only `recent` without sending it to the search API in `src/modules/nutrition/hooks/useNutritionSearch.ts`
+- [X] T055 [US4] Add `Recentes` label and supported filter type to source chips in `src/components/nutrition/SourceFilterChips.tsx`
+- [X] T056 [US4] Render recent foods inside the results panel when `Recentes` is active in `src/components/nutrition/FoodSearchResultsSection.tsx`
+- [X] T057 [US4] Hide standalone `Consumidos recentemente` whenever a search session is active in `src/components/nutrition/FoodSearchPanel.tsx`
+- [X] T058 [US4] Pass recent-food props into the results section without duplicating UI state in `src/components/nutrition/FoodSearchPanel.tsx`
+- [X] T059 [US4] Preserve Portuguese-BR copy for `Recentes`, `Registrar`, and `Nenhum recente para esta busca.` in `src/components/nutrition/FoodSearchResultsSection.tsx`
+
+**Checkpoint**: US4 is complete when a mobile search shows catalog results first
+and recent foods are accessible only through the `Recentes` option.
+
+---
+
+## Phase 8: User Story 5 - Investigar e priorizar FatSecret Brasil (Priority: P1)
+
+**Goal**: Confirmar se FatSecret localizado `BR/pt` está sendo usado, separar
+fallback internacional e ajustar ranking para alimentos brasileiros.
+
+**Independent Test**: Respostas simuladas com FatSecret localizado e default
+priorizam `BR/pt`; fallback default não recebe `countryCode="BR"`; TBCA/catálogo
+brasileiro relevante vence FatSecret internacional irrelevante.
+
+### Tests for User Story 5 (MANDATORY - write first)
+
+- [X] T060 [P] [US5] Add failing provider test that localized FatSecret requests include `region=BR` and `language=pt` in `src/modules/nutrition/providers/fatsecret.test.ts`
+- [X] T061 [P] [US5] Add failing provider test that default FatSecret fallback does not mark foods as `countryCode="BR"` in `src/modules/nutrition/providers/fatsecret.test.ts`
+- [X] T062 [P] [US5] Add failing provider test that localized FatSecret results are ordered before default results in `src/modules/nutrition/providers/fatsecret.test.ts`
+- [X] T063 [P] [US5] Add failing ranking test for TBCA/catalog Brazilian result above FatSecret international fallback in `src/modules/nutrition/services/catalog-search.service.test.ts`
+- [X] T064 [P] [US5] Add failing route or service test preserving valid source filters while rejecting UI-only `recent` at API boundary in `src/app/api/nutrition/foods/search/route.test.ts`
+
+### Implementation for User Story 5
+
+- [X] T065 [US5] Carry locale/country metadata in FatSecret search passes in `src/modules/nutrition/providers/fatsecret.ts`
+- [X] T066 [US5] Update `normalizeFatSecretFood` to receive optional provider context instead of hardcoding `pt-BR` and `BR` in `src/modules/nutrition/normalizers/normalize-food.ts`
+- [X] T067 [US5] Pass FatSecret search-pass context through parsing and dedupe without losing source ids in `src/modules/nutrition/providers/fatsecret.ts`
+- [X] T068 [US5] Log technical diagnostics when localized FatSecret returns zero or error and default fallback supplies results in `src/modules/nutrition/providers/fatsecret.ts`
+- [X] T069 [US5] Adjust search ranking so `BR`/`pt` and TBCA/catalog relevance beat FatSecret international fallback when appropriate in `src/modules/nutrition/services/food-search.service.ts`
+- [X] T070 [US5] Keep `searchNutritionCatalog` source behavior stable while applying the new ranking in `src/modules/nutrition/services/catalog-search.service.ts`
+- [X] T071 [US5] Document FatSecret localization assumptions and verification commands in `docs/fatsecret-localization.md`
+
+**Checkpoint**: US5 is complete when FatSecret localized results are clearly
+prioritized and fallback international data is visible as fallback in metadata,
+not disguised as Brazilian content.
+
+---
+
+## Phase 9: Polish & Cross-Cutting Concerns for Follow-up UX/FatSecret
+
+**Purpose**: Documentation, final validation, and clean user-facing copy review
+for US4 and US5.
+
+- [X] T072 [P] Update feature contract for search UX/FatSecret behavior in `specs/005-nutrition-recent-copy/contracts/search-results-ux-and-fatsecret.md`
+- [X] T073 [P] Update nutrition README notes if the user-visible search behavior changes in `README.md`
+- [X] T074 Scan new user-facing strings for devnotes, TODOs, route names, stack traces, and English error copy in `src/components/nutrition/FoodSearchPanel.tsx`, `src/components/nutrition/FoodSearchResultsSection.tsx`, and `src/components/nutrition/SourceFilterChips.tsx`
+- [X] T075 Run focused UI tests for US4 using `npm test -- --runInBand src/components/nutrition/FoodSearchPanel.test.tsx src/components/nutrition/FoodSearchResultsSection.test.tsx src/components/nutrition/SourceFilterChips.test.tsx`
+- [X] T076 Run focused FatSecret/search tests for US5 using `npm test -- --runInBand src/modules/nutrition/providers/fatsecret.test.ts src/modules/nutrition/services/catalog-search.service.test.ts src/app/api/nutrition/foods/search/route.test.ts`
+- [X] T077 Run `npm test` using the root script defined in `package.json`
+- [X] T078 Run `npm run lint` using the root script defined in `package.json`
+- [X] T079 Run `npm run build` using the root script defined in `package.json`
+- [X] T080 Run `npm audit --audit-level=high` and confirm no new dependency vulnerability was introduced in `docs/dependency-audit-notes.md`
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -153,12 +233,17 @@ meal as destination.
 - **Phase 4 US2**: Depends on Phase 2; can run after or alongside US1 once copy primitive exists.
 - **Phase 5 US3**: Depends on Phase 3 and Phase 4 behavior being stable.
 - **Phase 6 Polish**: Depends on selected user stories being complete.
+- **Phase 7 US4**: Depends on Phase 3 because it refines recent-food UI.
+- **Phase 8 US5**: Depends on existing search/FatSecret provider behavior; can run after Phase 2 and in parallel with US4 if file ownership is separated.
+- **Phase 9 Polish**: Depends on US4 and US5.
 
 ### User Story Dependencies
 
 - **US1 (P1)**: Requires foundational copy primitive and recent-food listing.
 - **US2 (P1)**: Requires foundational copy primitive; independent from recent-food UI.
 - **US3 (P2)**: Extends US1 recent-food registration and US2 copy behavior.
+- **US4 (P1 follow-up)**: Refines US1 UI placement; should land before further visual polish.
+- **US5 (P1 follow-up)**: Refines search quality; independent from US4 UI except source chip typing.
 
 ### Within Each User Story
 
@@ -178,6 +263,10 @@ meal as destination.
 - T025, T026, and T027 can run in parallel for US2 test-first work.
 - T034, T035, and T036 can run in parallel for US3 test-first work.
 - T040, T041, and T042 can run in parallel after implementation stabilizes.
+- T050, T051, T052, and T053 can run in parallel for US4 test-first work.
+- T060, T061, T062, T063, and T064 can run in parallel for US5 test-first work.
+- US4 implementation should own `FoodSearchPanel.tsx`, `FoodSearchResultsSection.tsx`, `SourceFilterChips.tsx`, and `useNutritionSearch.ts`.
+- US5 implementation should own `fatsecret.ts`, `normalize-food.ts`, `food-search.service.ts`, and `catalog-search.service.ts`.
 
 ---
 
@@ -200,6 +289,25 @@ Task: "T026 Add meal chooser tests in src/components/nutrition/MealSwitchDialog.
 Task: "T027 Add screen copy-flow tests in src/components/nutrition/NutritionScreen.test.tsx"
 ```
 
+## Parallel Example: User Story 4
+
+```bash
+# Start US4 red-state tasks in parallel:
+Task: "T050 Add active search/recent block regression in src/components/nutrition/FoodSearchPanel.test.tsx"
+Task: "T051 Add Recentes source chip test in src/components/nutrition/SourceFilterChips.test.tsx"
+Task: "T052 Add recent filter rendering test in src/components/nutrition/FoodSearchResultsSection.test.tsx"
+Task: "T053 Add no-API-call recent filter hook test in src/modules/nutrition/hooks/useNutritionSearch.test.tsx"
+```
+
+## Parallel Example: User Story 5
+
+```bash
+# Start US5 red-state tasks in parallel:
+Task: "T060-T062 Add FatSecret localized/default provider tests in src/modules/nutrition/providers/fatsecret.test.ts"
+Task: "T063 Add Brazilian ranking test in src/modules/nutrition/services/catalog-search.service.test.ts"
+Task: "T064 Add API-boundary source filter test in src/app/api/nutrition/foods/search/route.test.ts"
+```
+
 ---
 
 ## Implementation Strategy
@@ -216,7 +324,9 @@ Task: "T027 Add screen copy-flow tests in src/components/nutrition/NutritionScre
 2. US1: recent foods visible and registrable.
 3. US2: row-level copy action between meals.
 4. US3: previous-date recent foods copied into today's active meal.
-5. Polish: README, contracts, audit mitigation plan, full checks.
+5. US4: search results stay above recent shortcuts after active search.
+6. US5: FatSecret BR localization/fallback is diagnosed and ranked correctly.
+7. Polish: README, contracts, audit mitigation plan, full checks.
 
 ### Risk Notes
 

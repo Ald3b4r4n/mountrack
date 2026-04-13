@@ -67,17 +67,27 @@ alterar o contrato atual de `POST /api/nutrition/diary-items`, que depende de
 
 ## Decision 5 - Posição da UI
 
-**Decision**: Exibir "Consumidos recentemente" dentro da área de busca, antes dos
-resultados, e adicionar "Copiar" na própria linha do diário.
+**Decision**: Exibir "Consumidos recentemente" dentro da área de busca somente
+quando ainda não há uma busca ativa. Após o usuário enviar uma busca, os
+resultados buscados ficam no topo e "Recentes" vira uma opção/filtro separado,
+no mesmo nível de fontes como "Todos", "FatSecret", "Catálogo" e "TBCA".
 
 **Rationale**: Recentes são um atalho de registro e pertencem ao contexto de
-busca/adicionar alimento. A cópia é uma ação sobre um item já lançado, então deve
-ficar na linha do item junto de editar/remover.
+busca/adicionar alimento, mas não devem competir com a resposta explícita da
+busca. Quando o usuário procura por "arroz", a expectativa principal é ver os
+resultados de arroz primeiro. A cópia é uma ação sobre um item já lançado, então
+deve ficar na linha do item junto de editar/remover.
 
 **Alternatives considered**:
 
 - Colocar recentes no dashboard: rejeitado porque poderia disputar espaço com
   resumo diário e refeições.
+- Manter recentes sempre acima dos resultados: rejeitado porque empurra os
+  resultados buscados para baixo em mobile e cria a percepção de que a busca não
+  respondeu.
+- Misturar recentes em "Todos": rejeitado porque "Todos" deve representar fontes
+  de catálogo durante busca ativa; misturar histórico pode gerar duplicidade e
+  ambiguidade.
 - Colocar cópia em menu oculto: rejeitado porque reduz descoberta da ação.
 
 ## Decision 6 - Texto visível
@@ -108,12 +118,49 @@ experiência parcial.
 - Desabilitar recentes/cópia em modo volátil: rejeitado porque o diário ainda
   permite registrar itens localmente.
 
+## Decision 8 - FatSecret Brasil e fallback internacional
+
+**Decision**: Tratar a busca FatSecret como duas passagens distintas: localizada
+(`region=BR`, `language=pt`) e default. A passagem localizada deve ter prioridade
+quando retorna resultados. A passagem default pode ser usada como fallback, mas
+seus itens não devem ser marcados automaticamente como `locale="pt-BR"` ou
+`countryCode="BR"`.
+
+**Rationale**: A documentação oficial do FatSecret informa que localização é
+recurso premium disponível para contas selecionadas, que `region` filtra por
+região, que `language` é ignorado sem `region`, e que sem localização a resposta
+usa o padrão `US`/`en`. O código atual já tenta `language=pt` e `region=BR`, mas
+também executa fallback default. Além disso, o normalizador atual marca todo
+resultado FatSecret como `pt-BR`/`BR`, o que pode fazer item internacional
+parecer brasileiro no ranking.
+
+**Alternatives considered**:
+
+- Remover fallback default: rejeitado porque deixaria o FatSecret vazio quando a
+  conta não tiver localização ou quando o catálogo BR não tiver cobertura.
+- Aceitar fallback default como brasileiro: rejeitado porque distorce ranking e
+  dificulta diagnosticar a causa real.
+- Priorizar FatSecret sempre acima de TBCA/catálogo local: rejeitado porque
+  resultados brasileiros internos podem ser mais relevantes para alimentos
+  comuns no Brasil.
+
+**Verification needed**:
+
+- Testar que a chamada proxy e a chamada direta recebem `region=BR` e
+  `language=pt` na passagem localizada.
+- Testar que a passagem default não injeta `locale`/`countryCode` brasileiros.
+- Testar ranking com resposta mista: item `BR/pt`, item default `US/en` e item
+  TBCA/catálogo local.
+- Registrar diagnóstico técnico quando a passagem localizada retorna zero ou erro
+  e o fallback default preenche os resultados.
+
 ## Dependency Map
 
 ```text
 Recentes API -> UI de recentes -> Registro rápido por cópia
 Copy API     -> DiaryItemRow copy action -> Atualização de dashboard/histórico
 Fallback local acompanha as duas trilhas
+FatSecret BR -> normalização com origem da passagem -> ranking de busca
 ```
 
 **Confirmed**: Nenhuma dependência npm nova. Nenhuma migration obrigatória.

@@ -73,6 +73,11 @@ interface FatSecretFoodCandidate {
   food_description?: FatSecretScalar;
 }
 
+export interface FatSecretFoodContext {
+  locale?: string;
+  countryCode?: string;
+}
+
 function readFatSecretScalar(
   value: FatSecretScalar | undefined,
 ): string | number | undefined {
@@ -339,6 +344,7 @@ export function normalizeUsdaFood(food: UsdaFoodSearchItem): FoodItem | null {
 
 export function normalizeFatSecretFood(
   food: FatSecretFoodCandidate,
+  context: FatSecretFoodContext = {},
 ): FoodItem | null {
   const name = repairMojibake(toText(food.food_name));
   const sourceId = toText(food.food_id) ?? "";
@@ -372,8 +378,8 @@ export function normalizeFatSecretFood(
     fiberPer100: macros.fiberPer100,
     sodiumPer100: macros.sodiumPer100,
     confidenceScore: 0.88,
-    locale: "pt-BR",
-    countryCode: "BR",
+    ...(context.locale ? { locale: context.locale } : {}),
+    ...(context.countryCode ? { countryCode: context.countryCode } : {}),
     isBranded: Boolean(toText(food.brand_name)),
     ...classification,
   };

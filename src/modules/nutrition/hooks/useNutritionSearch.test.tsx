@@ -269,6 +269,35 @@ describe("useNutritionSearch barcode flow", () => {
     expect(result.current.state.sourceFilter).toBe("tbca");
   });
 
+  it("does not call the search API when selecting the Recentes UI filter", async () => {
+    const { result } = renderHook(() => useNutritionSearch(authUser, false));
+
+    act(() => {
+      result.current.actions.handleSearchQueryChange("arroz");
+      result.current.setters.setSearchResults([
+        {
+          id: "fatsecret-arroz",
+          source: "fatsecret",
+          name: "Arroz",
+          baseUnit: "g",
+          confidenceScore: 1,
+          mealCategories: [],
+        },
+      ]);
+    });
+
+    act(() => {
+      result.current.actions.handleSourceFilterChange("recent");
+    });
+
+    expect(authorizedNutritionFetchMock).not.toHaveBeenCalledWith(
+      authUser,
+      expect.stringContaining("source=recent"),
+    );
+    expect(authorizedNutritionFetchMock).not.toHaveBeenCalled();
+    expect(result.current.state.sourceFilter).toBe("recent");
+  });
+
   it("shows did-you-mean hints when search returns no results with suggestions", async () => {
     authorizedNutritionFetchMock.mockResolvedValue(
       createMockResponse(

@@ -55,6 +55,52 @@ interface DiaryItemCopyRequest {
 - `consumedAt`, quando enviado, deve ser ISO datetime válido.
 - Se `consumedAt` não for enviado, usar horário atual no backend.
 
+## UI State: NutritionSearchFilter
+
+Estado de UI usado para alternar entre resultados de catálogo e atalhos recentes
+durante busca ativa. Não é persistido.
+
+```typescript
+type NutritionSearchFilter =
+  | "all"
+  | "recent"
+  | "fatsecret"
+  | "openfoodfacts"
+  | "usda"
+  | "tbca"
+  | "internal"
+  | "custom";
+```
+
+### Validation Rules
+
+- `recent` é filtro somente de UI e não deve ser enviado para
+  `GET /api/nutrition/foods/search`.
+- `all` não inclui recentes durante busca ativa.
+- Quando `recent` estiver ativo e houver termo de busca, filtrar
+  `RecentConsumedFood.foodName` pelo termo normalizado.
+
+## Provider Context: FatSecretSearchPass
+
+Contexto interno para preservar a origem de cada resultado FatSecret.
+
+```typescript
+interface FatSecretSearchPass {
+  label: "localized" | "default";
+  extraParams: Record<string, string>;
+  locale?: string;
+  countryCode?: string;
+}
+```
+
+### Validation Rules
+
+- A passagem localizada deve enviar `region=BR` e `language=pt` quando não houver
+  configuração explícita diferente.
+- A passagem default não deve preencher `locale="pt-BR"` ou `countryCode="BR"`.
+- O normalizador deve receber o contexto da passagem em vez de assumir Brasil
+  para todo resultado FatSecret.
+
 ## State Transitions
 
 ### Registro de alimento recente

@@ -11,6 +11,16 @@ item do diário para duplicá-lo em outra refeição. A abordagem reaproveita
 `DiaryItemSnapshot`, `nutrition_diary_items`, `saveDiaryItem`, o fallback local do
 navegador e os componentes atuais de diário, sem criar nova tabela nesta fase.
 
+Refinamento planejado após validação mobile: recentes devem funcionar como
+atalho antes da busca e como opção secundária durante uma busca ativa. Quando o
+usuário envia uma busca, os resultados pesquisados devem ocupar a primeira área
+de conteúdo; recentes não devem empurrar resultados para baixo.
+
+Planejar também a verificação/correção da busca FatSecret Brasil: confirmar se a
+passagem localizada (`region=BR`, `language=pt`) está sendo aceita pelo provider
+ou proxy, evitar que fallback internacional seja rotulado como brasileiro e
+ajustar ranking para priorizar resultados brasileiros/português quando houver.
+
 ## Technical Context
 
 **Language/Version**: TypeScript 5 com strict mode
@@ -19,9 +29,9 @@ navegador e os componentes atuais de diário, sem criar nova tabela nesta fase.
 **Testing**: Jest 30.2.0, @testing-library/react 16.3.2, jsdom
 **Target Platform**: Web/PWA mobile-first, viewport mínimo de 375px
 **Project Type**: Aplicação web full-stack com App Router e API routes
-**Performance Goals**: Recentes carregados em até 300ms quando há banco disponível; ação de cópia refletida na UI sem refresh manual
-**Constraints**: Sem nova dependência; sem devnotes visíveis; textos finais em português-BR; preservar compatibilidade com refeições customizadas
-**Scale/Scope**: Módulo de Nutrição, 2 endpoints, 2 a 4 componentes/handlers, testes de rota, repositório e UI
+**Performance Goals**: Recentes carregados em até 300ms quando há banco disponível; ação de cópia refletida na UI sem refresh manual; resultados de busca visíveis sem deslocamento vertical indevido em mobile; resultados FatSecret BR/pt priorizados quando disponíveis
+**Constraints**: Sem nova dependência; sem devnotes visíveis; textos finais em português-BR; preservar compatibilidade com refeições customizadas; resultados buscados têm prioridade visual após submissão da busca; fallback FatSecret default não pode ser mascarado como BR
+**Scale/Scope**: Módulo de Nutrição, 2 endpoints, componentes de busca/resultado/diário, testes de rota, repositório e UI
 
 ## Constitution Check
 
@@ -29,9 +39,12 @@ navegador e os componentes atuais de diário, sem criar nova tabela nesta fase.
 
 - **TDD**: PASS. Testes devem ser escritos primeiro para:
   `listRecentConsumedFoods`, `POST /api/nutrition/diary-items/[id]/copy`,
-  `GET /api/nutrition/foods/recent`, `DiaryItemRow` com ação de copiar e o bloco
-  "Consumidos recentemente". O estado vermelho deve ser provado com `npm test --
-  --runInBand <arquivo-de-teste>`.
+  `GET /api/nutrition/foods/recent`, `DiaryItemRow` com ação de copiar, o bloco
+  "Consumidos recentemente" e regressão de busca ativa onde resultados aparecem
+  antes dos recentes. Para FatSecret, testes devem cobrir parâmetros de
+  localização, normalização por passagem e ranking com resultados BR/default. O
+  estado vermelho deve ser provado com `npm test -- --runInBand
+  <arquivo-de-teste>`.
 - **Documentation**: PASS. Esta pasta contém spec, plan, research, data-model,
   quickstart e contratos. A implementação deve manter estes artefatos atualizados
   se o contrato mudar.
@@ -75,11 +88,15 @@ src/
 │   ├── DiaryItemRow.tsx
 │   ├── FoodSearchPanel.tsx
 │   ├── FoodSearchResultsSection.tsx
+│   ├── SourceFilterChips.tsx
 │   └── MealHistoryDialog.tsx
 ├── components/nutrition/useNutritionScreenActions.ts
 ├── components/nutrition/NutritionScreen.tsx
 └── modules/nutrition/
     ├── client-storage.ts
+    ├── providers/fatsecret.ts
+    ├── services/catalog-search.service.ts
+    ├── services/food-search.service.ts
     ├── repositories/nutrition-store.ts
     ├── repositories/memory-store.ts
     ├── validators.ts
@@ -105,6 +122,16 @@ Decisões principais:
 - Derivar recentes de `nutrition_diary_items` em vez de criar tabela nova.
 - Usar uma rota dedicada de cópia para duplicar `DiaryItemSnapshot` existente.
 - Exibir recentes no contexto da busca, com CTA limpo em português-BR.
+- Durante busca ativa, não renderizar recentes como bloco acima dos resultados.
+  Recentes devem virar uma opção/filtro separado, no mesmo nível visual de
+  fontes como "Todos", "FatSecret", "Catálogo" e "TBCA".
+- Não incluir recentes dentro de "Todos" por padrão durante busca ativa. Isso
+  evita misturar atalhos de histórico com resultados pesquisados e preserva a
+  expectativa de que "Todos" represente fontes de catálogo.
+- Verificar e corrigir FatSecret Brasil: `foods.search.v3`/`foods.search` devem
+  ter passagem localizada com `region=BR` e `language=pt`; a passagem default sem
+  região continua existindo apenas como fallback e deve preservar metadados
+  default/indefinidos.
 - Adicionar ação "Copiar" na linha do diário, ao lado de editar/remover.
 - Manter fallback local usando `client-storage.ts`.
 
@@ -149,8 +176,18 @@ duplicar cálculo nutricional no cliente.
 
 - `FoodSearchPanel` recebe `recentFoods`, estado de loading e callback
   `onRegisterRecentFood`.
-- A seção deve usar título "Consumidos recentemente" e CTAs como "Registrar" ou
-  "Registrar novamente".
+- Sem busca ativa ou antes da primeira submissão: mostrar "Consumidos
+  recentemente" como atalho compacto, com CTAs como "Registrar".
+- Com busca ativa ou resultados visíveis: esconder o bloco completo de recentes
+  acima dos resultados e priorizar imediatamente o painel de resultados buscados.
+- Durante busca ativa, expor "Recentes" como opção/filtro separado no controle de
+  fontes. A ordem sugerida em mobile é: "Todos", "Recentes", "FatSecret",
+  "Catálogo", "TBCA".
+- Ao selecionar "Recentes", listar os recentes no formato compacto já existente.
+  Se houver texto de busca, filtrar os recentes pelo nome digitado; se não houver
+  correspondência, exibir mensagem limpa como "Nenhum recente para esta busca."
+- "Todos" não deve incluir recentes por padrão durante busca ativa, para evitar
+  duplicidade e para manter resultados pesquisados como resposta principal.
 - `DiaryItemRow` recebe `onCopy?: (item) => void` e mostra um botão com
   `aria-label="Copiar {nome} para outra refeição"`.
 - O seletor de refeição para cópia pode reutilizar padrão do `MealSwitchDialog`
@@ -159,6 +196,20 @@ duplicar cálculo nutricional no cliente.
   registrado em {refeição}."
 - Mensagens de erro: "Não foi possível copiar esse alimento agora." e "Não foi
   possível registrar esse alimento agora."
+
+### FatSecret Brasil
+
+- `searchFatSecretFoods` deve manter a ordem localizada antes da default.
+- `parseFoodsFromPayload`/`normalizeFatSecretFood` deve receber contexto da
+  passagem de busca para preencher `locale` e `countryCode` apenas quando a
+  resposta veio de `region=BR`/`language=pt`.
+- Quando a passagem localizada retornar zero ou erro e a default trouxer
+  resultados, registrar diagnóstico técnico em log sem expor mensagem técnica ao
+  usuário.
+- `searchNutritionCatalog`/ranking deve preferir itens `countryCode="BR"` ou
+  `locale` iniciado por `pt` e não deve dar bônus BR para itens FatSecret default.
+- Se FatSecret trouxer apenas itens internacionais e houver itens TBCA/catálogo
+  local relevantes, os resultados brasileiros devem aparecer antes.
 
 ### Testes TDD
 
@@ -179,9 +230,19 @@ duplicar cálculo nutricional no cliente.
    - dispara callback com item correto;
    - mantém labels em português-BR.
 5. `FoodSearchPanel.test.tsx` ou componente extra de recentes
-   - renderiza "Consumidos recentemente";
+   - renderiza "Consumidos recentemente" antes da busca;
    - aciona registro rápido;
-   - não renderiza devnotes em estado vazio.
+   - não renderiza devnotes em estado vazio;
+   - depois de uma busca submetida, resultados aparecem antes dos recentes;
+   - renderiza opção "Recentes" no filtro de fontes e mostra recentes apenas
+     quando essa opção está ativa.
+6. `fatsecret.test.ts`
+   - envia `region=BR` e `language=pt` na passagem localizada;
+   - não marca fallback default como `BR`;
+   - prioriza resultado localizado antes do default.
+7. `catalog-search.service.test.ts`
+   - mantém resultado brasileiro/TBCA acima de FatSecret internacional quando
+     ambos são relevantes.
 
 ## Post-Design Constitution Check
 

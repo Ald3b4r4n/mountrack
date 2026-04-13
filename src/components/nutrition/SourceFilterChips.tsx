@@ -1,9 +1,10 @@
 import type { FoodSource } from "@/modules/nutrition/domain/types";
 
-export type FoodSourceFilter = "all" | FoodSource;
+export type FoodSourceFilter = "all" | "recent" | FoodSource;
 
 const SOURCE_LABELS: Record<FoodSourceFilter, string> = {
   all: "Todos",
+  recent: "Recentes",
   fatsecret: "FatSecret",
   openfoodfacts: "OpenFoodFacts",
   usda: "USDA",

@@ -1,13 +1,13 @@
 import { FoodSearchPanel } from "@/components/nutrition/FoodSearchPanel";
 import type {
   FoodItem,
-  FoodSource,
   MealDefinition,
   MealType,
   NutritionTotals,
   NutritionUnit,
   RecentConsumedFood,
 } from "@/modules/nutrition/domain/types";
+import type { FoodSourceFilter } from "@/components/nutrition/SourceFilterChips";
 
 interface NutritionSearchWorkspaceProps {
   storageMode: string;
@@ -27,8 +27,8 @@ interface NutritionSearchWorkspaceProps {
   searchSuggestions: string[];
   resultsVisible: boolean;
   searchResults: FoodItem[];
-  activeSource: "all" | FoodSource;
-  onSourceChange: (source: "all" | FoodSource) => void;
+  activeSource: FoodSourceFilter;
+  onSourceChange: (source: FoodSourceFilter) => void;
   onSearchSuggestion: (value: string) => void;
   resultState: { title: string; text: string };
   barcodeMissCode?: string | null;

@@ -26,6 +26,27 @@ rg -n "DiaryItemRow|FoodSearchPanel|useNutritionScreenActions" src/components/nu
 6. Hidratação de dashboard/histórico após mutações.
 7. README curto sobre a nova capacidade de Nutrição.
 
+## Refinamento de UX planejado
+
+- Antes de uma busca ativa, manter "Consumidos recentemente" como atalho de
+  registro rápido.
+- Depois que o usuário envia uma busca, mostrar primeiro os resultados buscados.
+- Expor "Recentes" como filtro/opção ao lado de `Todos`, `FatSecret`,
+  `Catálogo` e `TBCA`.
+- Não incluir recentes dentro de `Todos` durante busca ativa para evitar
+  duplicidade e preservar a clareza da resposta da busca.
+
+## Refinamento FatSecret Brasil planejado
+
+- Confirmar que a passagem localizada envia `region=BR` e `language=pt`.
+- Confirmar se o proxy repassa esses parâmetros sem removê-los.
+- Separar metadados de resultados localizados e default para não marcar fallback
+  internacional como `BR`.
+- Ajustar ranking para não deixar FatSecret internacional vencer TBCA/catálogo
+  brasileiro quando os resultados locais forem mais aderentes.
+- Manter fallback default quando localização FatSecret não estiver disponível na
+  conta, registrando diagnóstico apenas em log técnico.
+
 ## TDD: comandos por etapa
 
 ### Repositório
@@ -60,6 +81,8 @@ Testes mínimos:
 ```bash
 npm test -- --runInBand src/components/nutrition/DiaryItemRow.test.tsx
 npm test -- --runInBand src/components/nutrition/FoodSearchPanel.test.tsx
+npm test -- --runInBand src/components/nutrition/FoodSearchResultsSection.test.tsx
+npm test -- --runInBand src/components/nutrition/SourceFilterChips.test.tsx
 ```
 
 Testes mínimos:
@@ -67,7 +90,26 @@ Testes mínimos:
 - botão `Copiar` aparece na linha;
 - `aria-label` descreve a ação em português-BR;
 - seção `Consumidos recentemente` aparece quando há dados;
+- após uma busca submetida, resultados buscados aparecem antes dos recentes;
+- opção `Recentes` mostra atalhos recentes quando selecionada;
 - estado vazio não exibe devnotes, TODOs ou texto técnico.
+
+### FatSecret Brasil
+
+```bash
+npm test -- --runInBand src/modules/nutrition/providers/fatsecret.test.ts
+npm test -- --runInBand src/modules/nutrition/services/catalog-search.service.test.ts
+npm test -- --runInBand src/app/api/nutrition/foods/search/route.test.ts
+```
+
+Testes mínimos:
+
+- chamada localizada envia `region=BR` e `language=pt`;
+- fallback default não recebe nem injeta metadados `BR`;
+- resultado localizado é priorizado sobre resultado default;
+- resultado TBCA/catálogo brasileiro relevante não fica abaixo de FatSecret
+  internacional irrelevante;
+- logs técnicos não aparecem como texto de UI.
 
 ## Checks finais
 
