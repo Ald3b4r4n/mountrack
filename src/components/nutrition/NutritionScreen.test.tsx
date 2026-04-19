@@ -253,12 +253,34 @@ describe("NutritionScreen", () => {
     ).toBeInTheDocument();
   });
 
-  it("prefers the last focused meal over the hour fallback", async () => {
-    saveNutritionFocusedMealToBrowser("preview-demo-user", "snack");
+  it("prefers the last focused meal when it belongs to the current window", async () => {
+    jest.setSystemTime(new Date(2026, 2, 15, 12, 0, 0));
+    saveNutritionFocusedMealToBrowser("preview-demo-user", "lunch");
 
     render(<NutritionScreen />);
 
-    expect(await screen.findByText(/Lanche em foco/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Almoço em foco/i)).toBeInTheDocument();
+  });
+
+  it("discards a persisted focus from a different window in favor of the current hour", async () => {
+    jest.setSystemTime(new Date(2026, 2, 15, 12, 0, 0));
+    saveNutritionFocusedMealToBrowser("preview-demo-user", "dinner");
+
+    render(<NutritionScreen />);
+
+    expect(await screen.findByText(/Almoço em foco/i)).toBeInTheDocument();
+  });
+
+  it("discards a persisted custom focus in favor of the current hour default", async () => {
+    jest.setSystemTime(new Date(2026, 2, 15, 12, 0, 0));
+    saveNutritionFocusedMealToBrowser(
+      "preview-demo-user",
+      "custom:pre-treino" as never,
+    );
+
+    render(<NutritionScreen />);
+
+    expect(await screen.findByText(/Almoço em foco/i)).toBeInTheDocument();
   });
 
   it("opens the copy target chooser from a diary row and calls the copy action", async () => {
