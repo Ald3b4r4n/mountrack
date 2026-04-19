@@ -1,17 +1,28 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { SegmentButton } from "@/components/nutrition/CommonUI";
 import { NutritionScreenShell } from "@/components/nutrition/NutritionScreenShell";
 import { NutritionScreenPreviewGate } from "@/components/nutrition/NutritionScreenPreviewGate";
 import { NutritionWorkspaceContent } from "@/components/nutrition/NutritionWorkspaceContent";
 import {
   formatSearchSourceLabel,
-  getDefaultFocusedMeal,
   parseInputNumber,
   roundValue,
   summarizeMealPlan,
 } from "@/components/nutrition/nutrition-screen-helpers";
+import {
+  getDefaultFocusedMeal,
+  getMealFocusWindow,
+  getMinutesOfDay,
+} from "@/modules/nutrition/meal-focus-windows";
 import {
   type NutritionScreenUiState,
   useNutritionScreenUiState,
@@ -216,7 +227,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
   const activeWorkspaceRef = useRef<HTMLDivElement | null>(null);
   const activePlanningPanelRef = useRef<HTMLDivElement | null>(null);
   const mealPreferenceReadyForUserRef = useRef<string | null>(null);
-  const lastAutoSyncedMealRef = useRef<MealType | null>(null);
+  const manualOverrideMinuteRef = useRef<number | null>(null);
   const [searchTargetDate, setSearchTargetDate] = useState<string | null>(null);
 
   const mealDefinitions = useMemo(
@@ -291,6 +302,16 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     loadDashboard,
     loadHistory,
   });
+
+  const applyManualMealFocus = useCallback(
+    (meal: MealType) => {
+      const now = new Date();
+      manualOverrideMinuteRef.current =
+        now.getHours() * 60 + now.getMinutes();
+      setActiveDiaryMeal(meal);
+    },
+    [setActiveDiaryMeal],
+  );
 
   const openSearchForTodayMeal = (nextMealType?: MealType) => {
     setSearchTargetDate(null);
@@ -451,18 +472,36 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     }
 
     const preferredMeal = loadNutritionFocusedMealFromBrowser(activeUser.uid);
-    if (
+    const defaultMeal = getDefaultFocusedMeal(new Date());
+    const isCustom =
+      typeof preferredMeal === "string" && preferredMeal.startsWith("custom:");
+    const isKnownDefault =
       preferredMeal &&
-      mealDefinitions.some((definition) => definition.key === preferredMeal)
-    ) {
-      dispatchUiState({
-        type: "patch",
-        value: {
-          activeDiaryMeal: preferredMeal,
-          mealType: preferredMeal,
-        },
-      });
+      !isCustom &&
+      mealDefinitions.some((definition) => definition.key === preferredMeal);
+
+    let nextMeal: MealType = defaultMeal;
+    if (isKnownDefault && preferredMeal) {
+      const currentWindow = getMealFocusWindow(defaultMeal);
+      const preferredWindow = getMealFocusWindow(
+        preferredMeal as Exclude<MealType, `custom:${string}`>,
+      );
+      if (
+        preferredWindow.start === currentWindow.start &&
+        preferredWindow.end === currentWindow.end
+      ) {
+        nextMeal = preferredMeal;
+      }
     }
+
+    dispatchUiState({
+      type: "patch",
+      value: {
+        activeDiaryMeal: nextMeal,
+        mealType: nextMeal,
+      },
+    });
+    manualOverrideMinuteRef.current = null;
 
     mealPreferenceReadyForUserRef.current = activeUser.uid;
   }, [activeUser, dispatchUiState, isLoading, mealDefinitions]);
@@ -589,10 +628,12 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
     });
   }, [diaryPage, diaryTotalPages, dispatchUiState]);
 
-  // Sync active meal with current hour without overriding manual meal changes.
+  // Sync active meal with the current focus window. Manual overrides are
+  // respected only within their own window; crossing a boundary expires them.
   useEffect(() => {
     const syncMealWithHour = () => {
-      const mealByHour = getDefaultFocusedMeal();
+      const now = new Date();
+      const mealByHour = getDefaultFocusedMeal(now);
       if (
         !mealDefinitions.some((definition) => definition.key === mealByHour)
       ) {
@@ -600,20 +641,30 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
       }
 
       if (activeDiaryMeal === mealByHour) {
-        lastAutoSyncedMealRef.current = mealByHour;
+        manualOverrideMinuteRef.current = null;
         return;
       }
 
-      if (
-        lastAutoSyncedMealRef.current == null ||
-        activeDiaryMeal === lastAutoSyncedMealRef.current
-      ) {
-        lastAutoSyncedMealRef.current = mealByHour;
-        dispatchUiState({
-          type: "patch",
-          value: { activeDiaryMeal: mealByHour },
-        });
+      const nowMinutes = getMinutesOfDay(now);
+      const overrideMinute = manualOverrideMinuteRef.current;
+
+      if (overrideMinute != null) {
+        const currentWindow = getMealFocusWindow(mealByHour);
+        const overrideInCurrentWindow =
+          overrideMinute >= currentWindow.start &&
+          overrideMinute <= currentWindow.end &&
+          nowMinutes >= currentWindow.start &&
+          nowMinutes <= currentWindow.end;
+        if (overrideInCurrentWindow) {
+          return;
+        }
       }
+
+      manualOverrideMinuteRef.current = null;
+      dispatchUiState({
+        type: "patch",
+        value: { activeDiaryMeal: mealByHour },
+      });
     };
 
     syncMealWithHour();
@@ -939,7 +990,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
           ]),
         ),
         onSelectMeal: (meal) => {
-          setActiveDiaryMeal(meal);
+          applyManualMealFocus(meal);
           setMealType(meal);
           setDiaryPage(1);
           setMealChooserOpen(false);
@@ -1035,7 +1086,7 @@ function NutritionScreenContent({ isPreview }: NutritionScreenContentProps) {
         onFocusMeal: isMobileLayout
           ? (meal) => {
               setDiarySuccessFeedback(null);
-              setActiveDiaryMeal(meal);
+              applyManualMealFocus(meal);
               setMealType(meal);
             }
           : undefined,
