@@ -143,7 +143,11 @@ export const historyQuerySchema = z.object({
 export const recentFoodsQuerySchema = z.object({
   limit: z.preprocess(
     (value) => (value == null || value === "" ? undefined : value),
-    z.coerce.number().int().min(1).max(12).default(8),
+    z.coerce.number().int().min(1).max(15).default(8),
+  ),
+  mealType: z.preprocess(
+    (value) => (value == null || value === "" ? undefined : value),
+    mealTypeSchema.optional(),
   ),
 });
 

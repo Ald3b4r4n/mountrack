@@ -85,6 +85,42 @@ describe("GET /api/nutrition/foods/recent", () => {
     expect(listRecentConsumedFoodsMock).not.toHaveBeenCalled();
   });
 
+  it("accepts limit up to 15", async () => {
+    const response = await GET(
+      new Request("http://localhost/api/nutrition/foods/recent?limit=15"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(listRecentConsumedFoodsMock).toHaveBeenCalledWith("user-123", {
+      limit: 15,
+    });
+  });
+
+  it("forwards mealType to the store when provided", async () => {
+    const response = await GET(
+      new Request(
+        "http://localhost/api/nutrition/foods/recent?limit=15&mealType=breakfast",
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(listRecentConsumedFoodsMock).toHaveBeenCalledWith("user-123", {
+      limit: 15,
+      mealType: "breakfast",
+    });
+  });
+
+  it("rejects an invalid mealType", async () => {
+    const response = await GET(
+      new Request(
+        "http://localhost/api/nutrition/foods/recent?mealType=brunch",
+      ),
+    );
+
+    expect(response.status).toBe(400);
+    expect(listRecentConsumedFoodsMock).not.toHaveBeenCalled();
+  });
+
   it("requires an authenticated nutrition user", async () => {
     requireNutritionUserMock.mockRejectedValue(createUnauthorizedNutritionError());
 

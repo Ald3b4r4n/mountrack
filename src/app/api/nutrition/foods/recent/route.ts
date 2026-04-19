@@ -15,9 +15,11 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const query = recentFoodsQuerySchema.parse({
       limit: url.searchParams.get("limit") ?? undefined,
+      mealType: url.searchParams.get("mealType") ?? undefined,
     });
     const foods = await listRecentConsumedFoods(user.uid, {
       limit: query.limit,
+      ...(query.mealType ? { mealType: query.mealType } : {}),
     });
 
     return NextResponse.json(

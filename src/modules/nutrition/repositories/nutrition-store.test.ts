@@ -289,6 +289,74 @@ describe("nutrition-store authorization", () => {
     expect(recentFoods.some((food) => food.foodId === "food-hidden")).toBe(false);
   });
 
+  it("filters recent consumed foods by mealType when provided", async () => {
+    const diary = await getOrCreateDiary("user-a", "2026-03-07", 2000, 2200);
+
+    await saveDiaryItem(
+      "user-a",
+      "2026-03-07",
+      2000,
+      2200,
+      makeDiaryItem("bf-banana", diary.id, {
+        foodId: "food-banana",
+        foodName: "Banana",
+        mealType: "breakfast",
+        consumedAt: "2026-03-07T08:00:00.000Z",
+      }),
+    );
+    await saveDiaryItem(
+      "user-a",
+      "2026-03-07",
+      2000,
+      2200,
+      makeDiaryItem("lunch-rice", diary.id, {
+        foodId: "food-rice",
+        foodName: "Arroz branco",
+        mealType: "lunch",
+        consumedAt: "2026-03-07T12:00:00.000Z",
+      }),
+    );
+
+    const breakfastFoods = await listRecentConsumedFoods("user-a", {
+      limit: 15,
+      mealType: "breakfast",
+    });
+
+    expect(breakfastFoods).toHaveLength(1);
+    expect(breakfastFoods[0]).toEqual(
+      expect.objectContaining({
+        foodId: "food-banana",
+        lastMealType: "breakfast",
+      }),
+    );
+  });
+
+  it("accepts limit up to 15 for recent consumed foods", async () => {
+    const diary = await getOrCreateDiary("user-a", "2026-03-07", 2000, 2200);
+
+    for (let index = 0; index < 20; index += 1) {
+      await saveDiaryItem(
+        "user-a",
+        "2026-03-07",
+        2000,
+        2200,
+        makeDiaryItem(`bf-${index}`, diary.id, {
+          foodId: `food-${index}`,
+          foodName: `Alimento ${index}`,
+          mealType: "breakfast",
+          consumedAt: new Date(Date.UTC(2026, 2, 7, 8, index)).toISOString(),
+        }),
+      );
+    }
+
+    const foods = await listRecentConsumedFoods("user-a", {
+      limit: 15,
+      mealType: "breakfast",
+    });
+
+    expect(foods).toHaveLength(15);
+  });
+
   it("keeps custom foods private to the owner", async () => {
     await saveUserCustomFood(
       "user-a",

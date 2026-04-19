@@ -12,6 +12,7 @@ import type {
   FoodItem,
   MealDefinition,
   MealPlan,
+  MealType,
   NutritionGoal,
   RecentConsumedFood,
 } from "@/modules/nutrition/domain/types";
@@ -214,6 +215,7 @@ interface ListDiaryHistoryOptions {
 
 interface ListRecentConsumedFoodsOptions {
   limit?: number;
+  mealType?: MealType;
 }
 
 interface CustomFoodRow {
@@ -548,7 +550,7 @@ function normalizeRecentFoodsLimit(limit = 8): number {
     return 8;
   }
 
-  return Math.min(Math.max(Math.trunc(limit), 1), 12);
+  return Math.min(Math.max(Math.trunc(limit), 1), 15);
 }
 
 function toRecentConsumedFood(item: DiaryItemSnapshot): RecentConsumedFood | null {
@@ -572,12 +574,17 @@ function toRecentConsumedFood(item: DiaryItemSnapshot): RecentConsumedFood | nul
 function buildRecentConsumedFoods(
   items: DiaryItemSnapshot[],
   limit: number,
+  mealType?: MealType,
 ): RecentConsumedFood[] {
   const seenFoodIds = new Set<string>();
   const recentFoods: RecentConsumedFood[] = [];
 
   const sortedItems = [...items].sort((left, right) => right.consumedAt.localeCompare(left.consumedAt));
   for (const item of sortedItems) {
+    if (mealType && item.mealType !== mealType) {
+      continue;
+    }
+
     if (seenFoodIds.has(item.foodId)) {
       continue;
     }
@@ -1468,7 +1475,7 @@ export async function listDiaryHistory(
 
 export async function listRecentConsumedFoods(
   userId: string,
-  { limit = 8 }: ListRecentConsumedFoodsOptions = {},
+  { limit = 8, mealType }: ListRecentConsumedFoodsOptions = {},
 ): Promise<RecentConsumedFood[]> {
   const normalizedLimit = normalizeRecentFoodsLimit(limit);
 
@@ -1478,26 +1485,36 @@ export async function listRecentConsumedFoods(
       .filter((diary) => diary.userId === userId)
       .flatMap((diary) => diary.items);
 
-    return buildRecentConsumedFoods(items, normalizedLimit);
+    return buildRecentConsumedFoods(items, normalizedLimit, mealType);
   }
 
   await ensureSchema();
   const fetchLimit = Math.max(normalizedLimit * 20, 40);
+  const params: unknown[] = [userId];
+  let mealFilter = "";
+  if (mealType) {
+    params.push(mealType);
+    mealFilter = `and item.meal_type = $${params.length}`;
+  }
+  params.push(fetchLimit);
+  const limitPlaceholder = `$${params.length}`;
+
   const itemsResult = await getPool().query<{ payload: DiaryItemSnapshot }>(
     `
     select item.payload
     from nutrition_diary_items item
     inner join nutrition_diaries diary on diary.id = item.diary_id
-    where diary.user_id = $1
+    where diary.user_id = $1 ${mealFilter}
     order by item.consumed_at desc
-    limit $2
+    limit ${limitPlaceholder}
     `,
-    [userId, fetchLimit],
+    params,
   );
 
   return buildRecentConsumedFoods(
     itemsResult.rows.map((row) => row.payload),
     normalizedLimit,
+    mealType,
   );
 }
 
