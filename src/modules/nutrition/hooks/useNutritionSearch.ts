@@ -144,20 +144,35 @@ export function useNutritionSearch(
       return;
     }
 
+    const mealType = searchMealContextRef.current;
+
     if (dashboardStorageMode === "volatile" && canUseBrowserPersistence) {
-      setRecentFoods(listRecentNutritionFoodsFromBrowser(activeUser.uid, { limit: 8 }));
+      setRecentFoods(
+        listRecentNutritionFoodsFromBrowser(activeUser.uid, {
+          limit: 15,
+          ...(mealType ? { mealType } : {}),
+        }),
+      );
       return;
     }
 
     setIsLoadingRecentFoods(true);
     try {
+      const params = new URLSearchParams({ limit: "15" });
+      if (mealType) {
+        params.set("mealType", mealType);
+      }
       const response = await authorizedNutritionFetch(
         activeUser as Exclude<NutritionSearchUser, null>,
-        "/api/nutrition/foods/recent?limit=8",
+        `/api/nutrition/foods/recent?${params.toString()}`,
       );
 
       if (!response.ok) {
         setRecentFoods([]);
+        return;
+      }
+
+      if (searchMealContextRef.current !== mealType) {
         return;
       }
 
@@ -452,7 +467,11 @@ export function useNutritionSearch(
   }
 
   function setSearchMealContext(mealType: MealType | null) {
+    if (searchMealContextRef.current === mealType) {
+      return;
+    }
     searchMealContextRef.current = mealType;
+    void loadRecentFoods();
   }
 
   async function handleSearchSuggestion(suggestion: string) {

@@ -10,7 +10,8 @@ para registro rápido.
 
 | Name | Type | Required | Default | Rules |
 |------|------|----------|---------|-------|
-| `limit` | number | no | `8` | integer, min `1`, max `12` |
+| `limit` | number | no | `8` | integer, min `1`, max `15` |
+| `mealType` | string | no | — | `breakfast\|lunch\|dinner\|snack\|custom:[a-z0-9-]{1,48}` (filtra recentes pela refeição em foco) |
 
 ### Response - 200 OK
 

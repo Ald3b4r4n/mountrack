@@ -50,6 +50,7 @@ export interface NutritionHistorySnapshot {
 
 interface ListRecentNutritionFoodsOptions {
   limit?: number;
+  mealType?: MealType;
 }
 
 const STORAGE_PREFIX = "mountrack:nutrition:";
@@ -161,7 +162,7 @@ function normalizeRecentFoodsLimit(limit = 8): number {
     return 8;
   }
 
-  return Math.min(Math.max(Math.trunc(limit), 1), 12);
+  return Math.min(Math.max(Math.trunc(limit), 1), 15);
 }
 
 function toRecentConsumedFood(item: DiaryItemSnapshot): RecentConsumedFood | null {
@@ -185,11 +186,16 @@ function toRecentConsumedFood(item: DiaryItemSnapshot): RecentConsumedFood | nul
 function buildRecentConsumedFoods(
   items: DiaryItemSnapshot[],
   limit: number,
+  mealType?: MealType,
 ): RecentConsumedFood[] {
   const seenFoodIds = new Set<string>();
   const recentFoods: RecentConsumedFood[] = [];
 
   for (const item of sortDiaryItems(items)) {
+    if (mealType && item.mealType !== mealType) {
+      continue;
+    }
+
     if (seenFoodIds.has(item.foodId)) {
       continue;
     }
@@ -395,7 +401,7 @@ export function copyNutritionDiaryItemInBrowser(
 
 export function listRecentNutritionFoodsFromBrowser(
   userId: string,
-  { limit = 8 }: ListRecentNutritionFoodsOptions = {},
+  { limit = 8, mealType }: ListRecentNutritionFoodsOptions = {},
 ): RecentConsumedFood[] {
   const state = readRawState(userId);
   const normalizedLimit = normalizeRecentFoodsLimit(limit);
@@ -403,7 +409,7 @@ export function listRecentNutritionFoodsFromBrowser(
     .filter((diary) => diary.userId === userId)
     .flatMap((diary) => diary.items);
 
-  return buildRecentConsumedFoods(items, normalizedLimit);
+  return buildRecentConsumedFoods(items, normalizedLimit, mealType);
 }
 
 export function saveNutritionMealDefinitionsToBrowser(

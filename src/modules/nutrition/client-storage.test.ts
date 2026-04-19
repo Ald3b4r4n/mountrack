@@ -224,6 +224,19 @@ describe("nutrition client storage", () => {
         quantity: 2,
       }),
     ]);
+
+    expect(
+      listRecentNutritionFoodsFromBrowser(userId, {
+        limit: 15,
+        mealType: "breakfast",
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        sourceItemId: "new-whey-item",
+        foodId: wheyFood.id,
+        lastMealType: "breakfast",
+      }),
+    ]);
   });
 
   it("excludes the current day from browser history snapshots", () => {
